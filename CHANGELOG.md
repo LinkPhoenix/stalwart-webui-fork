@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.6] - 2026-06-XX
+
+### Added
+
+### Changed
+
+### Fixed
+- Properly serialize `date` filters when applying them to the list filter.
+
 ## [1.0.5] - 2026-06-21
 
 ### Added

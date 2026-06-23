@@ -51,6 +51,7 @@ import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { toast } from '@/hooks/use-toast';
 import { friendlySetError } from '@/lib/jmapErrors';
 import { coerceLabel } from '@/lib/objectOptions';
+import { buildJmapFilter } from '@/lib/listFilter';
 
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -385,27 +386,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }, [viewName]);
 
   const buildFilter = useCallback((): Record<string, unknown> => {
-    const filter: Record<string, unknown> = {};
-    const list = resolved?.list;
-    if (list?.filtersStatic) {
-      Object.assign(filter, list.filtersStatic);
-    }
-    const opSuffix: Record<string, string> = {
-      eq: '',
-      gt: 'IsGreaterThan',
-      gte: 'IsGreaterThanOrEqual',
-      lt: 'IsLessThan',
-      lte: 'IsLessThanOrEqual',
-    };
-    for (const [key, val] of Object.entries(appliedFilters)) {
-      if (val === '' || val == null) continue;
-      if (key.endsWith('Op')) continue;
-      const op = appliedFilters[`${key}Op`];
-      const suffix = op ? (opSuffix[op] ?? '') : '';
-      filter[`${key}${suffix}`] = val;
-    }
-    return filter;
-  }, [appliedFilters, resolved?.list]);
+    return buildJmapFilter({
+      appliedFilters,
+      filters: resolved?.list?.filters,
+      filtersStatic: resolved?.list?.filtersStatic,
+      isXPrefixed: resolved?.obj.objectName.startsWith('x:') ?? false,
+    });
+  }, [appliedFilters, resolved?.list, resolved?.obj.objectName]);
 
   const buildSort = useCallback((): Record<string, unknown>[] | undefined => {
     if (!sort) return undefined;

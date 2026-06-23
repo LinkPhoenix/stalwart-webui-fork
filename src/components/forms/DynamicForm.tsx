@@ -350,9 +350,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
             newFieldErrors[ve.property] = validationErrorMessage(ve);
           } else if (ve.property) {
             const detail = ve.value && ve.value.length > 0 ? ve.value : ve.type;
-            setGeneralError((prev) =>
-              prev ? `${prev}\n${ve.property}: ${detail}` : `${ve.property}: ${detail}`,
-            );
+            setGeneralError((prev) => (prev ? `${prev}\n${ve.property}: ${detail}` : `${ve.property}: ${detail}`));
           }
         }
       }
