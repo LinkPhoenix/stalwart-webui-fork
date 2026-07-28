@@ -6,6 +6,7 @@
 
 import { useState, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBufferedValue, useResetOnChange } from '@/hooks/useBufferedValue';
 import ReactMarkdown from 'react-markdown';
 
 import { Input } from '@/components/ui/input';
@@ -243,11 +244,7 @@ interface BufferedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
 }
 
 function BufferedInput({ value, onCommit, onBlur, onKeyDown, ...rest }: BufferedInputProps) {
-  const [local, setLocal] = useState(value);
-
-  useEffect(() => {
-    setLocal(value);
-  }, [value]);
+  const [local, setLocal] = useBufferedValue(value);
 
   const commit = () => {
     if (local !== value) onCommit(local);
@@ -278,11 +275,7 @@ interface BufferedTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTe
 }
 
 function BufferedTextarea({ value, onCommit, onBlur, ...rest }: BufferedTextareaProps) {
-  const [local, setLocal] = useState(value);
-
-  useEffect(() => {
-    setLocal(value);
-  }, [value]);
+  const [local, setLocal] = useBufferedValue(value);
 
   return (
     <Textarea
@@ -463,8 +456,7 @@ function SecretInput({ value, onChange, readOnly, placeholder, minLength, maxLen
   const [localValue, setLocalValue] = useState(() => (value === SECRET_MASK || value === '' ? '' : value));
   const [isMasked, setIsMasked] = useState(() => value === SECRET_MASK);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
+  useResetOnChange(value, () => {
     if (value === SECRET_MASK || value === '') {
       setLocalValue('');
       setIsMasked(value === SECRET_MASK);
@@ -472,8 +464,7 @@ function SecretInput({ value, onChange, readOnly, placeholder, minLength, maxLen
       setLocalValue(value);
       setIsMasked(false);
     }
-  }, [value]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  });
 
   const handleLocalChange = (v: string) => {
     setLocalValue(v);
@@ -513,6 +504,10 @@ function SecretInput({ value, onChange, readOnly, placeholder, minLength, maxLen
           minLength={minLength}
           maxLength={maxLength}
           rows={4}
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore
           className={visible ? '' : 'tracking-widest'}
           style={visible ? undefined : ({ WebkitTextSecurity: 'disc' } as React.CSSProperties)}
         />
@@ -535,6 +530,10 @@ function SecretInput({ value, onChange, readOnly, placeholder, minLength, maxLen
         placeholder={displayPlaceholder}
         minLength={minLength}
         maxLength={maxLength}
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        data-bwignore
         className="flex-1"
       />
       {toggleBtn}
@@ -607,13 +606,7 @@ function BufferedNumberInput({
   disabled,
   onCommit,
 }: BufferedNumberInputProps) {
-  const [local, setLocal] = useState<string>(value != null ? String(value) : '');
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    setLocal(value != null ? String(value) : '');
-  }, [value]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const [local, setLocal] = useBufferedValue(value, (v) => (v != null ? String(v) : ''));
 
   const commit = () => {
     if (local === '') {
@@ -666,13 +659,11 @@ function SizeInputEditable({ value, onChange, nullable }: Omit<SizeInputProps, '
   const [unit, setUnit] = useState(initHuman.unit);
   const [localStr, setLocalStr] = useState<string>(isNull ? '' : String(initHuman.value));
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
+  useResetOnChange(value, () => {
     const h = bytesToHuman(typeof value === 'number' ? value : 0);
     setUnit(h.unit);
     setLocalStr(value == null ? '' : String(h.value));
-  }, [value]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  });
 
   const commit = () => {
     if (localStr === '') {
@@ -771,13 +762,11 @@ function DurationInputEditable({ value, onChange, nullable }: Omit<DurationInput
   const [unit, setUnit] = useState(initHuman.unit);
   const [localStr, setLocalStr] = useState<string>(isNull ? '' : String(initHuman.value));
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
+  useResetOnChange(value, () => {
     const h = msToHuman(typeof value === 'number' ? value : 0);
     setUnit(h.unit);
     setLocalStr(value == null ? '' : String(h.value));
-  }, [value]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  });
 
   const commit = () => {
     if (localStr === '') {
@@ -862,13 +851,7 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
     return new Date(local).toISOString();
   };
 
-  const [local, setLocal] = useState(() => toLocal(strValue));
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    setLocal(toLocal(strValue));
-  }, [strValue]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  const [local, setLocal] = useBufferedValue(strValue, toLocal);
 
   const commit = () => {
     const iso = toIso(local);
@@ -1005,9 +988,9 @@ function BlobField({ value, onChange, readOnly }: BlobFieldProps) {
     if (!blobId || loaded) return;
 
     let cancelled = false;
-    setLoading(true);
 
     (async () => {
+      setLoading(true);
       try {
         const accountId = getAccountId('x:Blob');
         const responses = await jmapGet('Blob', accountId, [blobId], ['data:asText']);
@@ -1253,12 +1236,8 @@ function RateField({ value, onChange, readOnly, nullable }: RateFieldProps) {
   const [localCount, setLocalCount] = useState(String(count));
   const [localPeriod, setLocalPeriod] = useState(String(human.value));
 
-  useEffect(() => {
-    setLocalCount(String(count));
-  }, [count]);
-  useEffect(() => {
-    setLocalPeriod(String(human.value));
-  }, [human.value]);
+  useResetOnChange(count, () => setLocalCount(String(count)));
+  useResetOnChange(human.value, () => setLocalPeriod(String(human.value)));
 
   const commitCount = () => {
     const n = parseInt(localCount, 10);

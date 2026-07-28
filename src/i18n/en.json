@@ -294,6 +294,9 @@
     "stalwartAlt": "Stalwart Logo"
   },
   "logout": "Logout",
+  "version": {
+    "label": "Stalwart WebUI v{{version}}"
+  },
   "oauth": {
     "backToLogin": "Back to login",
     "discoveryFailed": "Discovery failed for \"{{username}}\": {{status}} {{statusText}}",

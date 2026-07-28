@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBufferedValue } from '@/hooks/useBufferedValue';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,11 +22,7 @@ function BufferedExprInput({
   React.InputHTMLAttributes<HTMLInputElement>,
   'onChange' | 'value'
 >) {
-  const [local, setLocal] = useState(value);
-
-  useEffect(() => {
-    setLocal(value);
-  }, [value]);
+  const [local, setLocal] = useBufferedValue(value);
 
   const commit = () => {
     if (local !== value) onCommit(local);

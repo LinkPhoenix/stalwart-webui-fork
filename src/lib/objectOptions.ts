@@ -97,7 +97,7 @@ async function fetchObjectList(viewOrObjectName: string, schema: Schema): Promis
   const accountId = getAccountId(objectName);
   const displayProp = getDisplayProperty(schema, viewOrObjectName);
 
-  let items: Array<Record<string, unknown>> = [];
+  let items: Array<Record<string, unknown>>;
   try {
     const result = await jmapQueryAllAndGet(
       objectName,

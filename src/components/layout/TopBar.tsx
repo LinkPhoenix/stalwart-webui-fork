@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Logo from '@/components/common/Logo';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
 import { useUIStore } from '@/stores/uiStore';
@@ -66,9 +67,18 @@ export function TopBar() {
         <Menu className="h-4 w-4" />
       </Button>
 
-      <Link to="/" className="flex shrink-0 items-center">
-        <Logo />
-      </Link>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/" className="flex shrink-0 items-center">
+              <Logo />
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {t('version.label', 'Stalwart WebUI v{{version}}', { version: __APP_VERSION__ })}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <div className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex">
         <GlobalSearch />

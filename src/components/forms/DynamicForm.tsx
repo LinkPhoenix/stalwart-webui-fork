@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useBlocker } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -166,11 +167,11 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
     return Array.from(set);
   }, [schema, resolved, viewName]);
 
-  useEffect(() => {
-    if (!schema || !resolved) return;
-    const { obj, sch } = resolved;
-
-    if (isCreate) {
+  const [prevCreateInitKey, setPrevCreateInitKey] = useState<typeof resolved | undefined>(undefined);
+  if (isCreate && schema && resolved) {
+    if (resolved !== prevCreateInitKey) {
+      setPrevCreateInitKey(resolved);
+      const { obj, sch } = resolved;
       const staticFilters = resolved.list?.filtersStatic;
       if (sch.type === 'multiple') {
         const variantFromFilter = typeof staticFilters?.['@type'] === 'string' ? staticFilters['@type'] : undefined;
@@ -184,13 +185,19 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
         setFormData(defaults);
         setOriginalData(defaults);
       }
-      return;
     }
+  } else if (prevCreateInitKey !== undefined) {
+    setPrevCreateInitKey(undefined);
+  }
+
+  useEffect(() => {
+    if (!schema || !resolved || isCreate) return;
+    const { obj, sch } = resolved;
 
     const ctrl = new AbortController();
-    setLoading(true);
 
     (async () => {
+      setLoading(true);
       try {
         const accountId = getAccountId(obj.objectName);
         const ids = isSingleton ? ['singleton'] : [objectId];
@@ -251,13 +258,14 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
 
   const blocker = useBlocker(isDirty && !saving);
 
-  const [pendingNavAfterCreate, setPendingNavAfterCreate] = useState(false);
-  useEffect(() => {
-    if (!pendingNavAfterCreate) return;
-    setPendingNavAfterCreate(false);
+  const navigateAfterCreate = useCallback(() => {
+    flushSync(() => {
+      setOriginalData({ ...formData });
+      setServerCreatedProps(null);
+    });
     const section = viewToSection[viewName] ?? '';
     navigate(`/${section}/${viewName}`);
-  }, [pendingNavAfterCreate, viewName, viewToSection, navigate]);
+  }, [formData, viewToSection, viewName, navigate]);
 
   const handleFieldChange = useCallback((fieldName: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
@@ -928,9 +936,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
         open={serverCreatedProps !== null && createdObjectId !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setOriginalData({ ...formData });
-            setServerCreatedProps(null);
-            setPendingNavAfterCreate(true);
+            navigateAfterCreate();
           }
         }}
       >
@@ -963,15 +969,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
               })()}
           </div>
           <DialogFooter>
-            <Button
-              onClick={() => {
-                setOriginalData({ ...formData });
-                setServerCreatedProps(null);
-                setPendingNavAfterCreate(true);
-              }}
-            >
-              {t('common.continue', 'Continue')}
-            </Button>
+            <Button onClick={navigateAfterCreate}>{t('common.continue', 'Continue')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

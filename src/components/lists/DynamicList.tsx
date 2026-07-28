@@ -52,6 +52,7 @@ import { toast } from '@/hooks/use-toast';
 import { friendlySetError } from '@/lib/jmapErrors';
 import { coerceLabel } from '@/lib/objectOptions';
 import { buildJmapFilter } from '@/lib/listFilter';
+import { useResetOnChange } from '@/hooks/useBufferedValue';
 
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -305,6 +306,24 @@ interface SortState {
   ascending: boolean;
 }
 
+function readUrlFilters(): Record<string, string> {
+  const params = new URLSearchParams(window.location.search);
+  const filters: Record<string, string> = {};
+  params.forEach((value, key) => {
+    if (key.startsWith('f.')) {
+      filters[key.slice(2)] = value;
+    }
+  });
+  return filters;
+}
+
+function readUrlSort(): SortState | null {
+  const params = new URLSearchParams(window.location.search);
+  const sortParam = params.get('sort');
+  const sortDir = params.get('sortDir');
+  return sortParam ? { field: sortParam, ascending: sortDir !== 'desc' } : null;
+}
+
 interface ConfirmAction {
   label: string;
   onConfirm: () => void;
@@ -352,15 +371,15 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAllMode, setSelectAllMode] = useState(false);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({});
-  const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
+  const [filtersOpen, setFiltersOpen] = useState(() => Object.keys(readUrlFilters()).length > 0);
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(readUrlFilters);
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>(readUrlFilters);
 
-  const [sort, setSort] = useState<SortState | null>(null);
+  const [sort, setSort] = useState<SortState | null>(readUrlSort);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
-  useEffect(() => {
+  useResetOnChange(viewName, () => {
     setItems([]);
     setTotal(null);
     setAnchorStack([]);
@@ -369,30 +388,22 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setSelectAllMode(false);
     setError(null);
 
-    const params = new URLSearchParams(window.location.search);
-    const initialFilters: Record<string, string> = {};
-    params.forEach((value, key) => {
-      if (key.startsWith('f.')) {
-        initialFilters[key.slice(2)] = value;
-      }
-    });
+    const initialFilters = readUrlFilters();
     setFilterValues(initialFilters);
     setAppliedFilters(initialFilters);
     setFiltersOpen(Object.keys(initialFilters).length > 0);
+    setSort(readUrlSort());
+  });
 
-    const sortParam = params.get('sort');
-    const sortDir = params.get('sortDir');
-    setSort(sortParam ? { field: sortParam, ascending: sortDir !== 'desc' } : null);
-  }, [viewName]);
-
+  const objectName = resolved?.obj.objectName;
   const buildFilter = useCallback((): Record<string, unknown> => {
     return buildJmapFilter({
       appliedFilters,
       filters: resolved?.list?.filters,
       filtersStatic: resolved?.list?.filtersStatic,
-      isXPrefixed: resolved?.obj.objectName.startsWith('x:') ?? false,
+      isXPrefixed: objectName?.startsWith('x:') ?? false,
     });
-  }, [appliedFilters, resolved?.list, resolved?.obj.objectName]);
+  }, [appliedFilters, resolved?.list, objectName]);
 
   const buildSort = useCallback((): Record<string, unknown>[] | undefined => {
     if (!sort) return undefined;
@@ -464,6 +475,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
   useEffect(() => {
     if (!resolved?.list) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnchorStack([]);
     setCurrentAnchor(null);
     fetchData(null);

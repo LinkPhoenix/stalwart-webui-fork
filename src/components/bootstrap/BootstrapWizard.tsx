@@ -88,9 +88,9 @@ export function BootstrapWizard() {
     const { obj, sch } = resolved;
 
     const ctrl = new AbortController();
-    setLoading(true);
 
     (async () => {
+      setLoading(true);
       try {
         const accountId = getAccountId(obj.objectName);
         const responses = await jmapGet(obj.objectName, accountId, ['singleton'], fetchProperties, ctrl.signal);
