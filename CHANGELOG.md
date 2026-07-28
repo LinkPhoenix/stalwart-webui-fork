@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.0.6] - 2026-06-28
+## [1.0.6] - 2026-07-28
 
 ### Added
 - WebUI version is now displayed when hovering over the logo.
