@@ -199,6 +199,7 @@ export function TopBar() {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
+              variant="destructive"
               onClick={() => {
                 const endSessionEndpoint = useAuthStore.getState().endSessionEndpoint;
                 logout();
