@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 const { ChevronDown, Lock } = LucideIcons;
@@ -74,6 +74,27 @@ function subtreeHasVisibleLink(items: LayoutSubItem[], edition: string): boolean
   return false;
 }
 
+interface AutoOpenCollapsibleProps {
+  containsActive: boolean;
+  children: React.ReactNode;
+}
+
+// A collapsible that opens itself whenever the active page lands inside it,
+// while still allowing the user to toggle it manually afterwards.
+function AutoOpenCollapsible({ containsActive, children }: AutoOpenCollapsibleProps) {
+  const [open, setOpen] = useState(containsActive);
+  const [prevContainsActive, setPrevContainsActive] = useState(containsActive);
+  if (containsActive !== prevContainsActive) {
+    setPrevContainsActive(containsActive);
+    if (containsActive) setOpen(true);
+  }
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      {children}
+    </Collapsible>
+  );
+}
+
 function checkLinkVisible(viewName: string): boolean {
   const schema = useSchemaStore.getState().schema;
   if (!schema) return true;
@@ -120,6 +141,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
     return (
       <Button
         variant="ghost"
+        data-sidebar-active={isActive || undefined}
         className={cn(
           'w-full justify-start gap-2 font-normal',
           isActive && 'bg-accent text-accent-foreground',
@@ -145,7 +167,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
 
     const containsActive = subtreeContainsActive(item.items, currentPath, sectionName);
     return (
-      <Collapsible defaultOpen={containsActive}>
+      <AutoOpenCollapsible containsActive={containsActive}>
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
@@ -168,9 +190,9 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
               edition={edition}
               onUpsell={onUpsell}
             />
-          ))}
+            ))}
         </CollapsibleContent>
-      </Collapsible>
+      </AutoOpenCollapsible>
     );
   }
 
@@ -203,6 +225,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     return (
       <Button
         variant="ghost"
+        data-sidebar-active={isActive || undefined}
         className={cn('w-full justify-start gap-2 font-normal', isActive && 'bg-accent text-accent-foreground')}
         onClick={() => {
           if (isLocked) {
@@ -226,7 +249,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     const containsActive = subtreeContainsActive(items, currentPath, sectionName);
 
     return (
-      <Collapsible defaultOpen={containsActive}>
+      <AutoOpenCollapsible containsActive={containsActive}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start gap-2 font-normal">
             <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
@@ -246,9 +269,9 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
               edition={edition}
               onUpsell={onUpsell}
             />
-          ))}
+            ))}
         </CollapsibleContent>
-      </Collapsible>
+      </AutoOpenCollapsible>
     );
   }
 
@@ -267,6 +290,7 @@ export function Sidebar() {
   const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const [upsellOpen, setUpsellOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   const layouts = useMemo(
     () =>
@@ -288,6 +312,13 @@ export function Sidebar() {
       setSidebarOpen(false);
     }
   }, [location.pathname, setSidebarOpen]);
+
+  // Keep the active page visible in the sidebar after any navigation
+  // (e.g. from the command palette or an external link).
+  useEffect(() => {
+    const active = navRef.current?.querySelector('[data-sidebar-active="true"]');
+    active?.scrollIntoView({ block: 'nearest' });
+  }, [location.pathname, activeSection]);
 
   if (!sidebarOpen || !schema) return null;
 
@@ -312,7 +343,7 @@ export function Sidebar() {
       />
       <aside className="fixed top-14 left-0 bottom-0 z-30 flex w-64 flex-col border-r bg-background">
         <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin]">
-          <nav className="flex flex-col gap-0.5 px-2">
+          <nav ref={navRef} className="flex flex-col gap-0.5 px-2">
             {layout.items.map((item) => (
               <SidebarTopItem
                 key={'link' in item ? item.link.viewName : item.container.name}
