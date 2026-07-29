@@ -1,5 +1,21 @@
 {
   "accounts": "Accounts",
+  "appearance": {
+    "colorTheme": "Color theme",
+    "corners": "Corners",
+    "dark": "Dark",
+    "label": "Appearance",
+    "light": "Light",
+    "mode": "Mode",
+    "rounded": "Rounded",
+    "square": "Square",
+    "theme": {
+      "forest": "Forest",
+      "ocean": "Ocean",
+      "stalwart": "Stalwart",
+      "violet": "Violet"
+    }
+  },
   "actions": {
     "actionFailed": "Action failed.",
     "backToActions": "Back to actions",
@@ -337,8 +353,6 @@
     "periodValue": "Period value"
   },
   "sections": "Sections",
-  "squareCorners": "Square corners",
-  "toggleTheme": "Toggle theme",
   "tracing": {
     "addFilter": "Add filter",
     "bufferFull": "(buffer full)",

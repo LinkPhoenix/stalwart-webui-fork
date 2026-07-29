@@ -20,18 +20,19 @@ import { getBasePath } from './lib/basePath';
 (() => {
   try {
     const persisted = localStorage.getItem('stalwart-ui');
-    if (persisted) {
-      const parsed = JSON.parse(persisted);
-      const theme = parsed?.state?.theme;
-      if (theme === 'dark' || theme === 'light') {
-        document.documentElement.classList.toggle('dark', theme === 'dark');
-        return;
-      }
+    const state = persisted ? (JSON.parse(persisted)?.state ?? null) : null;
+    const theme = state?.theme;
+    const dark = theme === 'dark' || (theme !== 'light' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', dark);
+    const colorTheme = state?.colorTheme;
+    if (colorTheme === 'ocean' || colorTheme === 'forest' || colorTheme === 'violet') {
+      document.documentElement.dataset.theme = colorTheme;
+    }
+    if (state?.radius === 'square') {
+      document.documentElement.dataset.radius = 'square';
     }
     // eslint-disable-next-line no-empty
   } catch {}
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-  document.documentElement.classList.toggle('dark', !!prefersDark);
 })();
 
 const basePath = getBasePath();

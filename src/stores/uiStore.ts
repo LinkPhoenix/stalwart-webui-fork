@@ -7,18 +7,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Theme = 'light' | 'dark';
-type Radius = 'rounded' | 'square';
+export type Theme = 'light' | 'dark';
+export type ColorTheme = 'stalwart' | 'ocean' | 'forest' | 'violet';
+export type Radius = 'rounded' | 'square';
 
 interface UIState {
   theme: Theme;
+  colorTheme: ColorTheme;
   radius: Radius;
   sidebarOpen: boolean;
   activeSection: string;
 
-  toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
-  toggleRadius: () => void;
+  setColorTheme: (colorTheme: ColorTheme) => void;
   setRadius: (radius: Radius) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
@@ -33,34 +34,49 @@ function applyThemeClass(theme: Theme) {
   }
 }
 
+function applyColorThemeAttribute(colorTheme: ColorTheme) {
+  // The default theme is defined directly on :root/.dark, so it needs no attribute.
+  if (colorTheme === 'stalwart') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.dataset.theme = colorTheme;
+  }
+}
+
 function applyRadiusAttribute(radius: Radius) {
   document.documentElement.dataset.radius = radius;
 }
+
+export const COLOR_THEMES: { value: ColorTheme; labelKey: string; fallback: string; swatch: string }[] = [
+  {
+    value: 'stalwart',
+    labelKey: 'appearance.theme.stalwart',
+    fallback: 'Stalwart',
+    swatch: 'linear-gradient(135deg, oklch(0.205 0.017 285.823) 50%, oklch(0.92 0.007 285.823) 50%)',
+  },
+  { value: 'ocean', labelKey: 'appearance.theme.ocean', fallback: 'Ocean', swatch: 'oklch(0.546 0.215 262.9)' },
+  { value: 'forest', labelKey: 'appearance.theme.forest', fallback: 'Forest', swatch: 'oklch(0.527 0.137 150.1)' },
+  { value: 'violet', labelKey: 'appearance.theme.violet', fallback: 'Violet', swatch: 'oklch(0.541 0.281 293)' },
+];
 
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       theme:
         typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+      colorTheme: 'stalwart',
       radius: 'rounded',
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
       activeSection: '',
-
-      toggleTheme: () => {
-        const next = get().theme === 'light' ? 'dark' : 'light';
-        applyThemeClass(next);
-        set({ theme: next });
-      },
 
       setTheme: (theme) => {
         applyThemeClass(theme);
         set({ theme });
       },
 
-      toggleRadius: () => {
-        const next = get().radius === 'rounded' ? 'square' : 'rounded';
-        applyRadiusAttribute(next);
-        set({ radius: next });
+      setColorTheme: (colorTheme) => {
+        applyColorThemeAttribute(colorTheme);
+        set({ colorTheme });
       },
 
       setRadius: (radius) => {
@@ -84,12 +100,14 @@ export const useUIStore = create<UIState>()(
       name: 'stalwart-ui',
       partialize: (state) => ({
         theme: state.theme,
+        colorTheme: state.colorTheme,
         radius: state.radius,
       }),
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
             applyThemeClass(state.theme);
+            applyColorThemeAttribute(state.colorTheme ?? 'stalwart');
             applyRadiusAttribute(state.radius ?? 'rounded');
           }
         };
