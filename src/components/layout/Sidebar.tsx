@@ -288,24 +288,19 @@ export function Sidebar() {
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const schema = useSchemaStore((s) => s.schema);
   const edition = useAccountStore((s) => s.edition);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
+  const permissions = useAccountStore((s) => s.permissions);
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
 
-  const layouts = useMemo(
-    () =>
-      schema ? visibleLayouts(schema, edition, (prefix) => hasObjectPermission(prefix, 'Get'), hasPermission) : [],
-    [schema, edition, hasObjectPermission, hasPermission],
-  );
-
-  useEffect(() => {
-    if (!schema) return;
-    if (layouts.length === 0) return;
-    if (!layouts.find((l) => l.name === activeSection)) {
-      setActiveSection(layouts[0].name);
-    }
-  }, [schema, layouts, activeSection, setActiveSection]);
+  // Build the permission checks from the permissions array itself: the store
+  // accessors are stable refs, so depending on them alone would keep a stale
+  // layout list after access data finishes loading.
+  const layouts = useMemo(() => {
+    if (!schema) return [];
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    return visibleLayouts(schema, edition, canGet, hasPermission);
+  }, [schema, edition, permissions, hasPermission]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -328,7 +323,7 @@ export function Sidebar() {
 
   const handleSectionClick = (target: Layout) => {
     setActiveSection(target.name);
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
     const first =
       findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
       findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);

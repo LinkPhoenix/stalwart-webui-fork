@@ -75,7 +75,7 @@ export default function AdminPanel() {
   const setSchema = useSchemaStore((s) => s.setSchema);
   const setAccountInfo = useAccountStore((s) => s.setAccountInfo);
   const edition = useAccountStore((s) => s.edition);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
+  const permissions = useAccountStore((s) => s.permissions);
   const setSession = useAuthStore((s) => s.setSession);
   const accessToken = useAuthStore((s) => s.accessToken);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
@@ -146,20 +146,22 @@ export default function AdminPanel() {
     };
   }, [isSchemaLoaded, setSession, setSchema, setAccountInfo, t]);
 
-  const hasPermission = useAccountStore((s) => s.hasPermission);
   const isBootstrapMode = useMemo(() => {
     if (!schema) return false;
     if (!canViewObject('x:Bootstrap')) return false;
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-    const hasPerm = (perm: string) => hasPermission(perm);
+    // Read the permissions array directly: the store accessors are stable
+    // refs, so depending on them alone would keep stale results after access
+    // data finishes loading.
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    const hasPerm = (perm: string) => permissions.includes(perm);
     return visibleLayouts(schema, edition, canGet, hasPerm).length === 0;
-  }, [schema, canViewObject, edition, hasObjectPermission, hasPermission]);
+  }, [schema, canViewObject, edition, permissions]);
 
   useEffect(() => {
     if (!schema) return;
     if (isBootstrapMode) return;
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-    const hasPerm = (perm: string) => hasPermission(perm);
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    const hasPerm = (perm: string) => permissions.includes(perm);
     const layouts = visibleLayouts(schema, edition, canGet, hasPerm);
     const pickDefault = (): { layoutName: string; link: string | null } | null => {
       for (const layout of layouts) {
@@ -205,8 +207,7 @@ export default function AdminPanel() {
     setActiveSection,
     navigate,
     edition,
-    hasObjectPermission,
-    hasPermission,
+    permissions,
     isBootstrapMode,
   ]);
 
