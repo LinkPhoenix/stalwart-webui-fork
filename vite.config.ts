@@ -16,6 +16,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    // Same-origin proxy to the local Stalwart container: avoids CORS entirely
+    // (VITE_API_BASE_URL stays empty in .env.development.local).
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
+      '/jmap': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
+    },
+  },
   test: {
     globals: false,
     environment: 'happy-dom',
