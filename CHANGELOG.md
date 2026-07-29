@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.8] - 2026-07-29
+
+### Added
+- Appearance settings page (linked at the bottom of the sidebar) with light/dark mode, four selectable color themes (Stalwart, Ocean, Forest, Violet) and a rounded/square corners option that applies globally across all themes.
+- Light/dark toggle on the login pages.
+- Dynamic document titles per page, mirroring the sidebar navigation labels.
+- Square corners toggle for a border-radius-free interface.
+- Full-width sidebar hover with a separated footer in square mode.
+
+### Changed
+- The light/dark toggle is a single-click button again, in the top bar and on the login pages.
+- The logout menu item is marked as destructive.
+
+### Fixed
+- Section URLs without a view (e.g. /admin) redirect to the first accessible page instead of the "Select a view" empty state.
+
 ## [1.0.7] - 2026-07-29
 
 ### Added
