@@ -7,7 +7,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as LucideIcons from 'lucide-react';
-const { Sun, Moon, User, LogOut, Check, Menu, Sparkles, Search } = LucideIcons;
+const { Sun, Moon, User, LogOut, Check, Menu, Sparkles, Search, Radius } = LucideIcons;
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/common/CommandPalette';
 import {
@@ -43,6 +43,8 @@ export function TopBar() {
   const navigate = useNavigate();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const radius = useUIStore((s) => s.radius);
+  const toggleRadius = useUIStore((s) => s.toggleRadius);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const accounts = useAuthStore((s) => s.accounts);
@@ -188,6 +190,13 @@ export function TopBar() {
                 <DropdownMenuSeparator />
               </>
             )}
+
+            <DropdownMenuItem onClick={toggleRadius}>
+              <Radius className="mr-2 h-4 w-4" />
+              {t('squareCorners', 'Square corners')}
+              {radius === 'square' && <Check className="ml-auto h-4 w-4" />}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onClick={() => {
