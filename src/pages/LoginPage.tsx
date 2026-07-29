@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { ModeToggle } from '@/components/common/ModeToggle';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +46,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-content-background px-4">
       <div className="fixed right-4 top-4 z-50">
-        <ThemeSwitcher />
+        <ModeToggle />
       </div>
       <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="items-center text-center">

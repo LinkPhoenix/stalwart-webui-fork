@@ -9,6 +9,8 @@
     "mode": "Mode",
     "rounded": "Rounded",
     "square": "Square",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
     "theme": {
       "forest": "Forest",
       "ocean": "Ocean",

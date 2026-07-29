@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Logo from '@/components/common/Logo';
-import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { ModeToggle } from '@/components/common/ModeToggle';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
@@ -122,7 +122,7 @@ export function TopBar() {
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
-        <ThemeSwitcher />
+        <ModeToggle />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
