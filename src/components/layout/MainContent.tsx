@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useCacheStore } from '@/stores/cacheStore';
 import { useAccountStore } from '@/stores/accountStore';
@@ -12,11 +12,23 @@ import { resolveObject } from '@/lib/schemaResolver';
 import { DynamicList } from '@/components/lists/DynamicList';
 import { DynamicForm } from '@/components/forms/DynamicForm';
 import { DynamicViewPage } from '@/components/views/DynamicViewPage';
-import { DashboardView } from '@/features/dashboard/components/DashboardView';
-import { DeliveryTracePage } from '@/features/troubleshoot/DeliveryTracePage';
-import { LiveTracingPage } from '@/features/tracing/components/LiveTracingPage';
-import { TraceDetailView } from '@/features/tracing/components/TraceDetailView';
-import { ActionPage } from '@/features/actions/ActionPage';
+import { LoadingFallback } from '@/components/common/LoadingFallback';
+
+// Heavy or rarely used feature pages are code-split so the initial bundle
+// stays small (the dashboard pulls in recharts, ~150 kB gzipped on its own).
+const DashboardView = lazy(() =>
+  import('@/features/dashboard/components/DashboardView').then((m) => ({ default: m.DashboardView })),
+);
+const DeliveryTracePage = lazy(() =>
+  import('@/features/troubleshoot/DeliveryTracePage').then((m) => ({ default: m.DeliveryTracePage })),
+);
+const LiveTracingPage = lazy(() =>
+  import('@/features/tracing/components/LiveTracingPage').then((m) => ({ default: m.LiveTracingPage })),
+);
+const TraceDetailView = lazy(() =>
+  import('@/features/tracing/components/TraceDetailView').then((m) => ({ default: m.TraceDetailView })),
+);
+const ActionPage = lazy(() => import('@/features/actions/ActionPage').then((m) => ({ default: m.ActionPage })));
 
 interface MainContentProps {
   viewName?: string;
@@ -25,6 +37,14 @@ interface MainContentProps {
 }
 
 export function MainContent({ viewName, id, section }: MainContentProps) {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <MainContentView viewName={viewName} id={id} section={section} />
+    </Suspense>
+  );
+}
+
+function MainContentView({ viewName, id, section }: MainContentProps) {
   const schema = useSchemaStore((s) => s.schema);
   const invalidateAllObjectLists = useCacheStore((s) => s.invalidateAllObjectLists);
 

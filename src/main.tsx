@@ -12,8 +12,8 @@ import './index.css';
 import App from './App';
 import LoginPage from './pages/LoginPage';
 import OAuthCallback from './pages/OAuthCallback';
-import AdminPanel from './pages/AdminPanel';
 import NotFound from './pages/NotFound';
+import { AdminPanel } from './pages/AdminPanel.lazy';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { getBasePath } from './lib/basePath';
 

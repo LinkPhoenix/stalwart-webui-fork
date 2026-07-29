@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,7 +17,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MainContent } from '@/components/layout/MainContent';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { BootstrapWizard } from '@/components/bootstrap/BootstrapWizard';
+import { LoadingFallback } from '@/components/common/LoadingFallback';
 import {
   findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
@@ -26,6 +26,11 @@ import {
 } from '@/lib/layout';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Loader2 } from 'lucide-react';
+
+// Bootstrap mode is a rare first-run flow; keep it out of the main chunk.
+const BootstrapWizard = lazy(() =>
+  import('@/components/bootstrap/BootstrapWizard').then((m) => ({ default: m.BootstrapWizard })),
+);
 
 export default function AdminPanel() {
   const { t } = useTranslation();
@@ -237,7 +242,9 @@ export default function AdminPanel() {
   if (isBootstrapMode) {
     return (
       <ErrorBoundary>
-        <BootstrapWizard />
+        <Suspense fallback={<LoadingFallback fullScreen />}>
+          <BootstrapWizard />
+        </Suspense>
       </ErrorBoundary>
     );
   }
