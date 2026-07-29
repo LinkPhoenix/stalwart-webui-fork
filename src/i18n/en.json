@@ -169,10 +169,12 @@
     "none": "None",
     "notSet": "Not set",
     "optional": "(optional)",
+    "pickDate": "Pick a date",
     "required": "required",
     "selectEllipsis": "Select...",
     "selectKey": "Select key...",
     "selectOptions": "Select options...",
+    "time": "Time",
     "type": "Type",
     "typeAndPressEnter": "Type and press Enter...",
     "unknownObjectType": "Unknown object type: {{name}}"
