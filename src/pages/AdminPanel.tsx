@@ -220,6 +220,30 @@ export default function AdminPanel() {
     }
 
     if (section) {
+      if (!viewName) {
+        // A section URL without a view (e.g. /Settings alone, or an unknown
+        // section like /admin) should land on a real page instead of the
+        // dead-end "Select a view" empty state.
+        const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
+        if (ownLayout) {
+          const link =
+            findFirstAccessibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm) ??
+            findFirstVisibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm);
+          if (link) {
+            setActiveSection(ownLayout.name);
+            navigate(`/${ownLayout.name}/${link}`, { replace: true });
+            return;
+          }
+        }
+        const target = pickDefault();
+        if (target) {
+          setActiveSection(target.layoutName);
+          if (target.link) {
+            navigate(`/${target.layoutName}/${target.link}`, { replace: true });
+          }
+        }
+        return;
+      }
       setActiveSection(section);
       return;
     }
