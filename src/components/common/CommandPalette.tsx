@@ -40,7 +40,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="top-[15%] translate-y-0 overflow-hidden p-0">
+      <DialogContent className="top-[15%] translate-y-0 overflow-hidden p-0" showCloseButton={false}>
         <DialogTitle className="sr-only">{t('globalSearch.title', 'Search')}</DialogTitle>
         <Command
           shouldFilter={false}
