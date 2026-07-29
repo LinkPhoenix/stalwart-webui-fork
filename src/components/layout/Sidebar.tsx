@@ -121,6 +121,11 @@ function AccordionCollapsible({
 const sidebarItemClass =
   'w-full justify-start gap-2 font-normal text-muted-foreground hover:bg-accent/50 hover:text-foreground';
 
+// In square mode the sidebar follows documentation conventions (better-auth):
+// full-bleed rows with a barely-there hover wash instead of inset pills.
+const sidebarItemSquareClass =
+  "[[data-radius='square']_&]:hover:bg-foreground/[0.03] [[data-radius='square']_&]:hover:text-foreground/90";
+
 function checkLinkVisible(viewName: string): boolean {
   const schema = useSchemaStore.getState().schema;
   if (!schema) return true;
@@ -170,6 +175,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
         data-sidebar-active={isActive || undefined}
         className={cn(
           sidebarItemClass,
+          sidebarItemSquareClass,
           isActive && 'bg-accent text-accent-foreground hover:bg-accent',
           depth > 0 && 'text-sm',
         )}
@@ -197,7 +203,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
-            className={cn(sidebarItemClass, 'text-sm')}
+            className={cn(sidebarItemClass, sidebarItemSquareClass, 'text-sm')}
             style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
           >
             <ChevronDown className="h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
@@ -254,7 +260,11 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
       <Button
         variant="ghost"
         data-sidebar-active={isActive || undefined}
-        className={cn(sidebarItemClass, isActive && 'bg-accent text-accent-foreground hover:bg-accent')}
+        className={cn(
+          sidebarItemClass,
+          sidebarItemSquareClass,
+          isActive && 'bg-accent text-accent-foreground hover:bg-accent',
+        )}
         onClick={() => {
           if (isLocked) {
             onUpsell();
@@ -279,7 +289,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     return (
       <AccordionCollapsible id={name} containsActive={containsActive}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" className={sidebarItemClass}>
+          <Button variant="ghost" className={cn(sidebarItemClass, sidebarItemSquareClass)}>
             <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
             <span className="truncate">{name}</span>
             <ChevronDown className="ml-auto h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
@@ -368,7 +378,10 @@ export function Sidebar() {
       />
       <aside className="fixed top-14 left-0 bottom-0 z-30 flex w-64 flex-col border-r bg-background">
         <ScrollArea className="flex-1">
-          <nav ref={navRef} className="flex flex-col gap-0.5 px-2 py-2">
+          <nav
+            ref={navRef}
+            className="flex flex-col gap-0.5 px-2 py-2 [[data-radius='square']_&]:gap-0 [[data-radius='square']_&]:px-0"
+          >
             <AccordionLevel>
               {layout.items.map((item) => (
                 <SidebarTopItem
@@ -387,7 +400,7 @@ export function Sidebar() {
 
         {layouts.length > 1 && (
           <TooltipProvider>
-            <div className="flex items-center justify-around border-t bg-background px-2 py-2">
+            <div className="flex items-center justify-around border-t bg-background px-2 py-2 [[data-radius='square']_&]:px-0 [[data-radius='square']_&]:py-0">
               {layouts.map((target) => {
                 const Icon = (LucideIcons as Record<string, unknown>)[
                   target.icon
@@ -406,7 +419,11 @@ export function Sidebar() {
                         aria-label={target.name}
                         aria-current={isActive ? 'page' : undefined}
                         onClick={() => handleSectionClick(target)}
-                        className={cn('h-9 w-9', isActive && 'bg-accent text-accent-foreground')}
+                        className={cn(
+                          'h-9 w-9',
+                          "[[data-radius='square']_&]:h-12 [[data-radius='square']_&]:flex-1 [[data-radius='square']_&]:border-r [[data-radius='square']_&]:border-border [[data-radius='square']_&]:last:border-r-0 [[data-radius='square']_&]:hover:bg-foreground/[0.03]",
+                          isActive && 'bg-accent text-accent-foreground',
+                        )}
                       >
                         {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
                       </Button>
