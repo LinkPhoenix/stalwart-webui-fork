@@ -21,6 +21,7 @@ import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { friendlyName } from '@/hooks/useGlobalSearch';
+import { AppearancePage } from '@/features/appearance/AppearancePage';
 import {
   findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
@@ -81,6 +82,7 @@ export default function AdminPanel() {
   const setSession = useAuthStore((s) => s.setSession);
   const accessToken = useAuthStore((s) => s.accessToken);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const activeSection = useUIStore((s) => s.activeSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const { canViewObject } = usePermissions();
 
@@ -92,6 +94,7 @@ export default function AdminPanel() {
   // Tab title mirrors the sidebar label (search index) so it always matches
   // what the user sees in the navigation, e.g. "MTA-STS · Settings".
   const pageTitle = useMemo(() => {
+    if (section === 'Appearance') return t('appearance.label', 'Appearance');
     if (!section) return t('dashboard.title', 'Dashboard');
     if (!viewName) return section;
     const entry =
@@ -207,6 +210,15 @@ export default function AdminPanel() {
       }
     }
 
+    if (section === 'Appearance') {
+      // Appearance is a client-side page outside the schema layouts: keep the
+      // sidebar bound to a real section while it is open.
+      if (!layouts.some((l) => l.name === activeSection)) {
+        setActiveSection(layouts[0]?.name ?? '');
+      }
+      return;
+    }
+
     if (section) {
       setActiveSection(section);
       return;
@@ -222,6 +234,7 @@ export default function AdminPanel() {
   }, [
     section,
     viewName,
+    activeSection,
     schema,
     setActiveSection,
     navigate,
@@ -284,7 +297,11 @@ export default function AdminPanel() {
           <div className="p-6">
             <div className="mx-auto w-full max-w-7xl">
               <ErrorBoundary>
-                <MainContent viewName={viewName} id={id} section={section} />
+                {section === 'Appearance' ? (
+                  <AppearancePage />
+                ) : (
+                  <MainContent viewName={viewName} id={id} section={section} />
+                )}
               </ErrorBoundary>
             </div>
           </div>

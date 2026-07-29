@@ -6,6 +6,7 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import * as LucideIcons from 'lucide-react';
 const { ChevronDown, Lock } = LucideIcons;
 import { cn } from '@/lib/utils';
@@ -321,6 +322,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const activeSection = useUIStore((s) => s.activeSection);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -369,6 +371,9 @@ export function Sidebar() {
     if (first) navigate(`/${target.name}/${first}`);
   };
 
+  const isAppearanceActive =
+    location.pathname === '/Appearance' || location.pathname.startsWith('/Appearance/');
+
   return (
     <>
       <div
@@ -397,6 +402,22 @@ export function Sidebar() {
             </AccordionLevel>
           </nav>
         </ScrollArea>
+
+        <div className="border-t px-2 py-2 [[data-radius='square']_&]:px-0">
+          <Button
+            variant="ghost"
+            data-sidebar-active={isAppearanceActive || undefined}
+            className={cn(
+              sidebarItemClass,
+              sidebarItemSquareClass,
+              isAppearanceActive && 'bg-accent text-accent-foreground hover:bg-accent',
+            )}
+            onClick={() => navigate('/Appearance')}
+          >
+            <LucideIcons.Palette className="h-4 w-4 shrink-0" />
+            <span className="truncate">{t('appearance.label', 'Appearance')}</span>
+          </Button>
+        </div>
 
         {layouts.length > 1 && (
           <TooltipProvider>
