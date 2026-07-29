@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 const { ChevronDown, Lock } = LucideIcons;
@@ -75,26 +75,51 @@ function subtreeHasVisibleLink(items: LayoutSubItem[], edition: string): boolean
   return false;
 }
 
-interface AutoOpenCollapsibleProps {
-  containsActive: boolean;
-  children: React.ReactNode;
+interface AccordionLevelContextValue {
+  openId: string | null;
+  setOpenId: (id: string | null) => void;
 }
 
-// A collapsible that opens itself whenever the active page lands inside it,
-// while still allowing the user to toggle it manually afterwards.
-function AutoOpenCollapsible({ containsActive, children }: AutoOpenCollapsibleProps) {
-  const [open, setOpen] = useState(containsActive);
-  const [prevContainsActive, setPrevContainsActive] = useState(containsActive);
-  if (containsActive !== prevContainsActive) {
-    setPrevContainsActive(containsActive);
-    if (containsActive) setOpen(true);
-  }
+const AccordionLevelContext = createContext<AccordionLevelContextValue | null>(null);
+
+// Sibling collapsibles share a single open id, so expanding one collapses the
+// others at the same level (accordion behavior).
+function AccordionLevel({ children }: { children: React.ReactNode }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const value = useMemo(() => ({ openId, setOpenId }), [openId]);
+  return <AccordionLevelContext.Provider value={value}>{children}</AccordionLevelContext.Provider>;
+}
+
+// A collapsible wired to its accordion level. It opens itself whenever the
+// active page lands inside it, while still allowing manual toggling.
+function AccordionCollapsible({
+  id,
+  containsActive,
+  children,
+}: {
+  id: string;
+  containsActive: boolean;
+  children: React.ReactNode;
+}) {
+  const level = useContext(AccordionLevelContext);
+  if (!level) throw new Error('AccordionCollapsible must be used within AccordionLevel');
+  const { openId, setOpenId } = level;
+  // Layout effect so the branch containing the active page is already open on
+  // the first paint after a navigation.
+  useLayoutEffect(() => {
+    if (containsActive) setOpenId(id);
+  }, [containsActive, id, setOpenId]);
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={openId === id} onOpenChange={(open) => setOpenId(open ? id : null)}>
       {children}
     </Collapsible>
   );
 }
+
+// Softer than the default ghost hover, closer to documentation sidebars:
+// muted text that brightens with a faint background instead of a strong fill.
+const sidebarItemClass =
+  'w-full justify-start gap-2 font-normal text-muted-foreground hover:bg-accent/50 hover:text-foreground';
 
 function checkLinkVisible(viewName: string): boolean {
   const schema = useSchemaStore.getState().schema;
@@ -144,8 +169,8 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
         variant="ghost"
         data-sidebar-active={isActive || undefined}
         className={cn(
-          'w-full justify-start gap-2 font-normal',
-          isActive && 'bg-accent text-accent-foreground',
+          sidebarItemClass,
+          isActive && 'bg-accent text-accent-foreground hover:bg-accent',
           depth > 0 && 'text-sm',
         )}
         style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
@@ -168,11 +193,11 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
 
     const containsActive = subtreeContainsActive(item.items, currentPath, sectionName);
     return (
-      <AutoOpenCollapsible containsActive={containsActive}>
+      <AccordionCollapsible id={item.name} containsActive={containsActive}>
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
-            className="w-full justify-start gap-2 font-normal text-sm"
+            className={cn(sidebarItemClass, 'text-sm')}
             style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
           >
             <ChevronDown className="h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
@@ -180,20 +205,22 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          {item.items.map((sub) => (
-            <SidebarSubItem
-              key={sub.type === 'link' ? sub.viewName : sub.name}
-              item={sub}
-              depth={depth + 1}
-              sectionName={sectionName}
-              currentPath={currentPath}
-              navigate={navigate}
-              edition={edition}
-              onUpsell={onUpsell}
-            />
+          <AccordionLevel>
+            {item.items.map((sub) => (
+              <SidebarSubItem
+                key={sub.type === 'link' ? sub.viewName : sub.name}
+                item={sub}
+                depth={depth + 1}
+                sectionName={sectionName}
+                currentPath={currentPath}
+                navigate={navigate}
+                edition={edition}
+                onUpsell={onUpsell}
+              />
             ))}
+          </AccordionLevel>
         </CollapsibleContent>
-      </AutoOpenCollapsible>
+      </AccordionCollapsible>
     );
   }
 
@@ -227,7 +254,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
       <Button
         variant="ghost"
         data-sidebar-active={isActive || undefined}
-        className={cn('w-full justify-start gap-2 font-normal', isActive && 'bg-accent text-accent-foreground')}
+        className={cn(sidebarItemClass, isActive && 'bg-accent text-accent-foreground hover:bg-accent')}
         onClick={() => {
           if (isLocked) {
             onUpsell();
@@ -250,29 +277,31 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     const containsActive = subtreeContainsActive(items, currentPath, sectionName);
 
     return (
-      <AutoOpenCollapsible containsActive={containsActive}>
+      <AccordionCollapsible id={name} containsActive={containsActive}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full justify-start gap-2 font-normal">
+          <Button variant="ghost" className={sidebarItemClass}>
             <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
             <span className="truncate">{name}</span>
             <ChevronDown className="ml-auto h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          {items.map((sub) => (
-            <SidebarSubItem
-              key={sub.type === 'link' ? sub.viewName : sub.name}
-              item={sub}
-              depth={1}
-              sectionName={sectionName}
-              currentPath={currentPath}
-              navigate={navigate}
-              edition={edition}
-              onUpsell={onUpsell}
-            />
+          <AccordionLevel>
+            {items.map((sub) => (
+              <SidebarSubItem
+                key={sub.type === 'link' ? sub.viewName : sub.name}
+                item={sub}
+                depth={1}
+                sectionName={sectionName}
+                currentPath={currentPath}
+                navigate={navigate}
+                edition={edition}
+                onUpsell={onUpsell}
+              />
             ))}
+          </AccordionLevel>
         </CollapsibleContent>
-      </AutoOpenCollapsible>
+      </AccordionCollapsible>
     );
   }
 
@@ -340,17 +369,19 @@ export function Sidebar() {
       <aside className="fixed top-14 left-0 bottom-0 z-30 flex w-64 flex-col border-r bg-background">
         <ScrollArea className="flex-1">
           <nav ref={navRef} className="flex flex-col gap-0.5 px-2 py-2">
-            {layout.items.map((item) => (
-              <SidebarTopItem
-                key={'link' in item ? item.link.viewName : item.container.name}
-                item={item}
-                sectionName={layout.name}
-                currentPath={location.pathname}
-                navigate={navigate}
-                edition={edition}
-                onUpsell={() => setUpsellOpen(true)}
-              />
-            ))}
+            <AccordionLevel>
+              {layout.items.map((item) => (
+                <SidebarTopItem
+                  key={'link' in item ? item.link.viewName : item.container.name}
+                  item={item}
+                  sectionName={layout.name}
+                  currentPath={location.pathname}
+                  navigate={navigate}
+                  edition={edition}
+                  onUpsell={() => setUpsellOpen(true)}
+                />
+              ))}
+            </AccordionLevel>
           </nav>
         </ScrollArea>
 
