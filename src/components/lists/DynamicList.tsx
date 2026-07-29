@@ -1226,7 +1226,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
       )}
 
       <div className="rounded-lg border bg-background shadow-sm">
-        <div className="overflow-x-auto">
+        {/* The scroll container must clip with the parent's inner radius
+            (outer radius minus the 1px border), otherwise filled header rows
+            paint square corners behind the rounded border. */}
+        <div className="overflow-x-auto rounded-[calc(var(--radius-lg)-1px)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted">
