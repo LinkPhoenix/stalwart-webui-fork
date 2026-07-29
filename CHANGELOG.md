@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Changed
 - The light/dark toggle is a single-click button again, in the top bar and on the login pages.
 - The logout menu item is marked as destructive.
+- Updated react-router-dom to 7.18.2 and migrated the date picker to `@daypicker/react` 10 (the new react-day-picker package name).
 
 ### Fixed
 - Section URLs without a view (e.g. /admin) redirect to the first accessible page instead of the "Select a view" empty state.
