@@ -37,6 +37,10 @@
   --input: oklch(0.922 0.007 285.823);
   --ring: oklch(0.708 0.015 285.823);
 
+  /* Form fields use the page background tone so cards read as elevated
+     surfaces (shadcn convention: inset fields on a raised card). */
+  --field: var(--background);
+
   --radius: 0.5rem;
 
   --chart-1: 220 70% 50%;
@@ -50,7 +54,7 @@
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0.002 285.823);
 
-  --card: oklch(0.205 0.007 285.823);
+  --card: oklch(0.235 0.008 285.823);
   --card-foreground: oklch(0.985 0.002 285.823);
 
   --popover: oklch(0.205 0.007 285.823);
@@ -76,6 +80,8 @@
   --border: oklch(0.274 0.009 285.823);
   --input: oklch(0.274 0.009 285.823);
   --ring: oklch(0.553 0.013 285.823);
+
+  --field: var(--background);
 
   --chart-1: 220 70% 60%;
   --chart-2: 160 60% 55%;
@@ -113,6 +119,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-field: var(--field);
 
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));

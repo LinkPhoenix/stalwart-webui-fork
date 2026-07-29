@@ -398,7 +398,7 @@ function StringField({
             value={strValue || '#000000'}
             onChange={(e) => handleCommit(e.target.value)}
             disabled={readOnly}
-            className="h-9 w-14 cursor-pointer rounded-md border border-input bg-transparent p-1"
+            className="h-9 w-14 cursor-pointer rounded-md border border-input bg-field p-1"
           />
           <BufferedInput
             value={strValue}
