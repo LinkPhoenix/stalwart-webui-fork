@@ -19,6 +19,8 @@ import { MainContent } from '@/components/layout/MainContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { friendlyName } from '@/hooks/useGlobalSearch';
 import {
   findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
@@ -84,6 +86,23 @@ export default function AdminPanel() {
 
   const [initError, setInitError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(!isSchemaLoaded);
+
+  const searchIndex = useSchemaStore((s) => s.searchIndex);
+
+  // Tab title mirrors the sidebar label (search index) so it always matches
+  // what the user sees in the navigation, e.g. "MTA-STS · Settings".
+  const pageTitle = useMemo(() => {
+    if (!section) return t('dashboard.title', 'Dashboard');
+    if (!viewName) return section;
+    const entry =
+      searchIndex.find((e) => e.type === 'link' && e.viewName === viewName && e.section === section) ??
+      searchIndex.find((e) => e.type === 'link' && e.viewName === viewName);
+    const base = entry?.text ?? friendlyName(viewName);
+    if (id === 'new') return `${t('form.createTitle', 'Create {{name}}', { name: base })} · ${section}`;
+    return `${base} · ${section}`;
+  }, [section, viewName, id, searchIndex, t]);
+
+  useDocumentTitle(pageTitle);
 
   useEffect(() => {
     const bypassToken = import.meta.env.VITE_ACCESS_TOKEN;

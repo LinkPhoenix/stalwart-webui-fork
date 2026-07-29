@@ -76,6 +76,7 @@
     "preset30d": "Last 30 days",
     "preset7d": "Last 7 days",
     "preset90d": "Last 90 days",
+    "title": "Dashboard",
     "to": "To"
   },
   "deliveryTrace": {
@@ -308,6 +309,7 @@
     "continue": "Continue",
     "error": "An unexpected error occurred",
     "prompt": "Enter your account name to continue",
+    "title": "Sign in",
     "usernamePlaceholder": "user@example.com"
   },
   "logo": {
@@ -326,6 +328,7 @@
     "missingParams": "Missing authorization code or state parameter",
     "processing": "Completing sign in...",
     "stateMismatch": "State parameter mismatch. Please try logging in again.",
+    "title": "Signing in",
     "tokenExchangeFailed": "Token exchange failed: {{status}} {{statusText}}"
   },
   "otp": {
