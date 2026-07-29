@@ -222,7 +222,10 @@
     "list": "List",
     "noResults": "No results found.",
     "pages": "Pages",
-    "settings": "Settings"
+    "placeholder": "Search pages, fields, settings...",
+    "settings": "Settings",
+    "title": "Search",
+    "typeToSearch": "Type to search the admin panel."
   },
   "jmapErrors": {
     "addressBookHasContents": "This address book has contacts. Remove them first.",
