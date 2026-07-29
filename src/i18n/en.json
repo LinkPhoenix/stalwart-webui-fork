@@ -371,5 +371,17 @@
     "failedToLoad": "Failed to load",
     "noGetResponse": "No get response",
     "objectNotFound": "Object not found"
+  },
+  "webApps": {
+    "confirm": "Update",
+    "confirmBody": "The application will be updated from v{{from}} to v{{to}}. The server downloads the new package and starts serving it immediately.",
+    "confirmTitle": "Update application?",
+    "updateFailed": "Update failed",
+    "updateRejected": "The server rejected the update.",
+    "updateStarted": "Update started",
+    "updateStartedBody": "The server is downloading the latest version. Reload the page in a few seconds to use it.",
+    "updateTo": "Update to v{{version}}",
+    "upToDate": "Up to date",
+    "version": "Version"
   }
 }

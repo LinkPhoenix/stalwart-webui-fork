@@ -28,6 +28,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatSize as fmtSize, formatDuration as fmtDuration } from '@/lib/durationFormat';
+import { WebAppVersionCell } from '@/features/webapps/WebAppVersionCell';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -354,6 +355,16 @@ export function DynamicList({ viewName }: DynamicListProps) {
     return { obj, schema: schem, list };
   }, [schema, viewName]);
 
+  // The Web Applications list gets an extra client-side column showing the
+  // installed version of the WebUI app (and an update action when a newer
+  // release exists), which the server does not expose as an object property.
+  const isAppList = viewName === 'x:Application';
+  const displayColumns = useMemo(() => {
+    const columns = resolved?.list?.columns ?? [];
+    if (!isAppList) return columns;
+    return [...columns, { name: 'x:webuiVersion', label: t('webApps.version', 'Version') }];
+  }, [resolved?.list?.columns, isAppList, t]);
+
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -420,7 +431,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       try {
         const accountId = getAccountId(obj.objectName);
-        const properties = ['id', ...list.columns.map((c) => c.name)];
+        const properties = ['id', ...list.columns.map((c) => c.name), ...(isAppList ? ['resourceUrl'] : [])];
         const filter = buildFilter();
         const sortArr = buildSort();
 
@@ -470,7 +481,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, t],
+    [resolved, schema, buildFilter, buildSort, isAppList, t],
   );
 
   useEffect(() => {
@@ -1228,7 +1239,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                     />
                   </th>
                 )}
-                {list.columns.map((col) => (
+                {displayColumns.map((col) => (
                   <th key={col.name} className="px-3 py-3 text-left font-medium text-muted-foreground">
                     <div className="flex items-center">
                       {col.label}
@@ -1247,7 +1258,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               {loading && items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={list.columns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-12 text-center"
                   >
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
@@ -1256,7 +1267,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               ) : items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={list.columns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-12 text-center text-muted-foreground"
                   >
                     {t('list.noResults', 'No results found')}
@@ -1280,15 +1291,19 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           />
                         </td>
                       )}
-                      {list.columns.map((col) => (
+                      {displayColumns.map((col) => (
                         <td key={col.name} className="px-3 py-2">
-                          {renderCellValue(
-                            item[col.name],
-                            fields[col.name],
-                            col.name,
-                            schema!,
-                            resolved.obj.objectName,
-                            getDisplayName,
+                          {col.name === 'x:webuiVersion' ? (
+                            <WebAppVersionCell resourceUrl={item.resourceUrl} />
+                          ) : (
+                            renderCellValue(
+                              item[col.name],
+                              fields[col.name],
+                              col.name,
+                              schema!,
+                              resolved.obj.objectName,
+                              getDisplayName,
+                            )
                           )}
                         </td>
                       ))}
