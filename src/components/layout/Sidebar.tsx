@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUIStore } from '@/stores/uiStore';
 import { useAccountStore } from '@/stores/accountStore';
@@ -342,8 +343,8 @@ export function Sidebar() {
         onClick={() => setSidebarOpen(false)}
       />
       <aside className="fixed top-14 left-0 bottom-0 z-30 flex w-64 flex-col border-r bg-background">
-        <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin]">
-          <nav ref={navRef} className="flex flex-col gap-0.5 px-2">
+        <ScrollArea className="flex-1">
+          <nav ref={navRef} className="flex flex-col gap-0.5 px-2 py-2">
             {layout.items.map((item) => (
               <SidebarTopItem
                 key={'link' in item ? item.link.viewName : item.container.name}
@@ -356,7 +357,7 @@ export function Sidebar() {
               />
             ))}
           </nav>
-        </div>
+        </ScrollArea>
 
         {layouts.length > 1 && (
           <TooltipProvider>

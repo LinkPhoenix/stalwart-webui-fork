@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -1831,7 +1832,8 @@ function EnumMultiSelect({ enumName, items, onChange, readOnly, schema, minItems
                 className="h-8"
               />
             </div>
-            <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+            <ScrollArea viewportClassName="max-h-60">
+              <div className="p-2 space-y-1">
               {filtered.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-2">{t('field.noMatches', 'No matches')}</p>
               )}
@@ -1859,7 +1861,8 @@ function EnumMultiSelect({ enumName, items, onChange, readOnly, schema, minItems
                   </Label>
                 </div>
               ))}
-            </div>
+              </div>
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       </div>

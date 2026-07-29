@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, ArrowRight, Check, Copy, Loader2, Rocket } from 'lucide-react';
 
 import { useSchemaStore } from '@/stores/schemaStore';
@@ -403,13 +404,15 @@ export function BootstrapWizard() {
 
 function WizardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-content-background">
+    <div className="flex h-screen flex-col bg-content-background">
       <header className="flex items-center px-6 py-4 border-b bg-background">
         <DefaultLogo />
       </header>
-      <main className="flex-1 overflow-auto p-6">
-        <div className="mx-auto max-w-3xl">{children}</div>
-      </main>
+      <ScrollArea role="main" className="flex-1">
+        <div className="p-6">
+          <div className="mx-auto max-w-3xl">{children}</div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

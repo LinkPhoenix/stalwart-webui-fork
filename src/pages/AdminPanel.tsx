@@ -16,6 +16,7 @@ import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MainContent } from '@/components/layout/MainContent';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
 import {
@@ -249,20 +250,25 @@ export default function AdminPanel() {
     );
   }
 
+  // The shell is viewport-height so the main area scrolls internally through
+  // the shared ScrollArea instead of scrolling the whole window.
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col">
       <TopBar />
-      <div className="flex flex-1">
+      <div className="flex min-h-0 flex-1">
         <Sidebar />
-        <main
-          className={`flex-1 overflow-auto bg-content-background p-6 transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
+        <ScrollArea
+          role="main"
+          className={`flex-1 bg-content-background transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
         >
-          <div className="mx-auto w-full max-w-7xl">
-            <ErrorBoundary>
-              <MainContent viewName={viewName} id={id} section={section} />
-            </ErrorBoundary>
+          <div className="p-6">
+            <div className="mx-auto w-full max-w-7xl">
+              <ErrorBoundary>
+                <MainContent viewName={viewName} id={id} section={section} />
+              </ErrorBoundary>
+            </div>
           </div>
-        </main>
+        </ScrollArea>
       </div>
     </div>
   );
