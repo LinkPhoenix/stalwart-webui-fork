@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.7] - 2026-07-29
+
+### Added
+- Ctrl+K / Cmd+K command palette to search pages, form sections and fields across the admin panel, with an ESC hint badge instead of the close cross.
+- WebUI version and update action with a confirmation modal in the Web Applications list.
+- Calendar date picker with time input replacing native datetime inputs in all schema-driven forms.
+- Shared styled ScrollArea used app-wide, including the sidebar and the command palette.
+- Development proxy forwarding API and JMAP requests to a local Stalwart server.
+
+### Changed
+- Renamed the package to `stalwart-webui-fork` to identify the community fork.
+- Sidebar behaves as an animated accordion: expanding a section collapses the others at the same level, with a softer hover.
+- Main content is horizontally centered.
+- Form fields now use a background color distinct from card surfaces.
+- Feature pages and the admin shell are code-split with React.lazy to reduce the initial bundle size.
+- Switches show green when enabled and red when disabled.
+
+### Fixed
+- Table header background is clipped inside the rounded border, removing the square corner visible behind the radius.
+- Sidebar section stays synced with the URL on programmatic navigation and full page loads.
+
 ## [1.0.6] - 2026-07-28
 
 ### Added

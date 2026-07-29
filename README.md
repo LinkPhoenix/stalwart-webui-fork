@@ -8,6 +8,10 @@
   Web-based User Interface for Stalwart 🛡️
 </h3>
 
+<p align="center">
+  Community fork of <a href="https://github.com/stalwartlabs/webui">stalwartlabs/webui</a> with UI improvements and fixes.
+</p>
+
 <br>
 
 <p align="center">
