@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file. This projec
 ### Fixed
 - Section URLs without a view (e.g. /admin) redirect to the first accessible page instead of the "Select a view" empty state.
 
+### Removed
+- The Web Applications list no longer shows a "Version" column or an "Update" button, because Stalwart does not expose the installed version of each web application and `/latest/` GitHub URLs hide it.
+
 ## [1.0.7] - 2026-07-29
 
 ### Added

@@ -28,7 +28,6 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatSize as fmtSize, formatDuration as fmtDuration } from '@/lib/durationFormat';
-import { WebAppVersionCell } from '@/features/webapps/WebAppVersionCell';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -355,15 +354,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
     return { obj, schema: schem, list };
   }, [schema, viewName]);
 
-  // The Web Applications list gets an extra client-side column showing the
-  // installed version of the WebUI app (and an update action when a newer
-  // release exists), which the server does not expose as an object property.
-  const isAppList = viewName === 'x:Application';
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
-    if (!isAppList) return columns;
-    return [...columns, { name: 'x:webuiVersion', label: t('webApps.version', 'Version') }];
-  }, [resolved?.list?.columns, isAppList, t]);
+    return columns;
+  }, [resolved?.list?.columns]);
 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -431,7 +425,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       try {
         const accountId = getAccountId(obj.objectName);
-        const properties = ['id', ...list.columns.map((c) => c.name), ...(isAppList ? ['resourceUrl'] : [])];
+        const properties = ['id', ...list.columns.map((c) => c.name)];
         const filter = buildFilter();
         const sortArr = buildSort();
 
@@ -481,7 +475,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, isAppList, t],
+    [resolved, schema, buildFilter, buildSort],
   );
 
   useEffect(() => {
@@ -1296,10 +1290,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       )}
                       {displayColumns.map((col) => (
                         <td key={col.name} className="px-3 py-2">
-                          {col.name === 'x:webuiVersion' ? (
-                            <WebAppVersionCell resourceUrl={item.resourceUrl} />
-                          ) : (
-                            renderCellValue(
+                          {renderCellValue(
                               item[col.name],
                               fields[col.name],
                               col.name,
@@ -1307,7 +1298,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                               resolved.obj.objectName,
                               getDisplayName,
                             )
-                          )}
+                          }
                         </td>
                       ))}
                       {hasItemActions && <td className="px-3 py-2 text-right">{renderItemActions(item)}</td>}
