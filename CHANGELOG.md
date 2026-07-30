@@ -5,7 +5,6 @@ All notable changes to this project will be documented in this file. This projec
 ## [1.0.9] - 2026-07-30
 
 ### Added
-- Progressive Web App support: web app manifest, service worker, and a full icon set (192/512/maskable/apple-touch) generated from the Stalwart mark. `/api` and `/jmap` requests are never cached, so authenticated mail data can't end up in offline storage.
 - Level and Event filters on the Log Entries list, applied client-side since the backend doesn't support filtering on these properties yet. Event uses a searchable combobox given its ~600 possible values.
 - Rate-limited manual Refresh button on the Log Entries list (one click per 5 seconds) ([webui#8](https://github.com/stalwartlabs/webui/issues/8)).
 - Role and Usage/Quota columns on the Accounts list, replacing Created At ([webui#12](https://github.com/stalwartlabs/webui/issues/12)).
@@ -30,6 +29,7 @@ All notable changes to this project will be documented in this file. This projec
 - Icon/label alignment in backend select triggers.
 - Web Applications list shows an Enabled column again.
 - Appearance Corners preview: only the Rounded choice forces rounded radius on its card and sample; Square stays sharp even when the global theme is square.
+- Removed the experimental PWA/service worker: it precached `index.html` with `<base href="/">`, which broke Stalwart's mount-path rewrite (`/admin`, `/account`) and produced a blank UI. Aligns with upstream webui, which does not ship a service worker.
 
 ### Known limitations (confirmed backend-side, not fixable from this fork)
 - Level/Event filters on Log Entries are client-side only (see Added above) because the backend's JMAP query engine rejects `level`/`event` as filter conditions ([webui#15](https://github.com/stalwartlabs/webui/issues/15)).
