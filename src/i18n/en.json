@@ -313,7 +313,8 @@
     "showing": "Showing {{from}}-{{to}} of {{total}} {{name}}",
     "showingItems": "Showing {{count}} items",
     "sort": "Sort",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "unlimitedQuota": "Unlimited"
   },
   "login": {
     "continue": "Continue",

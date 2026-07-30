@@ -13,6 +13,7 @@ import { useAccountStore } from '@/stores/accountStore';
 import { useUIStore } from '@/stores/uiStore';
 import { fetchSession, fetchSchema, fetchAccountInfo } from '@/services/jmap/client';
 import { withClientLogFilters } from '@/lib/logFilters';
+import { withAccountListColumns } from '@/lib/accountColumns';
 import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -148,7 +149,7 @@ export default function AdminPanel() {
 
         if (cancelled) return;
 
-        setSchema(withClientLogFilters(schemaData));
+        setSchema(withAccountListColumns(withClientLogFilters(schemaData)));
 
         setAccountInfo(accountData.permissions, accountData.edition, accountData.locale);
         setLocale(accountData.locale);

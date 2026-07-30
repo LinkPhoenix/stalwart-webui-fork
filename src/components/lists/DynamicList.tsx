@@ -185,6 +185,35 @@ function formatNumber(value: unknown): string {
   return value.toLocaleString();
 }
 
+function formatUserRole(item: Record<string, unknown>, schema: Schema): React.ReactNode {
+  // The x:Account list merges field definitions across its User/Group
+  // variants (see getFieldsRecord), and Group's `roles` property points to
+  // a different object (`x:Roles`) that overrides User's (`x:UserRoles`)
+  // in that merge. This list only ever shows Users, so resolve the label
+  // directly against x:UserRoles instead of the ambiguous merged field.
+  const roles = item.roles as Record<string, unknown> | undefined;
+  const type = roles && typeof roles['@type'] === 'string' ? roles['@type'] : undefined;
+  if (!type) return <span className="text-muted-foreground">-</span>;
+
+  const variantSchema = schema.schemas['x:UserRoles'];
+  if (variantSchema?.type === 'multiple') {
+    const variant = variantSchema.variants.find((v) => v.name === type);
+    if (variant) return <Badge variant="secondary">{variant.label}</Badge>;
+  }
+  return type;
+}
+
+function formatQuotaUsage(item: Record<string, unknown>, t: TFn): string {
+  const used = typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0;
+  const quotas = item.quotas as Record<string, unknown> | undefined;
+  const limit = quotas && typeof quotas.maxDiskQuota === 'number' ? quotas.maxDiskQuota : 0;
+  const usedLabel = formatSize(used);
+  if (!limit) {
+    return `${usedLabel} / ${t('list.unlimitedQuota', 'Unlimited')}`;
+  }
+  return `${usedLabel} / ${formatSize(limit)}`;
+}
+
 function getFieldsRecord(resolvedSchema: ResolvedSchema): Record<string, Field> {
   if (resolvedSchema.type === 'single') {
     return resolvedSchema.fields.properties;
@@ -307,7 +336,14 @@ function renderCellValue(
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const obj = value as Record<string, unknown>;
         if ('@type' in obj && typeof obj['@type'] === 'string') {
-          return obj['@type'];
+          const variantSchema = schema.schemas[ft.objectName];
+          if (variantSchema?.type === 'multiple') {
+            const variant = variantSchema.variants.find((v) => v.name === obj['@type']);
+            if (variant) {
+              return <Badge variant="secondary">{variant.label}</Badge>;
+            }
+          }
+          return String(obj['@type']);
         }
       }
       return <span className="text-muted-foreground">-</span>;
@@ -397,6 +433,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const objectName = resolved?.obj.objectName;
   const isWebApplications = viewName === 'x:Application' || objectName === 'x:Application';
   const isLogEntries = viewName === 'x:Log' || objectName === 'x:Log';
+  const isAccountsList = viewName === 'x:Account/User';
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -555,6 +592,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
         if (isWebApplications && !properties.includes('enabled')) {
           properties.push('enabled');
         }
+        if (isAccountsList) {
+          const quotaIdx = properties.indexOf('quotaUsage');
+          if (quotaIdx !== -1) {
+            properties.splice(quotaIdx, 1, 'usedDiskQuota', 'quotas');
+          }
+        }
         const filter = buildFilter();
         const sortArr = buildSort();
 
@@ -626,7 +669,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, isWebApplications, activeClientFilters],
+    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, activeClientFilters],
   );
 
   useEffect(() => {
@@ -1529,6 +1572,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             ) : (
                               <X className="h-4 w-4 text-red-500" />
                             )
+                          ) : isAccountsList && col.name === 'roles' ? (
+                            formatUserRole(item, schema!)
+                          ) : isAccountsList && col.name === 'quotaUsage' ? (
+                            formatQuotaUsage(item, t)
                           ) : (
                             renderCellValue(
                               item[col.name],
