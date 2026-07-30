@@ -126,8 +126,8 @@ function ViewField({ label, field, value, schema }: { label: string; field: Fiel
   const isBlock = isBlockType(field.type, value);
 
   return (
-    <div className={isBlock ? 'space-y-1' : 'flex items-baseline gap-2'}>
-      <dt className="flex items-center gap-1 text-sm text-muted-foreground shrink-0 min-w-[140px]">
+    <div className={isBlock ? 'space-y-1' : 'flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2'}>
+      <dt className="flex items-center gap-1 text-sm text-muted-foreground shrink-0 sm:min-w-[140px]">
         {label}
         {field.description && (
           <TooltipProvider>
@@ -144,7 +144,7 @@ function ViewField({ label, field, value, schema }: { label: string; field: Fiel
           </TooltipProvider>
         )}
       </dt>
-      <dd className="text-sm min-w-0">
+      <dd className="text-sm min-w-0 break-words">
         <ViewValue type={field.type} value={value} schema={schema} />
       </dd>
     </div>

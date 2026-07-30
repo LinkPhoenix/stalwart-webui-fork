@@ -1392,13 +1392,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }
 
   return (
-    <div className="relative space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{list.title}</h1>
-          {list.subtitle && <p className="text-sm text-muted-foreground mt-1">{list.subtitle}</p>}
+    <div className="relative min-w-0 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight truncate">{list.title}</h1>
+          {list.subtitle && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{list.subtitle}</p>}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {hasMassActions && selectedIds.size > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1559,16 +1559,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
         </Card>
       )}
 
-      <div className="rounded-lg border bg-background shadow-sm">
+      <div className="min-w-0 rounded-lg border bg-background shadow-sm">
         {/* The scroll container must clip with the parent's inner radius
             (outer radius minus the 1px border), otherwise filled header rows
-            paint square corners behind the rounded border. */}
-        <div className="overflow-x-auto rounded-[calc(var(--radius-lg)-1px)]">
-          <table className="w-full text-sm">
+            paint square corners behind the rounded border.
+            `w-max min-w-full` keeps the table at least as wide as the card,
+            but lets wide column sets scroll horizontally inside this wrapper. */}
+        <div className="overflow-x-auto overscroll-x-contain rounded-[calc(var(--radius-lg)-1px)] [-webkit-overflow-scrolling:touch]">
+          <table className="w-max min-w-full text-sm">
             <thead>
               <tr className="border-b bg-muted">
                 {hasMassActions && (
-                  <th className="w-10 px-3 py-3">
+                  <th className="w-10 px-3 py-3 whitespace-nowrap">
                     <Checkbox
                       checked={items.length > 0 && selectedIds.size === items.length}
                       onCheckedChange={toggleSelectAll}
@@ -1577,7 +1579,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
                   </th>
                 )}
                 {displayColumns.map((col) => (
-                  <th key={col.name} className="px-3 py-3 text-left font-medium text-muted-foreground">
+                  <th
+                    key={col.name}
+                    className="px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap"
+                  >
                     <div className="flex items-center">
                       {col.label}
                       {renderSortIndicator(col.name)}
@@ -1585,7 +1590,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                   </th>
                 ))}
                 {hasItemActions && (
-                  <th className="w-12 px-3 py-3 text-right font-medium text-muted-foreground">
+                  <th className="w-12 px-3 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">
                     {t('list.actions', 'Actions')}
                   </th>
                 )}
@@ -1620,7 +1625,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       onClick={() => handleRowClick(item)}
                     >
                       {hasMassActions && (
-                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-3 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(itemId)}
                             onCheckedChange={() => toggleSelectItem(itemId)}
@@ -1629,7 +1634,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         </td>
                       )}
                       {displayColumns.map((col) => (
-                        <td key={col.name} className="px-3 py-2">
+                        <td key={col.name} className="px-3 py-2 whitespace-nowrap">
                           {isWebApplications && col.name === 'enabled' && !fields[col.name] ? (
                             item.enabled === true ? (
                               <Check className="h-4 w-4 text-green-600" />
@@ -1664,7 +1669,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           )}
                         </td>
                       ))}
-                      {hasItemActions && <td className="px-3 py-2 text-right">{renderItemActions(item)}</td>}
+                      {hasItemActions && (
+                        <td className="px-3 py-2 text-right whitespace-nowrap">{renderItemActions(item)}</td>
+                      )}
                     </tr>
                   );
                 })
@@ -1675,8 +1682,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
       </div>
 
       {items.length > 0 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+          <div className="min-w-0">
             {total !== null
               ? t('list.showing', 'Showing {{from}}-{{to}} of {{total}} {{name}}', {
                   from: rangeStart,
@@ -1688,7 +1695,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                   count: items.length,
                 })}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             <Button variant="outline" size="sm" disabled={!hasPrevPage || loading} onClick={handlePrevPage}>
               {t('list.previous', 'Previous')}
             </Button>

@@ -18,8 +18,16 @@ const ScrollArea = React.forwardRef<
     viewportClassName?: string;
   }
 >(({ className, viewportClassName, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root ref={ref} className={cn('relative overflow-hidden', className)} {...props}>
-    <ScrollAreaPrimitive.Viewport className={cn('h-full w-full rounded-[inherit]', viewportClassName)}>
+  <ScrollAreaPrimitive.Root ref={ref} className={cn('relative min-w-0 overflow-hidden', className)} {...props}>
+    {/*
+      Radix wraps children in a `display: table` div with an intrinsic min-width.
+      That lets wide tables expand the whole shell and clip under overflow-x:hidden,
+      so horizontal scroll never reaches the table's own overflow-x-auto wrapper.
+      Force the inner wrapper to shrink to the viewport width instead.
+    */}
+    <ScrollAreaPrimitive.Viewport
+      className={cn('h-full w-full rounded-[inherit] [&>div]:!block [&>div]:!min-w-0', viewportClassName)}
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />

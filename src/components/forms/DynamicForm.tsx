@@ -743,7 +743,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
   const sectionsToRender = buildSections(combinedForm, currentFields, isCreate, edition);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
         <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />
@@ -845,7 +845,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
         </Card>
       ))}
 
-      <div className="flex items-center justify-between pt-2 pb-8">
+      <div className="flex flex-col-reverse gap-3 pt-2 pb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {canDelete && (
             <Button type="button" variant="destructive" disabled={saving} onClick={() => setDeleteConfirmOpen(true)}>
@@ -854,7 +854,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {isDirty && (
             <span className="text-xs text-muted-foreground">{t('form.unsavedChangesLabel', 'Unsaved changes')}</span>
           )}

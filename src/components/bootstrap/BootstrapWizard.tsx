@@ -408,9 +408,9 @@ function WizardShell({ children }: { children: React.ReactNode }) {
       <header className="flex items-center px-6 py-4 border-b bg-background">
         <DefaultLogo />
       </header>
-      <ScrollArea role="main" className="flex-1">
-        <div className="p-6">
-          <div className="mx-auto max-w-3xl">{children}</div>
+      <ScrollArea role="main" className="min-w-0 flex-1">
+        <div className="min-w-0 p-4 sm:p-6">
+          <div className="mx-auto w-full min-w-0 max-w-3xl">{children}</div>
         </div>
       </ScrollArea>
     </div>

@@ -315,14 +315,14 @@ export default function AdminPanel() {
   return (
     <div className="flex h-screen flex-col">
       <TopBar />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1">
         <Sidebar />
         <ScrollArea
           role="main"
-          className={`flex-1 bg-content-background transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
+          className={`min-w-0 flex-1 bg-content-background transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
         >
-          <div className="p-6">
-            <div className="mx-auto w-full max-w-7xl">
+          <div className="min-w-0 p-4 sm:p-6">
+            <div className="mx-auto w-full min-w-0 max-w-7xl">
               {/* Keyed on the active account: forces MainContent (and every
                   view it renders) to fully remount on switch, so
                   account-scoped views can't keep showing stale data fetched
