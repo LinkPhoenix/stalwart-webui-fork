@@ -1477,12 +1477,12 @@ function EmbeddedObjectField({
         <Label className="text-sm font-medium">{formField.label ?? t('field.type', 'Type')}</Label>
         <Select value={currentType} onValueChange={handleVariantChange} disabled={readOnly}>
           <SelectTrigger>
-            <span className="flex flex-1 items-center gap-2 overflow-hidden">
+            <div className="flex flex-1 items-center gap-2 overflow-hidden">
               <BackendIcon backend={currentType} />
               <span className="truncate">
                 {selectedVariantLabel || t('form.selectType', 'Select type...')}
               </span>
-            </span>
+            </div>
           </SelectTrigger>
           <SelectContent>
             {resolvedSchema.variants.map((v) => (
