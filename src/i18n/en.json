@@ -16,9 +16,12 @@
     "switchToDark": "Switch to dark mode",
     "switchToLight": "Switch to light mode",
     "theme": {
+      "amber": "Amber",
       "forest": "Forest",
       "ocean": "Ocean",
+      "rose": "Rose",
       "stalwart": "Stalwart",
+      "teal": "Teal",
       "violet": "Violet"
     }
   },

@@ -9,7 +9,7 @@ import { persist } from 'zustand/middleware';
 import { getApiBaseUrl } from '@/services/api';
 
 export type Theme = 'light' | 'dark';
-export type ColorTheme = 'stalwart' | 'ocean' | 'forest' | 'violet';
+export type ColorTheme = 'stalwart' | 'ocean' | 'forest' | 'violet' | 'rose' | 'amber' | 'teal';
 export type Radius = 'rounded' | 'square';
 
 let logoAbortController: AbortController | null = null;
@@ -73,6 +73,9 @@ export const COLOR_THEMES: { value: ColorTheme; labelKey: string; fallback: stri
   { value: 'ocean', labelKey: 'appearance.theme.ocean', fallback: 'Ocean', swatch: 'oklch(0.546 0.215 262.9)' },
   { value: 'forest', labelKey: 'appearance.theme.forest', fallback: 'Forest', swatch: 'oklch(0.527 0.137 150.1)' },
   { value: 'violet', labelKey: 'appearance.theme.violet', fallback: 'Violet', swatch: 'oklch(0.541 0.281 293)' },
+  { value: 'rose', labelKey: 'appearance.theme.rose', fallback: 'Rose', swatch: 'oklch(0.577 0.245 12)' },
+  { value: 'amber', labelKey: 'appearance.theme.amber', fallback: 'Amber', swatch: 'oklch(0.65 0.16 70)' },
+  { value: 'teal', labelKey: 'appearance.theme.teal', fallback: 'Teal', swatch: 'oklch(0.55 0.13 195)' },
 ];
 
 export const useUIStore = create<UIState>()(
@@ -80,8 +83,8 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       theme:
         typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-      colorTheme: 'stalwart',
-      radius: 'rounded',
+      colorTheme: 'ocean',
+      radius: 'square',
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
       activeSection: '',
       logoUrl: null,
@@ -166,8 +169,8 @@ export const useUIStore = create<UIState>()(
         return (state) => {
           if (state) {
             applyThemeClass(state.theme);
-            applyColorThemeAttribute(state.colorTheme ?? 'stalwart');
-            applyRadiusAttribute(state.radius ?? 'rounded');
+            applyColorThemeAttribute(state.colorTheme ?? 'ocean');
+            applyRadiusAttribute(state.radius ?? 'square');
           }
         };
       },

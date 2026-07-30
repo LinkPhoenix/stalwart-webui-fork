@@ -25,7 +25,14 @@ import { getBasePath } from './lib/basePath';
     const dark = theme === 'dark' || (theme !== 'light' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', dark);
     const colorTheme = state?.colorTheme;
-    if (colorTheme === 'ocean' || colorTheme === 'forest' || colorTheme === 'violet') {
+    if (
+      colorTheme === 'ocean' ||
+      colorTheme === 'forest' ||
+      colorTheme === 'violet' ||
+      colorTheme === 'rose' ||
+      colorTheme === 'amber' ||
+      colorTheme === 'teal'
+    ) {
       document.documentElement.dataset.theme = colorTheme;
     }
     if (state?.radius === 'square') {
