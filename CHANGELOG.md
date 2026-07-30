@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file. This projec
 - Web Applications list shows an Enabled column again.
 - Appearance Corners preview: only the Rounded choice forces rounded radius on its card and sample; Square stays sharp even when the global theme is square.
 - Removed the experimental PWA/service worker: it precached `index.html` with `<base href="/">`, which broke Stalwart's mount-path rewrite (`/admin`, `/account`) and produced a blank UI. Aligns with upstream webui, which does not ship a service worker.
+- iOS home-screen Web App support without a service worker: `apple-touch-icon` plus `apple-mobile-web-app-title` set to "Stalwart".
 
 ### Known limitations (confirmed backend-side, not fixable from this fork)
 - Level/Event filters on Log Entries are client-side only (see Added above) because the backend's JMAP query engine rejects `level`/`event` as filter conditions ([webui#15](https://github.com/stalwartlabs/webui/issues/15)).
