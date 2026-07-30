@@ -24,6 +24,7 @@ import { ModeToggle } from '@/components/common/ModeToggle';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
+import { findLastVisitedLinkInLayout } from '@/lib/lastVisited';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oauth';
@@ -152,7 +153,9 @@ export function TopBar() {
                         onClick={() => {
                           setActiveSection(layout.name);
                           const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
+                          const lastLink = findLastVisitedLinkInLayout(schema, layout, edition, canGet, hasPermission);
                           const firstLink =
+                            lastLink ??
                             findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPermission) ??
                             findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPermission);
                           if (firstLink) {

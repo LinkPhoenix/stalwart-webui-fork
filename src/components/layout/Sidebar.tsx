@@ -25,6 +25,7 @@ import {
   isLinkEnterprise,
   isLinkVisible,
 } from '@/lib/layout';
+import { findLastVisitedLinkInLayout, setLastVisitedSection } from '@/lib/lastVisited';
 import type { Layout, LayoutItem, LayoutSubItem } from '@/types/schema';
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
@@ -185,6 +186,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
           if (isLocked) {
             onUpsell();
           } else {
+            setLastVisitedSection(sectionName, item.viewName);
             navigate(path);
           }
         }}
@@ -270,6 +272,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
           if (isLocked) {
             onUpsell();
           } else {
+            setLastVisitedSection(sectionName, viewName);
             navigate(path);
           }
         }}
@@ -365,7 +368,9 @@ export function Sidebar() {
   const handleSectionClick = (target: Layout) => {
     setActiveSection(target.name);
     const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    const last = findLastVisitedLinkInLayout(schema, target, edition, canGet, hasPermission);
     const first =
+      last ??
       findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
       findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
     if (first) navigate(`/${target.name}/${first}`);
