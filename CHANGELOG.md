@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.1.0] - 2026-07-30
+
+### Fixed
+- Mobile admin shell and lists: wide tables no longer expand/clip the page. The shared ScrollArea constrains content width, tables scroll horizontally inside their card, and list Create / pagination actions stay visible in the mobile viewport.
+- Form and detail layouts wrap more cleanly on narrow screens (action bars, label/value rows).
+
+### Changed
+- Negative account disk-usage values (stale Stalwart quota counters) are shown in red with an info tooltip that explains how to recalculate usage via Tasks (Perform account maintenance operations → Recalculate storage quota usage, or store-wide Reset all user quotas).
+
 ## [1.0.9] - 2026-07-30
 
 ### Added

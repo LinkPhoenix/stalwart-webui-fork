@@ -34,3 +34,5 @@ outputs/
 .vite_*.log
 .tmp_*
 *.py
+webui.zip
+release_body.md
