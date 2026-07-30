@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ObjectPicker } from '@/components/common/ObjectPicker';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { toast } from '@/hooks/use-toast';
@@ -59,7 +60,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAccountStore } from '@/stores/accountStore';
 import { useCacheStore } from '@/stores/cacheStore';
 import { resolveObject, resolveSchema, resolveList, getDisplayProperty } from '@/lib/schemaResolver';
-import { jmapGetBatched, jmapQueryAll, jmapQueryAndGet, jmapSet, getAccountId } from '@/services/jmap/client';
+import { jmapGetBatched, jmapQueryAll, jmapQueryAndGet, jmapQueryAllAndGet, jmapSet, getAccountId } from '@/services/jmap/client';
 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
@@ -329,6 +330,12 @@ interface ConfirmAction {
   onConfirm: () => void;
 }
 
+
+function isActiveWebApplication(item: Record<string, unknown>): boolean {
+  const prefixes = item.urlPrefix;
+  if (!Array.isArray(prefixes)) return false;
+  return prefixes.includes('/admin') || prefixes.includes('/account');
+}
 interface DynamicListProps {
   viewName: string;
 }
@@ -383,6 +390,36 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [sort, setSort] = useState<SortState | null>(readUrlSort);
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [activeWebApp, setActiveWebApp] = useState<Record<string, unknown> | null>(null);
+
+  const objectName = resolved?.obj.objectName;
+  const isWebApplications = objectName === 'x:Application';
+
+  useEffect(() => {
+    if (!isWebApplications || !schema) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const accountId = getAccountId('x:Application');
+        const result = await jmapQueryAllAndGet(
+          'x:Application',
+          accountId,
+          {},
+          ['id', 'description', 'enabled', 'urlPrefix'],
+        );
+        if (cancelled) return;
+        const active = result.list.find((item) => isActiveWebApplication(item));
+        setActiveWebApp(active ?? null);
+      } catch (err) {
+        console.error('Failed to fetch active web application:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isWebApplications, schema]);
 
   useResetOnChange(viewName, () => {
     setItems([]);
@@ -400,7 +437,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setSort(readUrlSort());
   });
 
-  const objectName = resolved?.obj.objectName;
   const buildFilter = useCallback((): Record<string, unknown> => {
     return buildJmapFilter({
       appliedFilters,
@@ -1219,6 +1255,25 @@ export function DynamicList({ viewName }: DynamicListProps) {
         </div>
       )}
 
+      {isWebApplications && activeWebApp && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t('webApplications.activeWebUI', 'Active WebUI')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            <p className="text-sm text-muted-foreground">
+              {String(activeWebApp.description ?? '-')}
+            </p>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">{t('webApplications.version', 'Version')}:</span>
+              <Badge variant="secondary">{__APP_VERSION__}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="rounded-lg border bg-background shadow-sm">
         {/* The scroll container must clip with the parent's inner radius
             (outer radius minus the 1px border), otherwise filled header rows
@@ -1234,6 +1289,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       onCheckedChange={toggleSelectAll}
                       aria-label={t('list.selectAll', 'Select all')}
                     />
+                  </th>
+                )}
+                {isWebApplications && (
+                  <th className="w-16 px-3 py-3 text-left font-medium text-muted-foreground">
+                    {t('list.active', 'Active')}
                   </th>
                 )}
                 {displayColumns.map((col) => (
@@ -1255,7 +1315,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               {loading && items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0) + (isWebApplications ? 1 : 0)}
                     className="px-3 py-12 text-center"
                   >
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
@@ -1264,7 +1324,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               ) : items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0) + (isWebApplications ? 1 : 0)}
                     className="px-3 py-12 text-center text-muted-foreground"
                   >
                     {t('list.noResults', 'No results found')}
@@ -1286,6 +1346,15 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             onCheckedChange={() => toggleSelectItem(itemId)}
                             aria-label={t('list.selectItem', 'Select item')}
                           />
+                        </td>
+                      )}
+                      {isWebApplications && (
+                        <td className="px-3 py-2">
+                          {activeWebApp?.id === item.id ? (
+                            <Badge variant="default">{t('list.active', 'Active')}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                       )}
                       {displayColumns.map((col) => (

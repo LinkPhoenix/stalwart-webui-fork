@@ -309,7 +309,8 @@
     "showing": "Showing {{from}}-{{to}} of {{total}} {{name}}",
     "showingItems": "Showing {{count}} items",
     "sort": "Sort",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "active": "Active"
   },
   "login": {
     "continue": "Continue",
@@ -397,5 +398,9 @@
     "failedToLoad": "Failed to load",
     "noGetResponse": "No get response",
     "objectNotFound": "Object not found"
+  },
+  "webApplications": {
+    "activeWebUI": "Active WebUI",
+    "version": "Version"
   }
 }
