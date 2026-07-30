@@ -924,6 +924,19 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
     onChange(next.toISOString());
   };
 
+  const formatClock = (d: Date): string =>
+    `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+  /** Empty fields open on "now" so the calendar and time selects start useful. */
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next && !parsed) {
+      const now = new Date();
+      now.setSeconds(0, 0);
+      onChange(now.toISOString());
+    }
+  };
+
   if (readOnly) {
     if (!strValue) {
       return <span className="text-sm text-muted-foreground italic">{t('field.notSet', 'Not set')}</span>;
@@ -944,7 +957,7 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
 
   return (
     <div className="flex items-center gap-2">
-      <Popover open={open} onOpenChange={setOpen} modal={false}>
+      <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -971,17 +984,17 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
           <Calendar
             mode="single"
             selected={parsed ?? undefined}
-            defaultMonth={parsed ?? undefined}
+            defaultMonth={parsed ?? new Date()}
             onSelect={(day) => {
               if (!day) return;
-              commit(day, timeValue || '00:00');
+              commit(day, timeValue || formatClock(new Date()));
             }}
             autoFocus
           />
           <div className="flex items-center gap-2 border-t bg-background p-3">
             <Clock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <DateTimeTimeSelect
-              value={timeValue || '00:00'}
+              value={timeValue || formatClock(new Date())}
               disabled={!parsed}
               onChange={(next) => {
                 if (parsed) commit(parsed, next);

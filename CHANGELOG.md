@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file. This projec
 - Mobile admin shell and lists: wide tables no longer expand/clip the page. The shared ScrollArea constrains content width, tables scroll horizontally inside their card, and list Create / pagination actions stay visible in the mobile viewport.
 - Form and detail layouts wrap more cleanly on narrow screens (action bars, label/value rows).
 - Date/time picker in dark mode: replaced the native time input (invisible clock icon + always-light popup) with themed hour/minute selects and a visible Clock icon; set `color-scheme` on light/dark themes so remaining native date controls follow the UI.
+- Empty date/time fields open prefilled with the current date and time so the calendar and hour/minute selects start on a useful default.
 
 ### Changed
 - Negative account disk-usage values (stale Stalwart quota counters) are shown in red with an info tooltip that explains how to recalculate usage via Tasks (Perform account maintenance operations → Recalculate storage quota usage, or store-wide Reset all user quotas).
