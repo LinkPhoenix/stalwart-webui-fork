@@ -418,6 +418,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const viewToSection = useSchemaStore((s) => s.viewToSection);
   const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
   const edition = useAccountStore((s) => s.edition);
+  // Reactive, unlike the getAccountId() snapshot read inside fetchData: needed
+  // so switching accounts from the profile dropdown (a pure store update with
+  // no navigation) re-triggers the fetch effect below for account-scoped
+  // views (Mailboxes, Calendars, Sieve Scripts, ...) even when viewName
+  // itself doesn't change.
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const [upsellOpen, setUpsellOpen] = useState(false);
 
   const resolved = useMemo(() => {
@@ -679,7 +685,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setCurrentAnchor(null);
     fetchData(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewName, sort, resolved?.list, appliedFilters]);
+  }, [viewName, sort, resolved?.list, appliedFilters, activeAccountId]);
 
   useEffect(() => {
     if (!schema || !resolved?.list || items.length === 0) return;
