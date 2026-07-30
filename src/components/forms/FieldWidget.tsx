@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { useAccountStore } from '@/stores/accountStore';
 import { useEffectiveEdition } from '@/components/forms/FormEditionContext';
 import { useObjectList, useObjectLabel, useNoPermissionMessage, type ObjectOption } from '@/lib/objectOptions';
+import { BackendIcon } from '@/components/common/BackendIcon';
 import { SECRET_MASK } from '@/lib/jmapUtils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { jmapGet, getAccountId } from '@/services/jmap/client';
@@ -1468,18 +1469,28 @@ function EmbeddedObjectField({
     onChange(newObj);
   };
 
+  const selectedVariantLabel = resolvedSchema.variants.find((v) => v.name === currentType)?.label;
+
   return (
     <div className="rounded-md border p-4 space-y-4">
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">{formField.label ?? t('field.type', 'Type')}</Label>
         <Select value={currentType} onValueChange={handleVariantChange} disabled={readOnly}>
           <SelectTrigger>
-            <SelectValue placeholder={t('form.selectType', 'Select type...')} />
+            <span className="flex flex-1 items-center gap-2 overflow-hidden">
+              <BackendIcon backend={currentType} />
+              <span className="truncate">
+                {selectedVariantLabel || t('form.selectType', 'Select type...')}
+              </span>
+            </span>
           </SelectTrigger>
           <SelectContent>
             {resolvedSchema.variants.map((v) => (
               <SelectItem key={v.name} value={v.name}>
-                {v.label}
+                <span className="flex items-center gap-2">
+                  <BackendIcon backend={v.name} />
+                  {v.label}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>

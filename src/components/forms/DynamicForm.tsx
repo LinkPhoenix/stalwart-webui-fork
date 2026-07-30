@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +53,7 @@ import { SECRET_MASK } from '@/lib/jmapUtils';
 import { toast } from '@/hooks/use-toast';
 import { logFormChange } from '@/lib/debug';
 import { FieldWidget } from '@/components/forms/FieldWidget';
+import { BackendIcon } from '@/components/common/BackendIcon';
 
 import type { Field, Fields, Form, FormField, Schema } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError, JmapMethodCall } from '@/types/jmap';
@@ -773,17 +774,26 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
                 if (!visible) return null;
 
                 if (formField.name === '@type' && sch.type === 'multiple') {
+                  const selectedVariantLabel = sch.variants.find((v) => v.name === selectedVariant)?.label;
                   return (
                     <div key="@type" className="space-y-1.5">
                       <Label className="text-sm font-medium">{formField.label}</Label>
                       <Select value={selectedVariant} onValueChange={handleVariantChange} disabled={readOnly}>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('form.selectType', 'Select type...')} />
+                          <span className="flex flex-1 items-center gap-2 overflow-hidden">
+                            <BackendIcon backend={selectedVariant} />
+                            <span className="truncate">
+                              {selectedVariantLabel || t('form.selectType', 'Select type...')}
+                            </span>
+                          </span>
                         </SelectTrigger>
                         <SelectContent>
                           {sch.variants.map((v) => (
                             <SelectItem key={v.name} value={v.name}>
-                              {v.label}
+                              <span className="flex items-center gap-2">
+                                <BackendIcon backend={v.name} />
+                                {v.label}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
