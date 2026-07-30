@@ -9,8 +9,7 @@ import { useTranslation } from 'react-i18next';
 import * as LucideIcons from 'lucide-react';
 const { Sun, Moon, User, LogOut, Check, Menu, Sparkles, Search } = LucideIcons;
 import { Button } from '@/components/ui/button';
-import { GlobalSearch } from '@/components/common/GlobalSearch';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { CommandPalette } from '@/components/common/CommandPalette';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +26,11 @@ import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleL
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oauth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccountStore } from '@/stores/accountStore';
 import { useSchemaStore } from '@/stores/schemaStore';
+
+const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
 function getIcon(name: string): LucideIcons.LucideIcon {
   const formatted = name
@@ -55,7 +56,18 @@ export function TopBar() {
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const schema = useSchemaStore((s) => s.schema);
   const [upsellOpen, setUpsellOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    }
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const navigableLayouts = schema
     ? visibleLayouts(schema, edition, (prefix) => hasObjectPermission(prefix, 'Get'), hasPermission)
@@ -81,7 +93,17 @@ export function TopBar() {
       </TooltipProvider>
 
       <div className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex">
-        <GlobalSearch />
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          className="flex h-9 w-full max-w-md items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent"
+        >
+          <Search className="h-4 w-4" />
+          <span className="flex-1 text-left">{t('globalSearch.placeholder', 'Search pages, fields, settings...')}</span>
+          <kbd className="pointer-events-none flex h-5 select-none items-center rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+            {IS_MAC ? '⌘K' : 'Ctrl K'}
+          </kbd>
+        </button>
       </div>
 
       <div className="ml-auto flex items-center gap-2 md:ml-0">
@@ -91,18 +113,13 @@ export function TopBar() {
           variant="ghost"
           size="icon"
           className="md:hidden"
-          onClick={() => setMobileSearchOpen(true)}
+          onClick={() => setPaletteOpen(true)}
           aria-label={t('search', 'Search')}
         >
           <Search className="h-4 w-4" />
         </Button>
 
-        <Dialog open={mobileSearchOpen} onOpenChange={setMobileSearchOpen}>
-          <DialogContent className="top-4 translate-y-0 max-w-[calc(100vw-2rem)] p-4">
-            <DialogTitle className="sr-only">{t('search', 'Search')}</DialogTitle>
-            <GlobalSearch autoFocus onAfterSelect={() => setMobileSearchOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t('toggleTheme', 'Toggle theme')}>
           {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}

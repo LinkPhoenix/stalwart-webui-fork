@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from './authStore';
+import { useCacheStore } from './cacheStore';
 
 const initialState = {
   accessToken: null,
@@ -21,6 +22,7 @@ const initialState = {
 describe('authStore', () => {
   beforeEach(() => {
     useAuthStore.setState(initialState);
+    useCacheStore.getState().clearAll();
     vi.restoreAllMocks();
   });
 
@@ -124,6 +126,29 @@ describe('authStore', () => {
 
       expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
     });
+
+    it('preserves an activeAccountId that exists in the new accounts', () => {
+      useAuthStore.setState({ activeAccountId: 'acc-2' });
+
+      useAuthStore.getState().setSession(
+        {
+          'acc-1': { name: 'Personal', isPersonal: true },
+          'acc-2': { name: 'Group', isPersonal: false },
+        },
+        'acc-1',
+        'https://api',
+      );
+
+      expect(useAuthStore.getState().activeAccountId).toBe('acc-2');
+    });
+
+    it('falls back to primaryAccountId when the previous activeAccountId is unknown', () => {
+      useAuthStore.setState({ activeAccountId: 'gone' });
+
+      useAuthStore.getState().setSession({ 'acc-1': { name: 'A', isPersonal: true } }, 'acc-1', 'https://api');
+
+      expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
+    });
   });
 
   describe('switchAccount', () => {
@@ -148,6 +173,35 @@ describe('authStore', () => {
 
       useAuthStore.getState().switchAccount('nonexistent');
       expect(useAuthStore.getState().activeAccountId).toBe('a1');
+    });
+
+    it('clears cached objects when the account changes', () => {
+      useCacheStore.getState().setDisplayNames('Mailbox', { m1: 'Inbox' });
+      useCacheStore.getState().setObjectList('Mailbox', [{ id: 'm1', label: 'Inbox' }]);
+      useAuthStore.setState({
+        accounts: {
+          a1: { name: 'A1', isPersonal: true },
+          a2: { name: 'A2', isPersonal: false },
+        },
+        activeAccountId: 'a1',
+      });
+
+      useAuthStore.getState().switchAccount('a2');
+
+      expect(useCacheStore.getState().displayNames).toEqual({});
+      expect(useCacheStore.getState().objectLists).toEqual({});
+    });
+
+    it('keeps the cache when switching to the already active account', () => {
+      useCacheStore.getState().setDisplayNames('Mailbox', { m1: 'Inbox' });
+      useAuthStore.setState({
+        accounts: { a1: { name: 'A1', isPersonal: true } },
+        activeAccountId: 'a1',
+      });
+
+      useAuthStore.getState().switchAccount('a1');
+
+      expect(useCacheStore.getState().getDisplayName('Mailbox', 'm1')).toBe('Inbox');
     });
   });
 

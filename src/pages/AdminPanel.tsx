@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,7 +17,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MainContent } from '@/components/layout/MainContent';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
-import { BootstrapWizard } from '@/components/bootstrap/BootstrapWizard';
+import { LoadingFallback } from '@/components/common/LoadingFallback';
 import {
   findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
@@ -25,7 +25,12 @@ import {
   visibleLayouts,
 } from '@/lib/layout';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Loader2 } from 'lucide-react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { friendlyName } from '@/hooks/useGlobalSearch';
+
+const BootstrapWizard = lazy(() =>
+  import('@/components/bootstrap/BootstrapWizard').then((m) => ({ default: m.BootstrapWizard })),
+);
 
 export default function AdminPanel() {
   const { t } = useTranslation();
@@ -69,15 +74,36 @@ export default function AdminPanel() {
   const setSchema = useSchemaStore((s) => s.setSchema);
   const setAccountInfo = useAccountStore((s) => s.setAccountInfo);
   const edition = useAccountStore((s) => s.edition);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
+  const permissions = useAccountStore((s) => s.permissions);
   const setSession = useAuthStore((s) => s.setSession);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const { canViewObject } = usePermissions();
 
   const [initError, setInitError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(!isSchemaLoaded);
+
+  const searchIndex = useSchemaStore((s) => s.searchIndex);
+  const pageTitle = useMemo(() => {
+    if (!section) return t('dashboard.title', 'Dashboard');
+    if (!viewName) return section;
+    let label: string | undefined;
+    for (const entry of searchIndex) {
+      if (entry.type !== 'link' || entry.viewName !== viewName) continue;
+      if (entry.section === section) {
+        label = entry.text;
+        break;
+      }
+      label ??= entry.text;
+    }
+    const name = label ?? friendlyName(viewName);
+    const title = id === 'new' ? t('form.createTitle', 'Create {{name}}', { name }) : name;
+    return `${title} · ${section}`;
+  }, [section, viewName, id, searchIndex, t]);
+
+  useDocumentTitle(pageTitle);
 
   useEffect(() => {
     const bypassToken = import.meta.env.VITE_ACCESS_TOKEN;
@@ -140,20 +166,19 @@ export default function AdminPanel() {
     };
   }, [isSchemaLoaded, setSession, setSchema, setAccountInfo, t]);
 
-  const hasPermission = useAccountStore((s) => s.hasPermission);
   const isBootstrapMode = useMemo(() => {
     if (!schema) return false;
     if (!canViewObject('x:Bootstrap')) return false;
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-    const hasPerm = (perm: string) => hasPermission(perm);
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    const hasPerm = (perm: string) => permissions.includes(perm);
     return visibleLayouts(schema, edition, canGet, hasPerm).length === 0;
-  }, [schema, canViewObject, edition, hasObjectPermission, hasPermission]);
+  }, [schema, canViewObject, edition, permissions]);
 
   useEffect(() => {
     if (!schema) return;
     if (isBootstrapMode) return;
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-    const hasPerm = (perm: string) => hasPermission(perm);
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    const hasPerm = (perm: string) => permissions.includes(perm);
     const layouts = visibleLayouts(schema, edition, canGet, hasPerm);
     const pickDefault = (): { layoutName: string; link: string | null } | null => {
       for (const layout of layouts) {
@@ -169,50 +194,46 @@ export default function AdminPanel() {
       return null;
     };
 
+    const redirectTo = (layoutName: string, link: string | null) => {
+      setActiveSection(layoutName);
+      if (link) navigate(`/${layoutName}/${link}`, { replace: true });
+    };
+
     if (section && viewName && !isLinkAccessible(schema, viewName, edition, canGet, hasPerm)) {
       const fallback = pickDefault();
       if (fallback && (fallback.layoutName !== section || fallback.link !== viewName)) {
-        setActiveSection(fallback.layoutName);
-        if (fallback.link) {
-          navigate(`/${fallback.layoutName}/${fallback.link}`, { replace: true });
-        }
+        redirectTo(fallback.layoutName, fallback.link);
         return;
       }
     }
 
+    if (section && viewName) {
+      const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
+      setActiveSection(ownLayout?.name ?? layouts[0]?.name ?? section);
+      return;
+    }
+
     if (section) {
-      setActiveSection(section);
+      const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
+      const ownLink = ownLayout
+        ? (findFirstAccessibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm) ??
+          findFirstVisibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm))
+        : null;
+      if (ownLayout && ownLink) {
+        redirectTo(ownLayout.name, ownLink);
+      } else {
+        const target = pickDefault();
+        if (target) redirectTo(target.layoutName, target.link);
+      }
       return;
     }
 
     const target = pickDefault();
-    if (target) {
-      setActiveSection(target.layoutName);
-      if (target.link) {
-        navigate(`/${target.layoutName}/${target.link}`, { replace: true });
-      }
-    }
-  }, [
-    section,
-    viewName,
-    schema,
-    setActiveSection,
-    navigate,
-    edition,
-    hasObjectPermission,
-    hasPermission,
-    isBootstrapMode,
-  ]);
+    if (target) redirectTo(target.layoutName, target.link);
+  }, [section, viewName, schema, setActiveSection, navigate, edition, permissions, isBootstrapMode]);
 
   if (initializing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{t('common.loading')}</p>
-        </div>
-      </div>
-    );
+    return <LoadingFallback fullScreen />;
   }
 
   if (initError) {
@@ -237,7 +258,9 @@ export default function AdminPanel() {
   if (isBootstrapMode) {
     return (
       <ErrorBoundary>
-        <BootstrapWizard />
+        <Suspense fallback={<LoadingFallback fullScreen />}>
+          <BootstrapWizard />
+        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -250,7 +273,7 @@ export default function AdminPanel() {
         <main
           className={`flex-1 overflow-auto bg-content-background p-6 transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
         >
-          <ErrorBoundary>
+          <ErrorBoundary key={activeAccountId ?? 'none'}>
             <MainContent viewName={viewName} id={id} section={section} />
           </ErrorBoundary>
         </main>

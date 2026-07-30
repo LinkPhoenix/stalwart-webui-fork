@@ -60,6 +60,7 @@
     "preset30d": "Last 30 days",
     "preset7d": "Last 7 days",
     "preset90d": "Last 90 days",
+    "title": "Dashboard",
     "to": "To"
   },
   "deliveryTrace": {
@@ -169,10 +170,12 @@
     "none": "None",
     "notSet": "Not set",
     "optional": "(optional)",
+    "pickDate": "Pick a date",
     "required": "required",
     "selectEllipsis": "Select...",
     "selectKey": "Select key...",
     "selectOptions": "Select options...",
+    "time": "Time",
     "type": "Type",
     "typeAndPressEnter": "Type and press Enter...",
     "unknownObjectType": "Unknown object type: {{name}}"
@@ -222,7 +225,10 @@
     "list": "List",
     "noResults": "No results found.",
     "pages": "Pages",
-    "settings": "Settings"
+    "placeholder": "Search pages, fields, settings...",
+    "settings": "Settings",
+    "title": "Search",
+    "typeToSearch": "Type to search the admin panel."
   },
   "jmapErrors": {
     "addressBookHasContents": "This address book has contacts. Remove them first.",
@@ -287,6 +293,7 @@
     "continue": "Continue",
     "error": "An unexpected error occurred",
     "prompt": "Enter your account name to continue",
+    "title": "Sign in",
     "usernamePlaceholder": "user@example.com"
   },
   "logo": {
@@ -305,6 +312,7 @@
     "missingParams": "Missing authorization code or state parameter",
     "processing": "Completing sign in...",
     "stateMismatch": "State parameter mismatch. Please try logging in again.",
+    "title": "Signing in",
     "tokenExchangeFailed": "Token exchange failed: {{status}} {{statusText}}"
   },
   "otp": {

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useState, useEffect, type KeyboardEvent } from 'react';
+import { useState, useEffect, useMemo, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBufferedValue, useResetOnChange } from '@/hooks/useBufferedValue';
 import ReactMarkdown from 'react-markdown';
@@ -20,8 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Calendar } from '@/components/ui/calendar';
 
-import { Plus, X, Eye, EyeOff, Loader2, Search, Check, ChevronRight } from 'lucide-react';
+import { Plus, X, Eye, EyeOff, Loader2, Search, Check, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -39,6 +40,7 @@ import {
   DURATION_UNITS,
 } from '@/lib/durationFormat';
 import { resolveSchema, resolveVariantForm, resolveObject, buildEmbeddedDefaults } from '@/lib/schemaResolver';
+import { cn } from '@/lib/utils';
 import { useAccountStore } from '@/stores/accountStore';
 import { useEffectiveEdition } from '@/components/forms/FormEditionContext';
 import { useObjectList, useObjectLabel, useNoPermissionMessage, type ObjectOption } from '@/lib/objectOptions';
@@ -831,60 +833,69 @@ interface DateTimeFieldProps {
   nullable?: boolean;
 }
 
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldProps) {
   const { t } = useTranslation();
   const strValue = typeof value === 'string' ? value : '';
 
-  const toLocal = (iso: string): string => {
-    if (!iso) return '';
-    try {
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return '';
-      return d.toISOString().slice(0, 16);
-    } catch {
-      return '';
-    }
-  };
+  const selected = useMemo(() => {
+    const d = strValue ? new Date(strValue) : null;
+    return d && !isNaN(d.getTime()) ? d : null;
+  }, [strValue]);
 
-  const toIso = (local: string): string | null => {
-    if (!local) return nullable ? null : '';
-    return new Date(local).toISOString();
-  };
+  const localTime = selected ? selected.toTimeString().slice(0, 5) : '';
 
-  const [local, setLocal] = useBufferedValue(strValue, toLocal);
-
-  const commit = () => {
-    const iso = toIso(local);
-    if (iso !== strValue) onChange(iso);
+  const commit = (day: Date, time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const next = new Date(day);
+    next.setHours(hours || 0, minutes || 0, 0, 0);
+    onChange(next.toISOString());
   };
 
   if (readOnly) {
     if (!strValue) {
       return <span className="text-sm text-muted-foreground italic">{t('field.notSet', 'Not set')}</span>;
     }
-    let formatted = strValue;
-    try {
-      const d = new Date(strValue);
-      if (!isNaN(d.getTime())) {
-        formatted = new Intl.DateTimeFormat(undefined, {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        }).format(d);
-      }
-      // eslint-disable-next-line no-empty
-    } catch {}
-    return <span className="text-sm">{formatted}</span>;
+    return <span className="text-sm">{selected ? DATE_TIME_FORMAT.format(selected) : strValue}</span>;
   }
 
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="datetime-local"
-        value={local}
-        onChange={(e) => setLocal(e.target.value)}
-        onBlur={commit}
-        className="flex-1"
-      />
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('flex-1 justify-start text-left font-normal', !selected && 'text-muted-foreground')}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {selected ? DATE_TIME_FORMAT.format(selected) : t('field.pickDate', 'Pick a date')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected ?? undefined}
+            defaultMonth={selected ?? undefined}
+            autoFocus
+            onSelect={(day) => {
+              if (day) commit(day, localTime || '00:00');
+            }}
+          />
+          <div className="border-t p-3">
+            <Input
+              type="time"
+              value={localTime}
+              disabled={!selected}
+              onChange={(e) => {
+                if (selected && e.target.value) commit(selected, e.target.value);
+              }}
+              aria-label={t('field.time', 'Time')}
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
       {nullable && strValue && (
         <Button
           type="button"

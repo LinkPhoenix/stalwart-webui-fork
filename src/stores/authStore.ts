@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCacheStore } from '@/stores/cacheStore';
 
 interface AccountInfo {
   name: string;
@@ -71,10 +72,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setSession: (accounts, primaryAccountId, apiUrl, maxObjectsInGet, maxObjectsInSet) => {
+        const current = get().activeAccountId;
         set({
           accounts,
           primaryAccountId,
-          activeAccountId: primaryAccountId,
+          activeAccountId: current && accounts[current] ? current : primaryAccountId,
           apiUrl,
           ...(maxObjectsInGet !== undefined ? { maxObjectsInGet } : {}),
           ...(maxObjectsInSet !== undefined ? { maxObjectsInSet } : {}),
@@ -82,9 +84,10 @@ export const useAuthStore = create<AuthState>()(
       },
 
       switchAccount: (accountId) => {
-        const { accounts } = get();
-        if (accounts[accountId]) {
+        const { accounts, activeAccountId } = get();
+        if (accounts[accountId] && accountId !== activeAccountId) {
           set({ activeAccountId: accountId });
+          useCacheStore.getState().clearAll();
         }
       },
 
@@ -134,6 +137,7 @@ export const useAuthStore = create<AuthState>()(
           tokenExpiresAt: state.tokenExpiresAt,
           tokenEndpoint: state.tokenEndpoint,
           endSessionEndpoint: state.endSessionEndpoint,
+          activeAccountId: state.activeAccountId,
         }) as AuthState,
     },
   ),

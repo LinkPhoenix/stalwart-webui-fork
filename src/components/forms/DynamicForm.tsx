@@ -742,7 +742,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
   const sectionsToRender = buildSections(combinedForm, currentFields, isCreate, edition);
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
         <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />

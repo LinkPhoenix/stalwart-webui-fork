@@ -6,9 +6,12 @@
 
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function NotFound() {
   const { t } = useTranslation();
+
+  useDocumentTitle(t('errors.notFound'));
 
   return (
     <div className="flex min-h-screen items-center justify-center">

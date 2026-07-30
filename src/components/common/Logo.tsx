@@ -77,5 +77,9 @@ export default function Logo() {
     return <img src={logoUrl} alt={t('logo.alt', 'Logo')} className="h-7 w-auto max-w-[220px] object-contain" />;
   }
 
+  if (!failed) {
+    return <div className="h-7" aria-hidden="true" />;
+  }
+
   return <DefaultLogo />;
 }

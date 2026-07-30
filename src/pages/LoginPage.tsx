@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -22,6 +23,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useDocumentTitle(t('login.title', 'Sign in'));
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useCacheStore } from '@/stores/cacheStore';
 import { useAccountStore } from '@/stores/accountStore';
@@ -12,11 +12,33 @@ import { resolveObject } from '@/lib/schemaResolver';
 import { DynamicList } from '@/components/lists/DynamicList';
 import { DynamicForm } from '@/components/forms/DynamicForm';
 import { DynamicViewPage } from '@/components/views/DynamicViewPage';
-import { DashboardView } from '@/features/dashboard/components/DashboardView';
-import { DeliveryTracePage } from '@/features/troubleshoot/DeliveryTracePage';
-import { LiveTracingPage } from '@/features/tracing/components/LiveTracingPage';
-import { TraceDetailView } from '@/features/tracing/components/TraceDetailView';
-import { ActionPage } from '@/features/actions/ActionPage';
+import { LoadingFallback } from '@/components/common/LoadingFallback';
+import type { Schema } from '@/types/schema';
+
+function lazyFeature<M, P>(load: () => Promise<M>, select: (module: M) => ComponentType<P>) {
+  return lazy(() => load().then((module) => ({ default: select(module) })));
+}
+
+const DashboardView = lazyFeature(
+  () => import('@/features/dashboard/components/DashboardView'),
+  (m) => m.DashboardView,
+);
+const DeliveryTracePage = lazyFeature(
+  () => import('@/features/troubleshoot/DeliveryTracePage'),
+  (m) => m.DeliveryTracePage,
+);
+const LiveTracingPage = lazyFeature(
+  () => import('@/features/tracing/components/LiveTracingPage'),
+  (m) => m.LiveTracingPage,
+);
+const TraceDetailView = lazyFeature(
+  () => import('@/features/tracing/components/TraceDetailView'),
+  (m) => m.TraceDetailView,
+);
+const ActionPage = lazyFeature(
+  () => import('@/features/actions/ActionPage'),
+  (m) => m.ActionPage,
+);
 
 interface MainContentProps {
   viewName?: string;
@@ -32,6 +54,10 @@ export function MainContent({ viewName, id, section }: MainContentProps) {
     invalidateAllObjectLists();
   }, [viewName, invalidateAllObjectLists]);
 
+  return <Suspense fallback={<LoadingFallback />}>{renderView(schema, viewName, id, section)}</Suspense>;
+}
+
+function renderView(schema: Schema | null, viewName?: string, id?: string, section?: string): ReactNode {
   if (!viewName) {
     return (
       <div className="flex items-center justify-center p-8 text-muted-foreground">Select a view from the sidebar.</div>
@@ -84,7 +110,7 @@ export function MainContent({ viewName, id, section }: MainContentProps) {
   }
 
   if (id) {
-    if (resolved.objectName === 'x:Trace' && id !== 'new') {
+    if (resolved.objectName === 'x:Trace') {
       return <TraceDetailView viewName={viewName} objectId={id} />;
     }
     const canUpdate = useAccountStore.getState().hasObjectPermission(resolved.permissionPrefix, 'Update');

@@ -24,6 +24,7 @@ interface CacheState {
   getObjectList: (key: string) => ObjectListEntry[] | undefined;
   invalidateObjectList: (key: string) => void;
   invalidateAllObjectLists: () => void;
+  clearAll: () => void;
 }
 
 export const useCacheStore = create<CacheState>()((set, get) => ({
@@ -74,5 +75,9 @@ export const useCacheStore = create<CacheState>()((set, get) => ({
 
   invalidateAllObjectLists: () => {
     set({ objectLists: {} });
+  },
+
+  clearAll: () => {
+    set({ displayNames: {}, objectLists: {} });
   },
 }));

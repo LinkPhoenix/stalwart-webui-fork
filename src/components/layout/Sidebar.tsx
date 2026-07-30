@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 const { ChevronDown, Lock } = LucideIcons;
@@ -74,6 +74,25 @@ function subtreeHasVisibleLink(items: LayoutSubItem[], edition: string): boolean
   return false;
 }
 
+interface AutoOpenCollapsibleProps {
+  containsActive: boolean;
+  children: React.ReactNode;
+}
+
+function AutoOpenCollapsible({ containsActive, children }: AutoOpenCollapsibleProps) {
+  const [open, setOpen] = useState(containsActive);
+  const [prevContainsActive, setPrevContainsActive] = useState(containsActive);
+  if (containsActive !== prevContainsActive) {
+    setPrevContainsActive(containsActive);
+    if (containsActive) setOpen(true);
+  }
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      {children}
+    </Collapsible>
+  );
+}
+
 function checkLinkVisible(viewName: string): boolean {
   const schema = useSchemaStore.getState().schema;
   if (!schema) return true;
@@ -95,6 +114,8 @@ function checkIsEnterprise(viewName: string): boolean {
   return isLinkEnterprise(schema, viewName, edition);
 }
 
+type ActiveItemRef = (el: HTMLButtonElement | null) => void;
+
 interface SidebarSubItemProps {
   item: LayoutSubItem;
   depth: number;
@@ -103,9 +124,19 @@ interface SidebarSubItemProps {
   navigate: ReturnType<typeof useNavigate>;
   edition: string;
   onUpsell: () => void;
+  activeItemRef: ActiveItemRef;
 }
 
-function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, edition, onUpsell }: SidebarSubItemProps) {
+function SidebarSubItem({
+  item,
+  depth,
+  sectionName,
+  currentPath,
+  navigate,
+  edition,
+  onUpsell,
+  activeItemRef,
+}: SidebarSubItemProps) {
   if (item.type === 'link') {
     if (!checkLinkVisible(item.viewName)) return null;
 
@@ -120,6 +151,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
     return (
       <Button
         variant="ghost"
+        ref={isActive ? activeItemRef : undefined}
         className={cn(
           'w-full justify-start gap-2 font-normal',
           isActive && 'bg-accent text-accent-foreground',
@@ -145,7 +177,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
 
     const containsActive = subtreeContainsActive(item.items, currentPath, sectionName);
     return (
-      <Collapsible defaultOpen={containsActive}>
+      <AutoOpenCollapsible containsActive={containsActive}>
         <CollapsibleTrigger asChild>
           <Button
             variant="ghost"
@@ -167,10 +199,11 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
               navigate={navigate}
               edition={edition}
               onUpsell={onUpsell}
+              activeItemRef={activeItemRef}
             />
           ))}
         </CollapsibleContent>
-      </Collapsible>
+      </AutoOpenCollapsible>
     );
   }
 
@@ -184,9 +217,18 @@ interface SidebarTopItemProps {
   navigate: ReturnType<typeof useNavigate>;
   edition: string;
   onUpsell: () => void;
+  activeItemRef: ActiveItemRef;
 }
 
-function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onUpsell }: SidebarTopItemProps) {
+function SidebarTopItem({
+  item,
+  sectionName,
+  currentPath,
+  navigate,
+  edition,
+  onUpsell,
+  activeItemRef,
+}: SidebarTopItemProps) {
   if ('link' in item) {
     const { name, icon, viewName } = item.link;
 
@@ -203,6 +245,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     return (
       <Button
         variant="ghost"
+        ref={isActive ? activeItemRef : undefined}
         className={cn('w-full justify-start gap-2 font-normal', isActive && 'bg-accent text-accent-foreground')}
         onClick={() => {
           if (isLocked) {
@@ -226,7 +269,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
     const containsActive = subtreeContainsActive(items, currentPath, sectionName);
 
     return (
-      <Collapsible defaultOpen={containsActive}>
+      <AutoOpenCollapsible containsActive={containsActive}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start gap-2 font-normal">
             <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
@@ -245,10 +288,11 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
               navigate={navigate}
               edition={edition}
               onUpsell={onUpsell}
+              activeItemRef={activeItemRef}
             />
           ))}
         </CollapsibleContent>
-      </Collapsible>
+      </AutoOpenCollapsible>
     );
   }
 
@@ -264,23 +308,19 @@ export function Sidebar() {
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
   const schema = useSchemaStore((s) => s.schema);
   const edition = useAccountStore((s) => s.edition);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
+  const permissions = useAccountStore((s) => s.permissions);
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const [upsellOpen, setUpsellOpen] = useState(false);
+  const activeItem = useRef<HTMLButtonElement | null>(null);
+  const activeItemRef = useCallback<ActiveItemRef>((el) => {
+    activeItem.current = el;
+  }, []);
 
-  const layouts = useMemo(
-    () =>
-      schema ? visibleLayouts(schema, edition, (prefix) => hasObjectPermission(prefix, 'Get'), hasPermission) : [],
-    [schema, edition, hasObjectPermission, hasPermission],
-  );
-
-  useEffect(() => {
-    if (!schema) return;
-    if (layouts.length === 0) return;
-    if (!layouts.find((l) => l.name === activeSection)) {
-      setActiveSection(layouts[0].name);
-    }
-  }, [schema, layouts, activeSection, setActiveSection]);
+  const layouts = useMemo(() => {
+    if (!schema) return [];
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
+    return visibleLayouts(schema, edition, canGet, hasPermission);
+  }, [schema, edition, permissions, hasPermission]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -289,6 +329,10 @@ export function Sidebar() {
     }
   }, [location.pathname, setSidebarOpen]);
 
+  useEffect(() => {
+    activeItem.current?.scrollIntoView({ block: 'nearest' });
+  }, [location.pathname, activeSection]);
+
   if (!sidebarOpen || !schema) return null;
 
   const layout: Layout | undefined = layouts.find((l) => l.name === activeSection);
@@ -296,7 +340,7 @@ export function Sidebar() {
 
   const handleSectionClick = (target: Layout) => {
     setActiveSection(target.name);
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
+    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
     const first =
       findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
       findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
@@ -322,6 +366,7 @@ export function Sidebar() {
                 navigate={navigate}
                 edition={edition}
                 onUpsell={() => setUpsellOpen(true)}
+                activeItemRef={activeItemRef}
               />
             ))}
           </nav>

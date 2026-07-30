@@ -1,7 +1,7 @@
 {
   "name": "stalwart-webui",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Stalwart WebUI",
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "format:check": "prettier --check src/"
   },
   "dependencies": {
+    "@daypicker/react": "^10.0.1",
     "@radix-ui/react-alert-dialog": "^1.1.23",
     "@radix-ui/react-checkbox": "^1.3.11",
     "@radix-ui/react-collapsible": "^1.1.20",
@@ -35,14 +36,14 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "i18next": "^26.3.6",
-    "lucide-react": "^1.27.0",
+    "lucide-react": "^1.28.0",
     "otpauth": "^9.5.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.18.1",
+    "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
     "zustand": "^5.0.14"
@@ -53,7 +54,7 @@
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
+    "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -64,7 +65,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.1.5",
+    "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
 }

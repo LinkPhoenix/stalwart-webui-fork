@@ -1215,7 +1215,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       )}
 
       <div className="rounded-lg border bg-background shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-[calc(var(--radius-lg)-1px)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted">

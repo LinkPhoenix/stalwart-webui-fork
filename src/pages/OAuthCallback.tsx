@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/authStore';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { getBasePath } from '@/lib/basePath';
 import { exchangeCode, getStoredOAuthData, clearStoredOAuthData, getOAuthRedirectUri } from '@/services/auth/oauth';
 
@@ -18,6 +19,8 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+
+  useDocumentTitle(t('oauth.title', 'Signing in'));
 
   useEffect(() => {
     async function handleCallback() {
