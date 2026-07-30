@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from '@/stores/uiStore';
+import { ensureLogoLoaded, getLogoSnapshot, subscribeLogo } from '@/lib/logoCache';
 
 export function DefaultLogo() {
   const { t } = useTranslation();
@@ -31,19 +31,17 @@ export function DefaultLogo() {
 
 export default function Logo() {
   const { t } = useTranslation();
-  const logoUrl = useUIStore((s) => s.logoUrl);
-  const logoLoading = useUIStore((s) => s.logoLoading);
-  const fetchLogo = useUIStore((s) => s.fetchLogo);
+  const logo = useSyncExternalStore(subscribeLogo, getLogoSnapshot, getLogoSnapshot);
 
   useEffect(() => {
-    fetchLogo();
-  }, [fetchLogo]);
+    ensureLogoLoaded();
+  }, []);
 
-  if (logoUrl) {
-    return <img src={logoUrl} alt={t('logo.alt', 'Logo')} className="h-7 w-auto max-w-[220px] object-contain" />;
+  if (logo.status === 'custom') {
+    return <img src={logo.url} alt={t('logo.alt', 'Logo')} className="h-7 w-auto max-w-[220px] object-contain" />;
   }
 
-  if (logoLoading) {
+  if (logo.status === 'loading') {
     return <span className="h-7 w-[140px] block" aria-hidden="true" />;
   }
 

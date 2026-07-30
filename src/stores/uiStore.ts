@@ -6,21 +6,10 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getApiBaseUrl } from '@/services/api';
 
 export type Theme = 'light' | 'dark';
 export type ColorTheme = 'stalwart' | 'ocean' | 'forest' | 'violet' | 'rose' | 'amber' | 'teal';
 export type Radius = 'rounded' | 'square';
-
-let logoAbortController: AbortController | null = null;
-let logoObjectUrl: string | null = null;
-
-function revokeLogoObjectUrl() {
-  if (logoObjectUrl) {
-    URL.revokeObjectURL(logoObjectUrl);
-    logoObjectUrl = null;
-  }
-}
 
 interface UIState {
   theme: Theme;
@@ -28,8 +17,6 @@ interface UIState {
   radius: Radius;
   sidebarOpen: boolean;
   activeSection: string;
-  logoUrl: string | null;
-  logoLoading: boolean;
 
   setTheme: (theme: Theme) => void;
   setColorTheme: (colorTheme: ColorTheme) => void;
@@ -37,9 +24,6 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setActiveSection: (section: string) => void;
-  setLogoUrl: (url: string | null) => void;
-  setLogoLoading: (loading: boolean) => void;
-  fetchLogo: () => void;
 }
 
 function applyThemeClass(theme: Theme) {
@@ -87,49 +71,6 @@ export const useUIStore = create<UIState>()(
       radius: 'square',
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
       activeSection: '',
-      logoUrl: null,
-      logoLoading: false,
-
-      setLogoUrl: (url) => {
-        revokeLogoObjectUrl();
-        if (url) {
-          logoObjectUrl = url;
-        }
-        set({ logoUrl: url, logoLoading: false });
-      },
-
-      setLogoLoading: (loading) => {
-        set({ logoLoading: loading });
-      },
-
-      fetchLogo: () => {
-        const { logoUrl, logoLoading } = get();
-        if (logoUrl !== null || logoLoading) return;
-
-        set({ logoLoading: true });
-        if (logoAbortController) {
-          logoAbortController.abort();
-        }
-        logoAbortController = new AbortController();
-
-        fetch(`${getApiBaseUrl()}/logo`, {
-          signal: logoAbortController.signal,
-        })
-          .then((response) => {
-            const contentType = response.headers.get('content-type') ?? '';
-            if (response.ok && contentType.startsWith('image/')) {
-              return response.blob().then((blob) => {
-                revokeLogoObjectUrl();
-                logoObjectUrl = URL.createObjectURL(blob);
-                set({ logoUrl: logoObjectUrl, logoLoading: false });
-              });
-            }
-            set({ logoUrl: null, logoLoading: false });
-          })
-          .catch(() => {
-            set({ logoUrl: null, logoLoading: false });
-          });
-      },
 
       setTheme: (theme) => {
         applyThemeClass(theme);

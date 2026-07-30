@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file. This projec
 - Updated Vite to 8.2.0, `@vitejs/plugin-react` to 6.0.5, and `lucide-react` to 1.28.0.
 
 ### Fixed
-- Custom logos no longer flash the default Stalwart logo while loading.
+- Custom logos no longer flash the default Stalwart logo while loading. Loading is encapsulated in `logoCache` (shared fetch + AbortController + blob URL revoke), keeping `uiStore` free of logo state while still caching across TopBar/Login remounts.
 - Icon/label alignment in backend select triggers.
 - Web Applications list shows an Enabled column again.
 - Appearance Corners preview: only the Rounded choice forces rounded radius on its card and sample; Square stays sharp even when the global theme is square.
