@@ -6,12 +6,12 @@
 
 import { useEffect } from 'react';
 
-const APP_NAME = 'Stalwart WebUI';
+const APP_NAME = 'Stalwart';
 
 // Keeps the tab title in sync with the current page instead of the static
 // index.html title; falls back to the bare app name when no page title is given.
 export function useDocumentTitle(title?: string | null) {
   useEffect(() => {
-    document.title = title ? `${title} · ${APP_NAME}` : APP_NAME;
+    document.title = title ? `${APP_NAME} | ${title}` : APP_NAME;
   }, [title]);
 }
