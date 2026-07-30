@@ -329,7 +329,7 @@
   },
   "logout": "Logout",
   "version": {
-    "label": "Stalwart WebUI v{{version}}"
+    "label": "Stalwart WebUI Fork v{{version}}"
   },
   "oauth": {
     "backToLogin": "Back to login",
