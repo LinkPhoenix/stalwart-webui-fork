@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatSize as fmtSize, formatDuration as fmtDuration } from '@/lib/durationFormat';
@@ -60,7 +61,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAccountStore } from '@/stores/accountStore';
 import { useCacheStore } from '@/stores/cacheStore';
 import { resolveObject, resolveSchema, resolveList, getDisplayProperty } from '@/lib/schemaResolver';
-import { jmapGetBatched, jmapQueryAll, jmapQueryAndGet, jmapQueryAllAndGet, jmapSet, getAccountId } from '@/services/jmap/client';
+import {
+  jmapGetBatched,
+  jmapQueryAll,
+  jmapQueryAndGet,
+  jmapQueryAllAndGet,
+  jmapSet,
+  getAccountId,
+} from '@/services/jmap/client';
 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
@@ -68,6 +76,13 @@ import type { ResolvedSchema } from '@/lib/schemaResolver';
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
+// Combobox threshold: plain <Select> is fine for a handful of options, but
+// unusable (no search) once an enum has dozens of entries.
+const ENUM_COMBOBOX_THRESHOLD = 15;
+
+function isClientOnlyFilter(f: FilterDef): boolean {
+  return f.type === 'enum' && f.clientOnly === true;
+}
 
 function parseSetResponse(raw: [string, Record<string, unknown>, string][]): JmapSetResponse | null {
   const entry = raw.find(([name]) => name.endsWith('/set'));
@@ -424,6 +439,24 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
   const [sort, setSort] = useState<SortState | null>(readUrlSort);
 
+  // Filters marked `clientOnly` (currently Level/Event on the Logs list) are
+  // not supported by the server's query engine, so they narrow an
+  // already-fetched result set in the browser instead of being sent as a
+  // JMAP filter. That switches pagination to a client-held array.
+  const clientFilterDefs = useMemo(
+    () => (resolved?.list?.filters ?? []).filter(isClientOnlyFilter),
+    [resolved?.list?.filters],
+  );
+  const activeClientFilters = useMemo(
+    () =>
+      clientFilterDefs
+        .map((f) => ({ field: f.field, value: appliedFilters[f.field] ?? '' }))
+        .filter((f) => f.value !== ''),
+    [clientFilterDefs, appliedFilters],
+  );
+  const [clientAllItems, setClientAllItems] = useState<Record<string, unknown>[] | null>(null);
+  const [clientPage, setClientPage] = useState(0);
+
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [activeWebApp, setActiveWebApp] = useState<Record<string, unknown> | null>(null);
 
@@ -461,6 +494,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setSelectedIds(new Set());
     setSelectAllMode(false);
     setError(null);
+    setClientAllItems(null);
+    setClientPage(0);
 
     const initialFilters = readUrlFilters();
     setFilterValues(initialFilters);
@@ -470,13 +505,20 @@ export function DynamicList({ viewName }: DynamicListProps) {
   });
 
   const buildFilter = useCallback((): Record<string, unknown> => {
+    const clientFields = new Set(clientFilterDefs.map((f) => f.field));
+    const serverAppliedFilters: Record<string, string> = {};
+    for (const [key, val] of Object.entries(appliedFilters)) {
+      const baseKey = key.endsWith('Op') ? key.slice(0, -2) : key;
+      if (clientFields.has(baseKey)) continue;
+      serverAppliedFilters[key] = val;
+    }
     return buildJmapFilter({
-      appliedFilters,
+      appliedFilters: serverAppliedFilters,
       filters: resolved?.list?.filters,
       filtersStatic: resolved?.list?.filtersStatic,
       isXPrefixed: objectName?.startsWith('x:') ?? false,
     });
-  }, [appliedFilters, resolved?.list, objectName]);
+  }, [appliedFilters, resolved?.list, objectName, clientFilterDefs]);
 
   const buildSort = useCallback((): Record<string, unknown>[] | undefined => {
     if (!sort) return undefined;
@@ -499,6 +541,28 @@ export function DynamicList({ viewName }: DynamicListProps) {
         }
         const filter = buildFilter();
         const sortArr = buildSort();
+
+        if (activeClientFilters.length > 0) {
+          // No server-side pagination possible once a client-only filter is
+          // active: fetch every server-matching row up front, narrow it in
+          // the browser, then paginate the in-memory result locally.
+          const { list: fullList } = await jmapQueryAllAndGet(
+            obj.objectName,
+            accountId,
+            { filter: Object.keys(filter).length > 0 ? filter : undefined, sort: sortArr },
+            properties,
+          );
+          const matched = fullList.filter((item) =>
+            activeClientFilters.every((f) => String(item[f.field] ?? '') === f.value),
+          );
+          setClientAllItems(matched);
+          setClientPage(0);
+          setTotal(matched.length);
+          setItems(matched.slice(0, PAGE_SIZE));
+          setSelectedIds(new Set());
+          return;
+        }
+        setClientAllItems(null);
 
         const queryOptions: Record<string, unknown> = {
           filter: Object.keys(filter).length > 0 ? filter : undefined,
@@ -546,7 +610,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort],
+    [resolved, schema, buildFilter, buildSort, isWebApplications, activeClientFilters],
   );
 
   useEffect(() => {
@@ -637,6 +701,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }, [filterValues, sort]);
 
   const handleNextPage = useCallback(() => {
+    if (clientAllItems !== null) {
+      const nextPage = clientPage + 1;
+      setClientPage(nextPage);
+      setItems(clientAllItems.slice(nextPage * PAGE_SIZE, nextPage * PAGE_SIZE + PAGE_SIZE));
+      return;
+    }
+
     if (items.length === 0) return;
     const lastItem = items[items.length - 1];
     const lastId = lastItem?.id as string;
@@ -648,9 +719,16 @@ export function DynamicList({ viewName }: DynamicListProps) {
     }
     setCurrentAnchor(lastId);
     fetchData(lastId, 1);
-  }, [items, fetchData]);
+  }, [items, fetchData, clientAllItems, clientPage]);
 
   const handlePrevPage = useCallback(() => {
+    if (clientAllItems !== null) {
+      const prevPage = Math.max(0, clientPage - 1);
+      setClientPage(prevPage);
+      setItems(clientAllItems.slice(prevPage * PAGE_SIZE, prevPage * PAGE_SIZE + PAGE_SIZE));
+      return;
+    }
+
     if (anchorStack.length === 0) {
       return;
     }
@@ -666,7 +744,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       setCurrentAnchor(prevFirstId);
       fetchData(prevFirstId, 0);
     }
-  }, [anchorStack, fetchData]);
+  }, [anchorStack, fetchData, clientAllItems, clientPage]);
 
   const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === items.length) {
@@ -730,12 +808,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
         let targetIds: string[];
         if (selectAllMode) {
-          const filter = buildFilter();
-          const sortArr = buildSort();
-          targetIds = await jmapQueryAll(obj.objectName, accountId, {
-            filter: Object.keys(filter).length > 0 ? filter : undefined,
-            sort: sortArr,
-          });
+          if (clientAllItems !== null) {
+            // A client-only filter is active: the full server-matching set
+            // would include rows it excludes, so use the already-narrowed list.
+            targetIds = clientAllItems.map((item) => item.id as string);
+          } else {
+            const filter = buildFilter();
+            const sortArr = buildSort();
+            targetIds = await jmapQueryAll(obj.objectName, accountId, {
+              filter: Object.keys(filter).length > 0 ? filter : undefined,
+              sort: sortArr,
+            });
+          }
         } else {
           targetIds = Array.from(selectedIds);
         }
@@ -790,7 +874,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, selectedIds, selectAllMode, buildFilter, buildSort, fetchData, currentAnchor, t],
+    [resolved, selectedIds, selectAllMode, buildFilter, buildSort, fetchData, currentAnchor, t, clientAllItems],
   );
 
   const executeItemAction = useCallback(
@@ -916,11 +1000,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const hasMassActions = effectiveMassActions.length > 0;
   const hasItemActions = (list.itemActions?.length ?? 0) > 0;
 
-  const pageStart = anchorStack.length * PAGE_SIZE;
+  const pageStart = clientAllItems !== null ? clientPage * PAGE_SIZE : anchorStack.length * PAGE_SIZE;
   const rangeStart = pageStart + 1;
   const rangeEnd = pageStart + items.length;
-  const hasNextPage = total !== null && rangeEnd < total;
-  const hasPrevPage = anchorStack.length > 0;
+  const hasNextPage = clientAllItems !== null ? rangeEnd < clientAllItems.length : total !== null && rangeEnd < total;
+  const hasPrevPage = clientAllItems !== null ? clientPage > 0 : anchorStack.length > 0;
 
   function renderFilter(filterDef: FilterDef): React.ReactNode {
     const value = filterValues[filterDef.field] ?? '';
@@ -945,6 +1029,22 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       case 'enum': {
         const enumVariants = schema!.enums[filterDef.enumName] ?? [];
+
+        if (enumVariants.length > ENUM_COMBOBOX_THRESHOLD) {
+          return wrapper(
+            <Combobox
+              options={enumVariants.map((v) => ({ value: v.name, label: v.label }))}
+              value={value}
+              onValueChange={(v) => handleFilterChange(filterDef.field, v)}
+              placeholder={filterDef.label}
+              searchPlaceholder={t('list.comboboxSearchPlaceholder', 'Search...')}
+              emptyText={t('list.comboboxEmptyText', 'No matches.')}
+              nullable
+              nullLabel={t('filters.all', 'All')}
+            />,
+          );
+        }
+
         return wrapper(
           <Select value={value || '__all__'} onValueChange={(v) => handleFilterSelectChange(filterDef.field, v)}>
             <SelectTrigger>

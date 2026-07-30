@@ -303,6 +303,10 @@ export interface FilterEnum {
   field: string;
   enumName: string;
   label: string;
+  /** Applied client-side after fetch instead of sent to the server as a JMAP
+   * filter condition. Used for properties the backend query engine doesn't
+   * (yet) support filtering on, even though it returns them per row. */
+  clientOnly?: boolean;
 }
 
 export interface FilterInteger {
