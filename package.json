@@ -1,7 +1,7 @@
 {
   "name": "stalwart-webui-fork",
   "private": true,
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Stalwart WebUI Fork",
   "type": "module",
   "scripts": {

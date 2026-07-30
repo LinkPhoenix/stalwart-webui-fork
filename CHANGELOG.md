@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.9] - 2026-07-30
+
+### Added
+- Progressive Web App support: web app manifest, service worker, and a full icon set (192/512/maskable/apple-touch) generated from the Stalwart mark. `/api` and `/jmap` requests are never cached, so authenticated mail data can't end up in offline storage.
+- Level and Event filters on the Log Entries list, applied client-side since the backend doesn't support filtering on these properties yet. Event uses a searchable combobox given its ~600 possible values.
+- Rate-limited manual Refresh button on the Log Entries list (one click per 5 seconds) ([webui#8](https://github.com/stalwartlabs/webui/issues/8)).
+- Role and Usage/Quota columns on the Accounts list, replacing Created At ([webui#12](https://github.com/stalwartlabs/webui/issues/12)).
+- Mailbox hierarchy: mailboxes are now indented under their parent instead of shown as a flat list ([webui#16](https://github.com/stalwartlabs/webui/issues/16)).
+- Three additional color themes — Rose, Amber, Teal — alongside Stalwart/Ocean/Forest/Violet.
+- "Remember last visited page" per section (localStorage), so switching sections returns to where you left off.
+- Username and email shown directly in the TopBar user menu trigger.
+- "Active WebUI" info card and column in the Web Applications list, showing which web app is currently serving the admin UI.
+- Backend/provider icons across the variant selectors (DNS providers, storage/directory backends, Redis/Valkey).
+
+### Changed
+- Default color theme is now Ocean with square corners (previously Stalwart with rounded corners); existing saved preferences are unaffected.
+- Active account is preserved across page reloads instead of resetting to the primary account, and switching accounts fully remounts the current view (and clears cached display-name/list lookups) so account-scoped data refreshes immediately instead of requiring a tab switch first ([webui#17](https://github.com/stalwartlabs/webui/issues/17); reviewed against upstream's own fix for the same issue in [stalwartlabs/webui@189e270](https://github.com/stalwartlabs/webui/commit/189e270785a6953a99d11c958fd52daa94e1f5c7) and aligned with it).
+- WebUI label renamed to "Stalwart WebUI Fork" to distinguish this fork from upstream.
+- Appearance settings moved from the sidebar to the header user dropdown.
+- Dynamic page titles prefixed with "Stalwart |".
+- x:Application list layout aligned with Domains (Description first, Enabled second).
+- Updated Vite to 8.2.0, `@vitejs/plugin-react` to 6.0.5, and `lucide-react` to 1.28.0.
+
+### Fixed
+- Custom logos no longer flash the default Stalwart logo while loading.
+- Icon/label alignment in backend select triggers.
+- Web Applications list shows an Enabled column again.
+
+### Known limitations (confirmed backend-side, not fixable from this fork)
+- Level/Event filters on Log Entries are client-side only (see Added above) because the backend's JMAP query engine rejects `level`/`event` as filter conditions ([webui#15](https://github.com/stalwartlabs/webui/issues/15)).
+- Text filters across the admin API (Spam Rules & Scores, Accounts, Domains, ...) only support exact match, not partial/glob/wildcard search — confirmed systemic across the whole `x:` filter engine, requires a server-side change.
+
 ## [1.0.8] - 2026-07-29
 
 ### Added
