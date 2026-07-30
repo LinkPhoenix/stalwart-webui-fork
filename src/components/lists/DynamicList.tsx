@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,7 @@ import {
   Lock,
   Search,
   RotateCcw,
+  RefreshCw,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,9 @@ const MAX_REPORTED_ERRORS = 3;
 // Combobox threshold: plain <Select> is fine for a handful of options, but
 // unusable (no search) once an enum has dozens of entries.
 const ENUM_COMBOBOX_THRESHOLD = 15;
+// Manual refresh on the Logs list is rate-limited to avoid hammering the
+// server if someone leaves it clicked repeatedly.
+const REFRESH_COOLDOWN_MS = 5000;
 
 function isClientOnlyFilter(f: FilterDef): boolean {
   return f.type === 'enum' && f.clientOnly === true;
@@ -392,6 +396,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
   const objectName = resolved?.obj.objectName;
   const isWebApplications = viewName === 'x:Application' || objectName === 'x:Application';
+  const isLogEntries = viewName === 'x:Log' || objectName === 'x:Log';
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -457,6 +462,15 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [clientAllItems, setClientAllItems] = useState<Record<string, unknown>[] | null>(null);
   const [clientPage, setClientPage] = useState(0);
 
+  const [refreshOnCooldown, setRefreshOnCooldown] = useState(false);
+  const refreshCooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (refreshCooldownTimer.current) clearTimeout(refreshCooldownTimer.current);
+    };
+  }, []);
+
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [activeWebApp, setActiveWebApp] = useState<Record<string, unknown> | null>(null);
 
@@ -496,6 +510,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setError(null);
     setClientAllItems(null);
     setClientPage(0);
+    if (refreshCooldownTimer.current) clearTimeout(refreshCooldownTimer.current);
+    setRefreshOnCooldown(false);
 
     const initialFilters = readUrlFilters();
     setFilterValues(initialFilters);
@@ -684,6 +700,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setFilterValues({});
     setAppliedFilters({});
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    if (refreshOnCooldown) return;
+    setRefreshOnCooldown(true);
+    fetchData(currentAnchor, 0);
+    refreshCooldownTimer.current = setTimeout(() => setRefreshOnCooldown(false), REFRESH_COOLDOWN_MS);
+  }, [refreshOnCooldown, fetchData, currentAnchor]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -1329,13 +1352,33 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       {list.filters && list.filters.length > 0 && (
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Filter className="h-4 w-4" />
-              {t('list.filters', 'Filters')}
-              {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Filter className="h-4 w-4" />
+                {t('list.filters', 'Filters')}
+                {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            {isLogEntries && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleRefresh}
+                disabled={refreshOnCooldown || loading}
+                title={
+                  refreshOnCooldown
+                    ? t('list.refreshCooldown', 'Please wait a few seconds before refreshing again')
+                    : undefined
+                }
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {t('list.refresh', 'Refresh')}
+              </Button>
+            )}
+          </div>
           <CollapsibleContent>
             <div className="mt-2 rounded-lg border bg-background shadow-sm">
               <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">

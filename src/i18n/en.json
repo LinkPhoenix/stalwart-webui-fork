@@ -302,6 +302,8 @@
     "next": "Next",
     "noResults": "No results found",
     "previous": "Previous",
+    "refresh": "Refresh",
+    "refreshCooldown": "Please wait a few seconds before refreshing again",
     "resetFilters": "Reset",
     "searchFilters": "Search",
     "selectAll": "Select all",
