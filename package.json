@@ -36,7 +36,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "i18next": "^26.3.6",
-    "lucide-react": "^1.27.0",
+    "lucide-react": "1.28.0",
     "otpauth": "^9.5.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
