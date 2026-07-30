@@ -21,6 +21,7 @@ import {
   Search,
   RotateCcw,
   RefreshCw,
+  CornerDownRight,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -183,6 +184,49 @@ function formatDuration(ms: unknown): string {
 function formatNumber(value: unknown): string {
   if (value == null || typeof value !== 'number') return '';
   return value.toLocaleString();
+}
+
+// Orders mailboxes so each parent is immediately followed by its
+// descendants (siblings alphabetical), and records each row's depth.
+// Requires the full set (not just one page) since a mailbox's parent
+// could be on a different page than the mailbox itself.
+function sortMailboxesByHierarchy(items: Record<string, unknown>[]): {
+  items: Record<string, unknown>[];
+  depths: Map<string, number>;
+} {
+  const byId = new Set(items.map((item) => item.id as string));
+  const childrenOf = new Map<string, Record<string, unknown>[]>();
+  const roots: Record<string, unknown>[] = [];
+
+  for (const item of items) {
+    const parentId = item.parentId as string | null | undefined;
+    if (parentId && byId.has(parentId)) {
+      const siblings = childrenOf.get(parentId) ?? [];
+      siblings.push(item);
+      childrenOf.set(parentId, siblings);
+    } else {
+      roots.push(item);
+    }
+  }
+
+  const byName = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    String(a.name ?? '').localeCompare(String(b.name ?? ''));
+  roots.sort(byName);
+  for (const siblings of childrenOf.values()) siblings.sort(byName);
+
+  const ordered: Record<string, unknown>[] = [];
+  const depths = new Map<string, number>();
+
+  function visit(item: Record<string, unknown>, depth: number) {
+    ordered.push(item);
+    depths.set(item.id as string, depth);
+    for (const child of childrenOf.get(item.id as string) ?? []) {
+      visit(child, depth + 1);
+    }
+  }
+  for (const root of roots) visit(root, 0);
+
+  return { items: ordered, depths };
 }
 
 function formatUserRole(item: Record<string, unknown>, schema: Schema): React.ReactNode {
@@ -440,6 +484,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const isWebApplications = viewName === 'x:Application' || objectName === 'x:Application';
   const isLogEntries = viewName === 'x:Log' || objectName === 'x:Log';
   const isAccountsList = viewName === 'x:Account/User';
+  const isMailboxList = viewName === 'Mailbox';
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -504,6 +549,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   );
   const [clientAllItems, setClientAllItems] = useState<Record<string, unknown>[] | null>(null);
   const [clientPage, setClientPage] = useState(0);
+  const [mailboxDepths, setMailboxDepths] = useState<Map<string, number>>(new Map());
 
   const [refreshOnCooldown, setRefreshOnCooldown] = useState(false);
   const refreshCooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -553,6 +599,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setError(null);
     setClientAllItems(null);
     setClientPage(0);
+    setMailboxDepths(new Map());
     if (refreshCooldownTimer.current) clearTimeout(refreshCooldownTimer.current);
     setRefreshOnCooldown(false);
 
@@ -604,22 +651,33 @@ export function DynamicList({ viewName }: DynamicListProps) {
             properties.splice(quotaIdx, 1, 'usedDiskQuota', 'quotas');
           }
         }
+        if (isMailboxList && !properties.includes('parentId')) {
+          properties.push('parentId');
+        }
         const filter = buildFilter();
         const sortArr = buildSort();
 
-        if (activeClientFilters.length > 0) {
+        if (activeClientFilters.length > 0 || isMailboxList) {
           // No server-side pagination possible once a client-only filter is
           // active: fetch every server-matching row up front, narrow it in
-          // the browser, then paginate the in-memory result locally.
+          // the browser, then paginate the in-memory result locally. Mailbox
+          // hierarchy needs this too — a mailbox's parent can land on a
+          // different server page than the mailbox itself, so the full set
+          // is required to place each row under its parent correctly.
           const { list: fullList } = await jmapQueryAllAndGet(
             obj.objectName,
             accountId,
             { filter: Object.keys(filter).length > 0 ? filter : undefined, sort: sortArr },
             properties,
           );
-          const matched = fullList.filter((item) =>
+          let matched = fullList.filter((item) =>
             activeClientFilters.every((f) => String(item[f.field] ?? '') === f.value),
           );
+          if (isMailboxList) {
+            const { items: ordered, depths } = sortMailboxesByHierarchy(matched);
+            matched = ordered;
+            setMailboxDepths(depths);
+          }
           setClientAllItems(matched);
           setClientPage(0);
           setTotal(matched.length);
@@ -675,7 +733,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, activeClientFilters],
+    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, isMailboxList, activeClientFilters],
   );
 
   useEffect(() => {
@@ -1582,6 +1640,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             formatUserRole(item, schema!)
                           ) : isAccountsList && col.name === 'quotaUsage' ? (
                             formatQuotaUsage(item, t)
+                          ) : isMailboxList && col.name === 'name' ? (
+                            (() => {
+                              const depth = mailboxDepths.get(item.id as string) ?? 0;
+                              return (
+                                <div style={{ paddingLeft: depth * 20 }} className="flex items-center gap-1.5">
+                                  {depth > 0 && (
+                                    <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                  )}
+                                  <span>{String(item.name ?? '')}</span>
+                                </div>
+                              );
+                            })()
                           ) : (
                             renderCellValue(
                               item[col.name],
