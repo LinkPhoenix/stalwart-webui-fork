@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCacheStore } from '@/stores/cacheStore';
 
 interface AccountInfo {
   name: string;
@@ -71,10 +72,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setSession: (accounts, primaryAccountId, apiUrl, maxObjectsInGet, maxObjectsInSet) => {
+        // Preserve the previously active account across a page reload (the
+        // session is refetched from scratch on every load) instead of
+        // always resetting to the primary account, as long as it's still
+        // in the refreshed accounts map.
+        const current = get().activeAccountId;
         set({
           accounts,
           primaryAccountId,
-          activeAccountId: primaryAccountId,
+          activeAccountId: current && accounts[current] ? current : primaryAccountId,
           apiUrl,
           ...(maxObjectsInGet !== undefined ? { maxObjectsInGet } : {}),
           ...(maxObjectsInSet !== undefined ? { maxObjectsInSet } : {}),
@@ -82,9 +88,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       switchAccount: (accountId) => {
-        const { accounts } = get();
-        if (accounts[accountId]) {
+        const { accounts, activeAccountId } = get();
+        if (accounts[accountId] && accountId !== activeAccountId) {
           set({ activeAccountId: accountId });
+          // Cached objectId display names/lists were resolved against the
+          // previous account and would otherwise show stale labels.
+          useCacheStore.getState().clearAll();
         }
       },
 
@@ -134,6 +143,7 @@ export const useAuthStore = create<AuthState>()(
           tokenExpiresAt: state.tokenExpiresAt,
           tokenEndpoint: state.tokenEndpoint,
           endSessionEndpoint: state.endSessionEndpoint,
+          activeAccountId: state.activeAccountId,
         }) as AuthState,
     },
   ),

@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from './authStore';
+import { useCacheStore } from './cacheStore';
 
 const initialState = {
   accessToken: null,
@@ -21,6 +22,7 @@ const initialState = {
 describe('authStore', () => {
   beforeEach(() => {
     useAuthStore.setState(initialState);
+    useCacheStore.setState({ displayNames: {}, objectLists: {} });
     vi.restoreAllMocks();
   });
 
@@ -124,6 +126,26 @@ describe('authStore', () => {
 
       expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
     });
+
+    it('preserves the previously active account across a reload if still valid', () => {
+      useAuthStore.setState({ activeAccountId: 'acc-2' });
+      const accounts = {
+        'acc-1': { name: 'Personal', isPersonal: true },
+        'acc-2': { name: 'Shared', isPersonal: false },
+      };
+
+      useAuthStore.getState().setSession(accounts, 'acc-1', 'https://api');
+
+      expect(useAuthStore.getState().activeAccountId).toBe('acc-2');
+    });
+
+    it('falls back to primaryAccountId if the previously active account is gone', () => {
+      useAuthStore.setState({ activeAccountId: 'acc-removed' });
+
+      useAuthStore.getState().setSession({ 'acc-1': { name: 'A', isPersonal: true } }, 'acc-1', 'https://api');
+
+      expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
+    });
   });
 
   describe('switchAccount', () => {
@@ -148,6 +170,33 @@ describe('authStore', () => {
 
       useAuthStore.getState().switchAccount('nonexistent');
       expect(useAuthStore.getState().activeAccountId).toBe('a1');
+    });
+
+    it('clears the cache store when switching to a different account', () => {
+      useAuthStore.setState({
+        accounts: {
+          a1: { name: 'A1', isPersonal: true },
+          a2: { name: 'A2', isPersonal: false },
+        },
+        activeAccountId: 'a1',
+      });
+      useCacheStore.getState().setDisplayNames('x:Domain', { d1: 'example.org' });
+
+      useAuthStore.getState().switchAccount('a2');
+
+      expect(useCacheStore.getState().displayNames).toEqual({});
+    });
+
+    it('does not clear the cache store when "switching" to the already-active account', () => {
+      useAuthStore.setState({
+        accounts: { a1: { name: 'A1', isPersonal: true } },
+        activeAccountId: 'a1',
+      });
+      useCacheStore.getState().setDisplayNames('x:Domain', { d1: 'example.org' });
+
+      useAuthStore.getState().switchAccount('a1');
+
+      expect(useCacheStore.getState().displayNames).toEqual({ 'x:Domain': { d1: 'example.org' } });
     });
   });
 

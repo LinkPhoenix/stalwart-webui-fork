@@ -83,6 +83,7 @@ export default function AdminPanel() {
   const permissions = useAccountStore((s) => s.permissions);
   const setSession = useAuthStore((s) => s.setSession);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const activeSection = useUIStore((s) => s.activeSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -322,7 +323,11 @@ export default function AdminPanel() {
         >
           <div className="p-6">
             <div className="mx-auto w-full max-w-7xl">
-              <ErrorBoundary>
+              {/* Keyed on the active account: forces MainContent (and every
+                  view it renders) to fully remount on switch, so
+                  account-scoped views can't keep showing stale data fetched
+                  under the previous account. */}
+              <ErrorBoundary key={activeAccountId ?? 'none'}>
                 {section === 'Appearance' ? (
                   <AppearancePage />
                 ) : (

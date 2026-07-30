@@ -24,6 +24,7 @@ interface CacheState {
   getObjectList: (key: string) => ObjectListEntry[] | undefined;
   invalidateObjectList: (key: string) => void;
   invalidateAllObjectLists: () => void;
+  clearAll: () => void;
 }
 
 export const useCacheStore = create<CacheState>()((set, get) => ({
@@ -74,5 +75,11 @@ export const useCacheStore = create<CacheState>()((set, get) => ({
 
   invalidateAllObjectLists: () => {
     set({ objectLists: {} });
+  },
+
+  // Switching the active JMAP account can make cached objectId display
+  // names and lists resolve against the wrong account's data.
+  clearAll: () => {
+    set({ displayNames: {}, objectLists: {} });
   },
 }));
