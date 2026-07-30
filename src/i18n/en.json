@@ -196,6 +196,8 @@
     "notSet": "Not set",
     "optional": "(optional)",
     "pickDate": "Pick a date",
+    "hour": "Hour",
+    "minute": "Minute",
     "required": "required",
     "selectEllipsis": "Select...",
     "selectKey": "Select key...",

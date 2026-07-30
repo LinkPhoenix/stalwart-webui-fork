@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Calendar } from '@/components/ui/calendar';
 
-import { Plus, X, Eye, EyeOff, Loader2, Search, Check, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, X, Eye, EyeOff, Loader2, Search, Check, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -839,6 +839,67 @@ interface DateTimeFieldProps {
   nullable?: boolean;
 }
 
+const TIME_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME_MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+/** Themed hour/minute selects — avoids the native time picker which ignores app dark/light tokens. */
+function DateTimeTimeSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [hour = '00', minute = '00'] = value.split(':');
+
+  const update = (nextHour: string, nextMinute: string) => {
+    onChange(`${nextHour}:${nextMinute}`);
+  };
+
+  return (
+    <div className="flex flex-1 items-center gap-1.5">
+      <Select
+        value={TIME_HOURS.includes(hour) ? hour : '00'}
+        disabled={disabled}
+        onValueChange={(nextHour) => update(nextHour, TIME_MINUTES.includes(minute) ? minute : '00')}
+      >
+        <SelectTrigger className="h-9 w-[4.75rem]" aria-label={t('field.hour', 'Hour')}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-60" position="popper">
+          {TIME_HOURS.map((h) => (
+            <SelectItem key={h} value={h}>
+              {h}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span className="text-sm text-muted-foreground" aria-hidden="true">
+        :
+      </span>
+      <Select
+        value={TIME_MINUTES.includes(minute) ? minute : '00'}
+        disabled={disabled}
+        onValueChange={(nextMinute) => update(TIME_HOURS.includes(hour) ? hour : '00', nextMinute)}
+      >
+        <SelectTrigger className="h-9 w-[4.75rem]" aria-label={t('field.minute', 'Minute')}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-60" position="popper">
+          {TIME_MINUTES.map((m) => (
+            <SelectItem key={m} value={m}>
+              {m}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldProps) {
   const { t } = useTranslation();
   const strValue = typeof value === 'string' ? value : '';
@@ -883,7 +944,7 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
 
   return (
     <div className="flex items-center gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -896,7 +957,17 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
               : t('field.pickDate', 'Pick a date')}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent
+          className="w-auto p-0"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.closest('[data-radix-select-content]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <Calendar
             mode="single"
             selected={parsed ?? undefined}
@@ -904,18 +975,17 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
             onSelect={(day) => {
               if (!day) return;
               commit(day, timeValue || '00:00');
-              setOpen(false);
             }}
             autoFocus
           />
-          <div className="border-t p-3">
-            <Input
-              type="time"
-              value={timeValue}
-              onChange={(e) => {
-                if (parsed && e.target.value) commit(parsed, e.target.value);
+          <div className="flex items-center gap-2 border-t bg-background p-3">
+            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <DateTimeTimeSelect
+              value={timeValue || '00:00'}
+              disabled={!parsed}
+              onChange={(next) => {
+                if (parsed) commit(parsed, next);
               }}
-              aria-label={t('field.time', 'Time')}
             />
           </div>
         </PopoverContent>

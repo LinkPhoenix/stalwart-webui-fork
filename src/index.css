@@ -7,6 +7,7 @@
 @import 'tailwindcss';
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0.017 285.823);
 
@@ -51,6 +52,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0.002 285.823);
 
@@ -409,8 +411,4 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-.dark input[type='number'] {
-  color-scheme: dark;
 }
