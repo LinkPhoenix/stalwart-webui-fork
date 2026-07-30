@@ -29,6 +29,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oauth';
 import { useEffect, useState } from 'react';
 import { useAccountStore } from '@/stores/accountStore';
+import { useCurrentAccountDetails } from '@/hooks/useCurrentAccount';
 import { useSchemaStore } from '@/stores/schemaStore';
 
 function getIcon(name: string): LucideIcons.LucideIcon {
@@ -48,6 +49,10 @@ export function TopBar() {
   const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const switchAccount = useAuthStore((s) => s.switchAccount);
   const logout = useAuthStore((s) => s.logout);
+  const activeAccount = activeAccountId ? accounts[activeAccountId] : null;
+  const currentAccount = useCurrentAccountDetails();
+  const displayName = currentAccount.username?.trim() || activeAccount?.name?.trim() || activeAccountId?.split('@')[0] || activeAccountId;
+  const displayEmail = currentAccount.email || activeAccountId;
   const edition = useAccountStore((s) => s.edition);
   const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
   const hasPermission = useAccountStore((s) => s.hasPermission);
@@ -126,8 +131,12 @@ export function TopBar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t('userMenu', 'User menu')}>
+            <Button variant="ghost" className="h-auto gap-2 px-2" aria-label={t('userMenu', 'User menu')}>
               <User className="h-4 w-4" />
+              <div className="hidden flex-col items-start text-left md:flex">
+                <span className="text-sm font-medium leading-none">{displayName}</span>
+                <span className="text-xs text-muted-foreground leading-none">{displayEmail}</span>
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
