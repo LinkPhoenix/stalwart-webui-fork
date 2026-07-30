@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file. This projec
 - Custom logos no longer flash the default Stalwart logo while loading.
 - Icon/label alignment in backend select triggers.
 - Web Applications list shows an Enabled column again.
+- Appearance Corners preview: only the Rounded choice forces rounded radius on its card and sample; Square stays sharp even when the global theme is square.
 
 ### Known limitations (confirmed backend-side, not fixable from this fork)
 - Level/Event filters on Log Entries are client-side only (see Added above) because the backend's JMAP query engine rejects `level`/`event` as filter conditions ([webui#15](https://github.com/stalwartlabs/webui/issues/15)).

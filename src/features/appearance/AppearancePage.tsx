@@ -4,13 +4,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Moon, Sun } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { COLOR_THEMES, useUIStore } from '@/stores/uiStore';
+
+/** Matches `:root { --radius: 0.5rem }` so only the Rounded choice stays curved in square mode. */
+const ROUNDED_RADIUS_STYLE = { '--radius': '0.5rem' } as CSSProperties;
 
 export function AppearancePage() {
   const { t } = useTranslation();
@@ -82,6 +85,7 @@ export function AppearancePage() {
             selected={radius === 'rounded'}
             onClick={() => setRadius('rounded')}
             label={t('appearance.rounded', 'Rounded')}
+            style={ROUNDED_RADIUS_STYLE}
           >
             <span className="h-6 w-10 rounded-md border-2 border-current" />
           </OptionCard>
@@ -89,6 +93,7 @@ export function AppearancePage() {
             selected={radius === 'square'}
             onClick={() => setRadius('square')}
             label={t('appearance.square', 'Square')}
+            className="rounded-none"
           >
             <span className="h-6 w-10 rounded-none border-2 border-current" />
           </OptionCard>
@@ -103,22 +108,28 @@ function OptionCard({
   onClick,
   label,
   children,
+  className,
+  style,
 }: {
   selected: boolean;
   onClick: () => void;
   label: string;
   children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={selected}
+      style={style}
       className={cn(
         'relative flex flex-col items-center gap-2 rounded-lg border bg-field p-4 text-sm transition-colors',
         selected
           ? 'border-primary text-foreground'
           : 'border-border text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+        className,
       )}
     >
       {selected && <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />}
