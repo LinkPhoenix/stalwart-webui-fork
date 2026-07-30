@@ -53,7 +53,7 @@ import { SECRET_MASK } from '@/lib/jmapUtils';
 import { toast } from '@/hooks/use-toast';
 import { logFormChange } from '@/lib/debug';
 import { FieldWidget } from '@/components/forms/FieldWidget';
-import { BackendIcon } from '@/components/common/BackendIcon';
+import { BackendVariantIcon } from '@/components/common/BackendIcon';
 
 import type { Field, Fields, Form, FormField, Schema } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError, JmapMethodCall } from '@/types/jmap';
@@ -781,7 +781,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
                       <Select value={selectedVariant} onValueChange={handleVariantChange} disabled={readOnly}>
                         <SelectTrigger>
                           <div className="flex flex-1 items-center gap-2 overflow-hidden">
-                            <BackendIcon backend={selectedVariant} />
+                            <BackendVariantIcon variant={{ name: selectedVariant, label: selectedVariantLabel ?? selectedVariant }} />
                             <span className="truncate">
                               {selectedVariantLabel || t('form.selectType', 'Select type...')}
                             </span>
@@ -791,7 +791,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
                           {sch.variants.map((v) => (
                             <SelectItem key={v.name} value={v.name}>
                               <span className="flex items-center gap-2">
-                                <BackendIcon backend={v.name} />
+                                <BackendVariantIcon variant={v} />
                                 {v.label}
                               </span>
                             </SelectItem>

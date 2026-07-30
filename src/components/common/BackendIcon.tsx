@@ -99,3 +99,23 @@ export function isBackendIconKnown(backend: string | null | undefined): boolean 
   const key = backend.toLowerCase().replace(/[^a-z0-9]/g, '');
   return Boolean(BACKEND_ICONS[key] ?? BACKEND_ICONS[backend.toLowerCase()]);
 }
+
+interface BackendVariantIconProps {
+  variant: { name: string; label: string };
+  className?: string;
+}
+
+export function BackendVariantIcon({ variant, className }: BackendVariantIconProps): React.ReactElement | null {
+  const nameLower = variant.name.toLowerCase();
+  const labelLower = variant.label?.toLowerCase() ?? '';
+  const isRedisValkey = nameLower === 'redis' && labelLower.includes('valkey');
+  if (isRedisValkey) {
+    return (
+      <span className="flex items-center gap-1">
+        <BackendIcon backend="redis" className={className} />
+        <BackendIcon backend="valkey" className={className} />
+      </span>
+    );
+  }
+  return <BackendIcon backend={variant.name} className={className} />;
+}
