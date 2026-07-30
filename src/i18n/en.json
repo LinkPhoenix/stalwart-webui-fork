@@ -309,8 +309,7 @@
     "showing": "Showing {{from}}-{{to}} of {{total}} {{name}}",
     "showingItems": "Showing {{count}} items",
     "sort": "Sort",
-    "unknownError": "Unknown error",
-    "active": "Active"
+    "unknownError": "Unknown error"
   },
   "login": {
     "continue": "Continue",

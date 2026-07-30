@@ -361,10 +361,26 @@ export function DynamicList({ viewName }: DynamicListProps) {
     return { obj, schema: schem, list };
   }, [schema, viewName]);
 
+  const objectName = resolved?.obj.objectName;
+  const isWebApplications = objectName === 'x:Application';
+
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
-    return columns;
-  }, [resolved?.list?.columns]);
+    if (!isWebApplications) return columns;
+
+    // For Web Applications, present Description first and Enabled second
+    // to match the layout of other tables such as Domains.
+    const ordered = ['description', 'enabled'];
+    const rest = columns.filter((c) => !ordered.includes(c.name));
+    const descriptionCol = columns.find((c) => c.name === 'description');
+    const enabledCol = columns.find((c) => c.name === 'enabled');
+
+    const result = [];
+    if (descriptionCol) result.push(descriptionCol);
+    if (enabledCol) result.push(enabledCol);
+    result.push(...rest);
+    return result;
+  }, [resolved?.list?.columns, isWebApplications]);
 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -391,9 +407,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [activeWebApp, setActiveWebApp] = useState<Record<string, unknown> | null>(null);
-
-  const objectName = resolved?.obj.objectName;
-  const isWebApplications = objectName === 'x:Application';
 
   useEffect(() => {
     if (!isWebApplications || !schema) return;
@@ -1291,11 +1304,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
                     />
                   </th>
                 )}
-                {isWebApplications && (
-                  <th className="w-16 px-3 py-3 text-left font-medium text-muted-foreground">
-                    {t('list.active', 'Active')}
-                  </th>
-                )}
                 {displayColumns.map((col) => (
                   <th key={col.name} className="px-3 py-3 text-left font-medium text-muted-foreground">
                     <div className="flex items-center">
@@ -1315,7 +1323,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               {loading && items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0) + (isWebApplications ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-12 text-center"
                   >
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
@@ -1324,7 +1332,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               ) : items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0) + (isWebApplications ? 1 : 0)}
+                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-12 text-center text-muted-foreground"
                   >
                     {t('list.noResults', 'No results found')}
@@ -1346,15 +1354,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             onCheckedChange={() => toggleSelectItem(itemId)}
                             aria-label={t('list.selectItem', 'Select item')}
                           />
-                        </td>
-                      )}
-                      {isWebApplications && (
-                        <td className="px-3 py-2">
-                          {activeWebApp?.id === item.id ? (
-                            <Badge variant="default">{t('list.active', 'Active')}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
                         </td>
                       )}
                       {displayColumns.map((col) => (
