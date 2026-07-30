@@ -14,7 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { resolveSchema, resolveVariantForm, resolveForm } from '@/lib/schemaResolver';
 import { useObjectList, useObjectLabel } from '@/lib/objectOptions';
-import { formatSize, formatDuration } from '@/lib/durationFormat';
+import { formatDuration } from '@/lib/durationFormat';
+import { SizeDisplay } from '@/components/common/SizeDisplay';
 import type { Schema, Field, FieldType, FormField, Form, Fields, EnumVariant, ScalarType } from '@/types/schema';
 
 export interface DynamicViewProps {
@@ -224,7 +225,7 @@ function NumberValue({ value, format }: { value: unknown; format: string }) {
 
   switch (format) {
     case 'size':
-      return <span>{formatSize(num)}</span>;
+      return <SizeDisplay bytes={num} />;
     case 'duration':
       return <span>{formatDuration(num)}</span>;
     default:

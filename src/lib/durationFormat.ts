@@ -15,15 +15,18 @@ const SIZE_FACTORS: Record<string, number> = {
 };
 
 export function bytesToHuman(bytes: number): { value: number; unit: string } {
-  if (bytes === 0) return { value: 0, unit: 'B' };
+  if (!Number.isFinite(bytes) || bytes === 0) return { value: 0, unit: 'B' };
+
+  const sign = bytes < 0 ? -1 : 1;
+  const abs = Math.abs(bytes);
 
   for (let i = SIZE_UNITS.length - 1; i >= 0; i--) {
     const unit = SIZE_UNITS[i];
     const factor = SIZE_FACTORS[unit];
-    const v = bytes / factor;
+    const v = abs / factor;
     if (v >= 1) {
       const rounded = Math.round(v * 100) / 100;
-      return { value: rounded, unit };
+      return { value: sign * rounded, unit };
     }
   }
 

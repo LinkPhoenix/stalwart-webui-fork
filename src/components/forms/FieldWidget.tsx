@@ -29,13 +29,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 import { ExpressionEditor } from '@/components/expression/ExpressionEditor';
 import { OtpAuthField } from '@/components/forms/OtpAuthField';
+import { SizeDisplay } from '@/components/common/SizeDisplay';
 
 import {
   bytesToHuman,
   humanToBytes,
   msToHuman,
   humanToMs,
-  formatSize,
   formatDuration,
   SIZE_UNITS,
   DURATION_UNITS,
@@ -651,7 +651,11 @@ function SizeInput({ value, onChange, readOnly, nullable }: SizeInputProps) {
   if (readOnly) {
     if (value == null)
       return <span className="text-sm text-muted-foreground italic">{t('field.notSet', 'Not set')}</span>;
-    return <span className="text-sm">{formatSize(value as number)}</span>;
+    return (
+      <span className="text-sm">
+        <SizeDisplay bytes={value as number} />
+      </span>
+    );
   }
   return <SizeInputEditable value={value} onChange={onChange} nullable={nullable} />;
 }

@@ -31,6 +31,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatSize as fmtSize, formatDuration as fmtDuration } from '@/lib/durationFormat';
+import { SizeDisplay } from '@/components/common/SizeDisplay';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -247,15 +248,25 @@ function formatUserRole(item: Record<string, unknown>, schema: Schema): React.Re
   return type;
 }
 
-function formatQuotaUsage(item: Record<string, unknown>, t: TFn): string {
-  const used = typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0;
+function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNode {
+  const rawUsed = typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0;
+  const used = Number.isFinite(rawUsed) ? rawUsed : 0;
   const quotas = item.quotas as Record<string, unknown> | undefined;
-  const limit = quotas && typeof quotas.maxDiskQuota === 'number' ? quotas.maxDiskQuota : 0;
-  const usedLabel = formatSize(used);
-  if (!limit) {
-    return `${usedLabel} / ${t('list.unlimitedQuota', 'Unlimited')}`;
+  const rawLimit = quotas && typeof quotas.maxDiskQuota === 'number' ? quotas.maxDiskQuota : 0;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 0;
+  const limitLabel = limit ? formatSize(limit) : t('list.unlimitedQuota', 'Unlimited');
+
+  if (used >= 0) {
+    return `${formatSize(used)} / ${limitLabel}`;
   }
-  return `${usedLabel} / ${formatSize(limit)}`;
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <SizeDisplay bytes={used} />
+      <span className="text-muted-foreground">/</span>
+      <span>{limitLabel}</span>
+    </span>
+  );
 }
 
 function getFieldsRecord(resolvedSchema: ResolvedSchema): Record<string, Field> {
@@ -1644,7 +1655,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           ) : isAccountsList && col.name === 'roles' ? (
                             formatUserRole(item, schema!)
                           ) : isAccountsList && col.name === 'quotaUsage' ? (
-                            formatQuotaUsage(item, t)
+                            renderQuotaUsage(item, t)
                           ) : isMailboxList && col.name === 'name' ? (
                             (() => {
                               const depth = mailboxDepths.get(item.id as string) ?? 0;

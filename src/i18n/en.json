@@ -317,7 +317,9 @@
     "showingItems": "Showing {{count}} items",
     "sort": "Sort",
     "unknownError": "Unknown error",
-    "unlimitedQuota": "Unlimited"
+    "unlimitedQuota": "Unlimited",
+    "negativeQuotaInfoAria": "Why is disk usage negative?",
+    "negativeQuotaTooltip": "This disk-usage counter is out of sync (often after a migration or reset). Schedule a task: Perform account maintenance operations → Recalculate storage quota usage for the account. Or for all accounts: Perform store maintenance operations → Reset all user quotas."
   },
   "login": {
     "continue": "Continue",

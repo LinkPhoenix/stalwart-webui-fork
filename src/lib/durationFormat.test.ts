@@ -68,6 +68,15 @@ describe('bytesToHuman', () => {
   it('should convert 1099511627776 bytes to 1 TB', () => {
     expect(bytesToHuman(1099511627776)).toEqual({ value: 1, unit: 'TB' });
   });
+
+  it('should format negative byte counts with a minus sign', () => {
+    expect(bytesToHuman(-9515272)).toEqual({ value: -9.07, unit: 'MB' });
+  });
+
+  it('should treat non-finite byte counts as empty usage', () => {
+    expect(bytesToHuman(Number.NaN)).toEqual({ value: 0, unit: 'B' });
+    expect(bytesToHuman(Number.POSITIVE_INFINITY)).toEqual({ value: 0, unit: 'B' });
+  });
 });
 
 describe('humanToBytes', () => {
@@ -107,6 +116,10 @@ describe('formatSize', () => {
 
   it('should format large values in TB', () => {
     expect(formatSize(1099511627776)).toBe('1 TB');
+  });
+
+  it('should format negative byte counts with a minus sign', () => {
+    expect(formatSize(-9515272)).toBe('-9.07 MB');
   });
 });
 
