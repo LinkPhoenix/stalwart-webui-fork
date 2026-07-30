@@ -333,8 +333,22 @@ interface ConfirmAction {
 
 function isActiveWebApplication(item: Record<string, unknown>): boolean {
   const prefixes = item.urlPrefix;
-  if (!Array.isArray(prefixes)) return false;
-  return prefixes.includes('/admin') || prefixes.includes('/account');
+  const values: string[] = [];
+  if (Array.isArray(prefixes)) {
+    values.push(...prefixes.map(String));
+  } else if (typeof prefixes === 'string') {
+    values.push(...prefixes.split(',').map((s) => s.trim()));
+  } else if (prefixes && typeof prefixes === 'object') {
+    // JMAP exposes urlPrefix as a set object such as { "/admin": true, "/account": true }
+    for (const [key, value] of Object.entries(prefixes)) {
+      if (value === true) {
+        values.push(key);
+      }
+    }
+  } else if (prefixes != null) {
+    values.push(String(prefixes));
+  }
+  return values.some((p) => p === '/admin' || p === '/account');
 }
 interface DynamicListProps {
   viewName: string;
@@ -362,22 +376,27 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }, [schema, viewName]);
 
   const objectName = resolved?.obj.objectName;
-  const isWebApplications = objectName === 'x:Application';
+  const isWebApplications = viewName === 'x:Application' || objectName === 'x:Application';
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
     if (!isWebApplications) return columns;
 
     // For Web Applications, present Description first and Enabled second
-    // to match the layout of other tables such as Domains.
+    // to match the layout of other tables such as Domains. If the schema
+    // does not expose an Enabled column, add a synthetic one.
     const ordered = ['description', 'enabled'];
     const rest = columns.filter((c) => !ordered.includes(c.name));
     const descriptionCol = columns.find((c) => c.name === 'description');
     const enabledCol = columns.find((c) => c.name === 'enabled');
 
-    const result = [];
+    const result: Array<{ name: string; label: string }> = [];
     if (descriptionCol) result.push(descriptionCol);
-    if (enabledCol) result.push(enabledCol);
+    if (enabledCol) {
+      result.push(enabledCol);
+    } else {
+      result.push({ name: 'enabled', label: t('webApplications.enabled', 'Enabled') });
+    }
     result.push(...rest);
     return result;
   }, [resolved?.list?.columns, isWebApplications]);
@@ -414,9 +433,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
     void (async () => {
       try {
-        const accountId = getAccountId('x:Application');
+        const accountId = getAccountId(objectName ?? 'x:Application');
         const result = await jmapQueryAllAndGet(
-          'x:Application',
+          objectName ?? 'x:Application',
           accountId,
           {},
           ['id', 'description', 'enabled', 'urlPrefix'],
@@ -475,6 +494,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
       try {
         const accountId = getAccountId(obj.objectName);
         const properties = ['id', ...list.columns.map((c) => c.name)];
+        if (isWebApplications && !properties.includes('enabled')) {
+          properties.push('enabled');
+        }
         const filter = buildFilter();
         const sortArr = buildSort();
 
@@ -1358,7 +1380,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       )}
                       {displayColumns.map((col) => (
                         <td key={col.name} className="px-3 py-2">
-                          {renderCellValue(
+                          {isWebApplications && col.name === 'enabled' && !fields[col.name] ? (
+                            item.enabled === true ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <X className="h-4 w-4 text-red-500" />
+                            )
+                          ) : (
+                            renderCellValue(
                               item[col.name],
                               fields[col.name],
                               col.name,
@@ -1366,7 +1395,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                               resolved.obj.objectName,
                               getDisplayName,
                             )
-                          }
+                          )}
                         </td>
                       ))}
                       {hasItemActions && <td className="px-3 py-2 text-right">{renderItemActions(item)}</td>}

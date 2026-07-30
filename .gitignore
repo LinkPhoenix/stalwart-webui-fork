@@ -28,3 +28,9 @@ scripts/
 !README.md
 !CHANGELOG.md
 /SPEC-*
+# Tool-generated artifacts during agent sessions
+.playwright-mcp/
+outputs/
+.vite_*.log
+.tmp_*
+*.py

@@ -400,6 +400,7 @@
   },
   "webApplications": {
     "activeWebUI": "Active WebUI",
-    "version": "Version"
+    "version": "Version",
+    "enabled": "Enabled"
   }
 }
