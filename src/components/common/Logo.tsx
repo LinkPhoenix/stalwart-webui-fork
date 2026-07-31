@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getApiBaseUrl } from '@/services/api';
+import { getLogoState, loadLogoOnce, subscribeToLogo } from '@/lib/logoCache';
 
 export function DefaultLogo() {
   const { t } = useTranslation();
@@ -31,54 +31,18 @@ export function DefaultLogo() {
 
 export default function Logo() {
   const { t } = useTranslation();
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const logo = useSyncExternalStore(subscribeToLogo, getLogoState, getLogoState);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    async function fetchLogo() {
-      try {
-        const response = await fetch(`${getApiBaseUrl()}/logo`, {
-          signal: controller.signal,
-        });
-        const contentType = response.headers.get('content-type') ?? '';
-
-        if (response.ok && contentType.startsWith('image/')) {
-          const blob = await response.blob();
-          if (!controller.signal.aborted) {
-            const url = URL.createObjectURL(blob);
-            setLogoUrl(url);
-          }
-        } else {
-          if (!controller.signal.aborted) setFailed(true);
-        }
-      } catch {
-        if (!controller.signal.aborted) setFailed(true);
-      }
-    }
-
-    fetchLogo();
-
-    return () => {
-      controller.abort();
-    };
+    loadLogoOnce();
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (logoUrl) {
-        URL.revokeObjectURL(logoUrl);
-      }
-    };
-  }, [logoUrl]);
-
-  if (logoUrl && !failed) {
-    return <img src={logoUrl} alt={t('logo.alt', 'Logo')} className="h-7 w-auto max-w-[220px] object-contain" />;
+  if (logo.status === 'custom') {
+    return <img src={logo.url} alt={t('logo.alt', 'Logo')} className="h-7 w-auto max-w-[220px] object-contain" />;
   }
 
-  if (!failed) {
-    return <div className="h-7" aria-hidden="true" />;
+  if (logo.status === 'loading') {
+    return <span className="block h-7 w-[140px]" aria-hidden="true" />;
   }
 
   return <DefaultLogo />;

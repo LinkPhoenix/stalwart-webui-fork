@@ -16,13 +16,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useUIStore } from '@/stores/uiStore';
 import { useAccountStore } from '@/stores/accountStore';
 import { useSchemaStore } from '@/stores/schemaStore';
-import {
-  visibleLayouts,
-  findFirstVisibleLinkInLayout,
-  findFirstAccessibleLinkInLayout,
-  isLinkEnterprise,
-  isLinkVisible,
-} from '@/lib/layout';
+import { visibleLayouts, isLinkEnterprise, isLinkVisible } from '@/lib/layout';
+import { sectionLandingLink } from '@/lib/lastVisited';
 import type { Layout, LayoutItem, LayoutSubItem } from '@/types/schema';
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
@@ -341,9 +336,7 @@ export function Sidebar() {
   const handleSectionClick = (target: Layout) => {
     setActiveSection(target.name);
     const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
-    const first =
-      findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
-      findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
+    const first = sectionLandingLink(schema, target, edition, canGet, hasPermission);
     if (first) navigate(`/${target.name}/${first}`);
   };
 

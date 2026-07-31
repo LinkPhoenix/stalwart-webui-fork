@@ -59,9 +59,7 @@ export function MainContent({ viewName, id, section }: MainContentProps) {
 
 function renderView(schema: Schema | null, viewName?: string, id?: string, section?: string): ReactNode {
   if (!viewName) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">Select a view from the sidebar.</div>
-    );
+    return <LoadingFallback />;
   }
 
   if (viewName.startsWith('Dashboard/')) {

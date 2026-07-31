@@ -16,6 +16,7 @@ import NotFound from './pages/NotFound';
 import { AdminPanel } from './pages/AdminPanel.lazy';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { getBasePath } from './lib/basePath';
+import { loadLogoOnce } from './lib/logoCache';
 
 (() => {
   try {
@@ -33,6 +34,8 @@ import { getBasePath } from './lib/basePath';
   const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
   document.documentElement.classList.toggle('dark', !!prefersDark);
 })();
+
+loadLogoOnce();
 
 const basePath = getBasePath();
 

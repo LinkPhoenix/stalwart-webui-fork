@@ -27,6 +27,7 @@ import {
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { friendlyName } from '@/hooks/useGlobalSearch';
+import { rememberLastVisited, sectionLandingLink } from '@/lib/lastVisited';
 
 const BootstrapWizard = lazy(() =>
   import('@/components/bootstrap/BootstrapWizard').then((m) => ({ default: m.BootstrapWizard })),
@@ -210,15 +211,13 @@ export default function AdminPanel() {
     if (section && viewName) {
       const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
       setActiveSection(ownLayout?.name ?? layouts[0]?.name ?? section);
+      if (ownLayout) rememberLastVisited(ownLayout.name, viewName);
       return;
     }
 
     if (section) {
       const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
-      const ownLink = ownLayout
-        ? (findFirstAccessibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm) ??
-          findFirstVisibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm))
-        : null;
+      const ownLink = ownLayout ? sectionLandingLink(schema, ownLayout, edition, canGet, hasPerm) : null;
       if (ownLayout && ownLink) {
         redirectTo(ownLayout.name, ownLink);
       } else {

@@ -22,7 +22,8 @@ import {
 import Logo from '@/components/common/Logo';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
-import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
+import { visibleLayouts } from '@/lib/layout';
+import { sectionLandingLink } from '@/lib/lastVisited';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oauth';
@@ -144,9 +145,7 @@ export function TopBar() {
                         onClick={() => {
                           setActiveSection(layout.name);
                           const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-                          const firstLink =
-                            findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPermission) ??
-                            findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPermission);
+                          const firstLink = sectionLandingLink(schema, layout, edition, canGet, hasPermission);
                           if (firstLink) {
                             navigate(`/${layout.name}/${firstLink}`);
                           }

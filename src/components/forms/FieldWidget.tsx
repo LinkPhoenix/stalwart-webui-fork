@@ -844,7 +844,7 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
     return d && !isNaN(d.getTime()) ? d : null;
   }, [strValue]);
 
-  const localTime = selected ? selected.toTimeString().slice(0, 5) : '';
+  const localTime = (selected ?? new Date()).toTimeString().slice(0, 5);
 
   const commit = (day: Date, time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
@@ -880,7 +880,7 @@ function DateTimeField({ value, onChange, readOnly, nullable }: DateTimeFieldPro
             defaultMonth={selected ?? undefined}
             autoFocus
             onSelect={(day) => {
-              if (day) commit(day, localTime || '00:00');
+              if (day) commit(day, localTime);
             }}
           />
           <div className="border-t p-3">

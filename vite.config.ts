@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { configDefaults } from 'vitest/config'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -19,5 +20,6 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'happy-dom',
+    exclude: [...configDefaults.exclude, '**/.ignore/**'],
   },
 })

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.8] - 2026-07-31
+
+### Added
+- Remember the last visited page when switching sections (credits @LinkPhoenix).
+
+### Changed
+- Enum list filters with many options render as a searchable combobox (credits @LinkPhoenix).
+- Object cells display the variant label as a badge instead of the raw type name (credits @LinkPhoenix).
+- Empty date pickers open on the current date and time (credits @LinkPhoenix).
+
+### Fixed
+- Custom logos no longer flash when navigating between pages.
+- Landing no longer flashes "Select a view" before redirecting to the default page.
+
 ## [1.0.7] - 2026-07-30
 
 ### Added

@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatSize as fmtSize, formatDuration as fmtDuration } from '@/lib/durationFormat';
@@ -64,6 +65,8 @@ import { jmapGetBatched, jmapQueryAll, jmapQueryAndGet, jmapSet, getAccountId } 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
+
+const ENUM_FILTER_COMBOBOX_THRESHOLD = 15;
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
@@ -285,9 +288,11 @@ function renderCellValue(
 
     case 'object': {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const obj = value as Record<string, unknown>;
-        if ('@type' in obj && typeof obj['@type'] === 'string') {
-          return obj['@type'];
+        const typeName = (value as Record<string, unknown>)['@type'];
+        if (typeof typeName === 'string') {
+          const objSchema = schema.schemas[ft.objectName];
+          const variant = objSchema?.type === 'multiple' ? objSchema.variants.find((v) => v.name === typeName) : null;
+          return <Badge variant="secondary">{variant?.label ?? typeName}</Badge>;
         }
       }
       return <span className="text-muted-foreground">-</span>;
@@ -869,6 +874,20 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       case 'enum': {
         const enumVariants = schema!.enums[filterDef.enumName] ?? [];
+        if (enumVariants.length > ENUM_FILTER_COMBOBOX_THRESHOLD) {
+          return wrapper(
+            <Combobox
+              options={[
+                { value: '__all__', label: t('filters.all', 'All') },
+                ...enumVariants.map((v) => ({ value: v.name, label: v.label })),
+              ]}
+              value={value || '__all__'}
+              onValueChange={(v) => handleFilterSelectChange(filterDef.field, v)}
+              searchPlaceholder={t('common.searchPlaceholder', 'Search...')}
+              emptyText={t('field.noMatches', 'No matches')}
+            />,
+          );
+        }
         return wrapper(
           <Select value={value || '__all__'} onValueChange={(v) => handleFilterSelectChange(filterDef.field, v)}>
             <SelectTrigger>
