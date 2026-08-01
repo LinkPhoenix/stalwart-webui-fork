@@ -5,6 +5,7 @@
  */
 
 import type { Schema } from '@/types/schema';
+import { clientSortable } from './schemaDeviationTypes';
 
 /**
  * SCHEMA-DEVIATION: role-permission-count-columns (see SCHEMA_DEVIATIONS.md)
@@ -14,6 +15,12 @@ import type { Schema } from '@/types/schema';
  * synthetic columns — DynamicList's generic count-column handling
  * resolves them from the real `enabledPermissions`/`disabledPermissions`
  * set properties and renders their entry counts.
+ *
+ * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+ *
+ * Description and both permission-count columns are tagged
+ * `clientSortable` — same reasoning as Accounts/Groups: the server
+ * doesn't support sorting on any `x:Role` property either.
  */
 export function withRoleListColumns(schema: Schema): Schema {
   const list = schema.lists['x:Role'];
@@ -26,9 +33,9 @@ export function withRoleListColumns(schema: Schema): Schema {
       'x:Role': {
         ...list,
         columns: [
-          ...list.columns,
-          { name: 'enabledPermissionCount', label: 'Enabled Permissions' },
-          { name: 'disabledPermissionCount', label: 'Disabled Permissions' },
+          ...list.columns.map((c) => (c.name === 'description' ? clientSortable(c) : c)),
+          clientSortable({ name: 'enabledPermissionCount', label: 'Enabled Permissions' }),
+          clientSortable({ name: 'disabledPermissionCount', label: 'Disabled Permissions' }),
         ],
       },
     },

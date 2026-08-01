@@ -30,3 +30,8 @@ export type ClientSortableColumn = Column & { clientSortable?: boolean };
 export function isClientSortableColumn(c: Column): boolean {
   return (c as ClientSortableColumn).clientSortable === true;
 }
+
+/** Tags a column `clientSortable`, for schema patches that opt a column into account-client-sort. */
+export function clientSortable(column: Column): ClientSortableColumn {
+  return { ...column, clientSortable: true };
+}

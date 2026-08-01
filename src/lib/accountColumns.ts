@@ -5,7 +5,7 @@
  */
 
 import type { Schema } from '@/types/schema';
-import type { ClientSortableColumn } from './schemaDeviationTypes';
+import { clientSortable as sortable } from './schemaDeviationTypes';
 
 /**
  * SCHEMA-DEVIATION: account-quota-usage-column (see SCHEMA_DEVIATIONS.md)
@@ -35,10 +35,6 @@ import type { ClientSortableColumn } from './schemaDeviationTypes';
  * itself, the same way it already resolves `quotaUsage`/`aliasCount`,
  * instead of hardcoding which lists/columns support it.
  */
-function sortable(column: { name: string; label: string }): ClientSortableColumn {
-  return { ...column, clientSortable: true };
-}
-
 export function withAccountListColumns(schema: Schema): Schema {
   let lists = schema.lists;
 

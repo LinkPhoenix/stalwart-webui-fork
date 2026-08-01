@@ -5,6 +5,7 @@
  */
 
 import type { Schema } from '@/types/schema';
+import { clientSortable } from './schemaDeviationTypes';
 
 /**
  * SCHEMA-DEVIATION: account-alias-count-column (see SCHEMA_DEVIATIONS.md)
@@ -13,16 +14,27 @@ import type { Schema } from '@/types/schema';
  * full `aliases` objectList on the detail view. Adds the same synthetic
  * `aliasCount` column already used on Accounts/Groups — DynamicList's
  * generic count-column handling picks it up with no further wiring.
+ *
+ * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+ *
+ * Email Address, Description, and `aliasCount` are tagged
+ * `clientSortable` — same reasoning as Accounts/Groups: the server
+ * doesn't support sorting on any `x:MailingList` property either.
  */
 export function withMailingListColumns(schema: Schema): Schema {
   const list = schema.lists['x:MailingList'];
   if (!list) return schema;
 
+  const columns = [
+    ...list.columns.map((c) => (c.name === 'emailAddress' || c.name === 'description' ? clientSortable(c) : c)),
+    clientSortable({ name: 'aliasCount', label: 'Aliases' }),
+  ];
+
   return {
     ...schema,
     lists: {
       ...schema.lists,
-      'x:MailingList': { ...list, columns: [...list.columns, { name: 'aliasCount', label: 'Aliases' }] },
+      'x:MailingList': { ...list, columns },
     },
   };
 }
