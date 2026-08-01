@@ -15,6 +15,7 @@ import { fetchSession, fetchSchema, fetchAccountInfo } from '@/services/jmap/cli
 import { withClientLogFilters } from '@/lib/logFilters';
 import { withAccountListColumns } from '@/lib/accountColumns';
 import { withMailingListColumns } from '@/lib/mailingListColumns';
+import { withRoleListColumns } from '@/lib/roleColumns';
 import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -151,7 +152,7 @@ export default function AdminPanel() {
 
         if (cancelled) return;
 
-        setSchema(withMailingListColumns(withAccountListColumns(withClientLogFilters(schemaData))));
+        setSchema(withRoleListColumns(withMailingListColumns(withAccountListColumns(withClientLogFilters(schemaData)))));
 
         setAccountInfo(accountData.permissions, accountData.edition, accountData.locale);
         setLocale(accountData.locale);

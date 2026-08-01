@@ -273,6 +273,28 @@ function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNod
 }
 
 /**
+ * SCHEMA-DEVIATION: account-alias-count-column, role-permission-count-columns
+ * (see SCHEMA_DEVIATIONS.md)
+ *
+ * Synthetic "count" columns, keyed by column name, each naming the real
+ * set/objectList property whose entry count they render. Generic and
+ * table-level: whichever list's schema patch tags a column with one of
+ * these names (see withAccountListColumns, withMailingListColumns,
+ * withRoleListColumns) gets it resolved and rendered automatically, with
+ * no per-list wiring in this component.
+ */
+const COUNT_COLUMN_SOURCES: Record<string, string> = {
+  aliasCount: 'aliases',
+  enabledPermissionCount: 'enabledPermissions',
+  disabledPermissionCount: 'disabledPermissions',
+};
+
+function getCountColumnValue(colName: string, item: Record<string, unknown>): number {
+  const source = COUNT_COLUMN_SOURCES[colName];
+  return Object.keys((item[source] as Record<string, unknown>) ?? {}).length;
+}
+
+/**
  * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
  *
  * Generic, table-level client-sort mechanism: any column tagged
@@ -282,15 +304,16 @@ function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNod
  * or Groups, and needs no per-list wiring in this component.
  *
  * Real columns compare their own property directly; synthetic deviation
- * columns (quotaUsage, aliasCount) aren't real properties, so they need an
- * override to compute a comparable value from what's actually on the item.
+ * columns (quotaUsage, and any COUNT_COLUMN_SOURCES entry) aren't real
+ * properties, so they need an override to compute a comparable value from
+ * what's actually on the item.
  */
 const CLIENT_SORT_VALUE_OVERRIDES: Record<string, (item: Record<string, unknown>) => string | number> = {
   quotaUsage: (item) => (typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0),
-  aliasCount: (item) => Object.keys((item.aliases as Record<string, unknown>) ?? {}).length,
 };
 
 function getClientSortValue(colName: string, item: Record<string, unknown>): string | number {
+  if (colName in COUNT_COLUMN_SOURCES) return getCountColumnValue(colName, item);
   const override = CLIENT_SORT_VALUE_OVERRIDES[colName];
   if (override) return override(item);
   const raw = item[colName];
@@ -528,8 +551,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // (see withAccountListColumns, account-quota-usage-column deviation)
   // include the synthetic `quotaUsage` column gets it resolved and rendered.
   const hasQuotaUsageColumn = (resolved?.list?.columns ?? []).some((c) => c.name === 'quotaUsage');
-  // SCHEMA-DEVIATION: account-alias-count-column (see SCHEMA_DEVIATIONS.md)
-  const hasAliasCountColumn = (resolved?.list?.columns ?? []).some((c) => c.name === 'aliasCount');
+  // SCHEMA-DEVIATION: account-alias-count-column, role-permission-count-columns
+  // (see SCHEMA_DEVIATIONS.md) — which COUNT_COLUMN_SOURCES entries this
+  // particular list's columns actually declare.
+  const activeCountColumns = useMemo(
+    () => (resolved?.list?.columns ?? []).filter((c) => c.name in COUNT_COLUMN_SOURCES).map((c) => c.name),
+    [resolved?.list?.columns],
+  );
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -709,10 +737,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
             properties.splice(quotaIdx, 1, 'usedDiskQuota', 'quotas');
           }
         }
-        if (hasAliasCountColumn) {
-          const aliasIdx = properties.indexOf('aliasCount');
-          if (aliasIdx !== -1) {
-            properties.splice(aliasIdx, 1, 'aliases');
+        for (const countCol of activeCountColumns) {
+          const idx = properties.indexOf(countCol);
+          if (idx !== -1) {
+            properties.splice(idx, 1, COUNT_COLUMN_SOURCES[countCol]);
           }
         }
         if (isMailboxList && !properties.includes('parentId')) {
@@ -819,7 +847,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       isWebApplications,
       isAccountsList,
       hasQuotaUsageColumn,
-      hasAliasCountColumn,
+      activeCountColumns,
       isMailboxList,
       clientSortField,
       sort,
@@ -1749,8 +1777,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             formatUserRole(item, schema!)
                           ) : hasQuotaUsageColumn && col.name === 'quotaUsage' ? (
                             renderQuotaUsage(item, t)
-                          ) : hasAliasCountColumn && col.name === 'aliasCount' ? (
-                            Object.keys((item.aliases as Record<string, unknown>) ?? {}).length
+                          ) : col.name in COUNT_COLUMN_SOURCES && activeCountColumns.includes(col.name) ? (
+                            getCountColumnValue(col.name, item)
                           ) : isMailboxList && col.name === 'name' ? (
                             (() => {
                               const depth = mailboxDepths.get(item.id as string) ?? 0;

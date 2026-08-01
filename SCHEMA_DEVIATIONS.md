@@ -81,6 +81,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: neither list's schema declares any sortable property at all (`list.sort` is absent) — confirmed against a live server: `x:Account/query` with `sort: [{"property":"emailAddress",...}]` returns `unsupportedSort` for every property tried, including the real ones. This is a systemic gap in the current Stalwart server, not specific to this fork's synthetic columns.
 - **Ideal fix**: the server's `x:Account/User`/`x:Account/Group` query methods accept `sort` on at least `emailAddress`, `description`, `usedDiskQuota`, and the schema declares them in `list.sort`; `withAccountListColumns` stops tagging those columns `clientSortable` and they fall through to the normal server-paginated `sortableFields` path already used elsewhere. The generic mechanism itself only goes away once nothing tags any column `clientSortable` anymore.
 
+### `role-permission-count-columns` 🟡
+
+- **Where**: [`src/lib/roleColumns.ts`](src/lib/roleColumns.ts); resolved generically by the same `COUNT_COLUMN_SOURCES` table in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) used by `account-alias-count-column`
+- **What**: adds synthetic `enabledPermissionCount`/`disabledPermissionCount` columns to the `x:Role` list — not real schema properties; resolved from the real `enabledPermissions`/`disabledPermissions` set properties and rendered as entry counts.
+- **Why**: the Roles list schema only exposes Description as a column; seeing how broad or restrictive a role is requires opening it and counting permissions by hand.
+- **Ideal fix**: the server's `x:Role` list schema includes computed enabled/disabled permission count columns natively; this column definition is deleted.
+
 ## Not a deviation (for reference)
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in
