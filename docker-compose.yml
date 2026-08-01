@@ -22,7 +22,9 @@ services:
       - stalwart-data:/var/lib/stalwart
     environment:
       # Disposable local dev credentials — do not reuse for anything real.
-      # Matches scripts/dev-token.ps1's defaults.
+      # Break-glass admin, used only by scripts/dev-server-init.sh (its
+      # tokens always expire in 1h regardless of server config, so it's
+      # not used for day-to-day dev tokens — see scripts/dev-token.sh).
       STALWART_RECOVERY_ADMIN: "admin@example.org:c8321iEscHDy0GWV"
 
 volumes:
