@@ -7,6 +7,8 @@
 import type { Schema } from '@/types/schema';
 
 /**
+ * SCHEMA-DEVIATION: account-quota-usage-column (see SCHEMA_DEVIATIONS.md)
+ *
  * The Accounts list only shows Email/Full Name/Created At, hiding role and
  * storage usage that otherwise require opening each account individually.
  * `createdAt` is dropped to make room; `roles` is a real property so it

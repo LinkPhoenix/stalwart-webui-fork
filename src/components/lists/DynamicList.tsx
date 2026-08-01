@@ -76,6 +76,7 @@ import {
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
+import { isClientOnlyFilterEnum } from '@/lib/schemaDeviationTypes';
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
@@ -87,7 +88,7 @@ const ENUM_COMBOBOX_THRESHOLD = 15;
 const REFRESH_COOLDOWN_MS = 5000;
 
 function isClientOnlyFilter(f: FilterDef): boolean {
-  return f.type === 'enum' && f.clientOnly === true;
+  return f.type === 'enum' && isClientOnlyFilterEnum(f);
 }
 
 function parseSetResponse(raw: [string, Record<string, unknown>, string][]): JmapSetResponse | null {
@@ -187,6 +188,8 @@ function formatNumber(value: unknown): string {
   return value.toLocaleString();
 }
 
+// SCHEMA-DEVIATION: mailbox-client-hierarchy-sort (see SCHEMA_DEVIATIONS.md)
+//
 // Orders mailboxes so each parent is immediately followed by its
 // descendants (siblings alphabetical), and records each row's depth.
 // Requires the full set (not just one page) since a mailbox's parent
@@ -502,8 +505,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
     if (!isWebApplications) return columns;
 
     // For Web Applications, present Description first and Enabled second
-    // to match the layout of other tables such as Domains. If the schema
-    // does not expose an Enabled column, add a synthetic one.
+    // to match the layout of other tables such as Domains. Reordering real
+    // schema columns is fine, but the synthetic fallback below (when the
+    // schema doesn't list an Enabled column at all) is a tracked deviation.
+    // SCHEMA-DEVIATION: webapp-enabled-column-fallback (see SCHEMA_DEVIATIONS.md)
     const ordered = ['description', 'enabled'];
     const rest = columns.filter((c) => !ordered.includes(c.name));
     const descriptionCol = columns.find((c) => c.name === 'description');
@@ -670,11 +675,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
         if (activeClientFilters.length > 0 || isMailboxList) {
           // No server-side pagination possible once a client-only filter is
-          // active: fetch every server-matching row up front, narrow it in
-          // the browser, then paginate the in-memory result locally. Mailbox
-          // hierarchy needs this too — a mailbox's parent can land on a
-          // different server page than the mailbox itself, so the full set
-          // is required to place each row under its parent correctly.
+          // active (SCHEMA-DEVIATION: log-client-filters): fetch every
+          // server-matching row up front, narrow it in the browser, then
+          // paginate the in-memory result locally. Mailbox hierarchy needs
+          // this too (SCHEMA-DEVIATION: mailbox-client-hierarchy-sort) — a
+          // mailbox's parent can land on a different server page than the
+          // mailbox itself, so the full set is required to place each row
+          // under its parent correctly.
           const { list: fullList } = await jmapQueryAllAndGet(
             obj.objectName,
             accountId,
