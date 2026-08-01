@@ -119,4 +119,29 @@ try {
   } | Out-Null
 } catch {}
 
+# Cosmetic only: Stalwart seeds a default "Stalwart Web Interface" /
+# stalwartlabs/webui entry for the x:Application record serving /admin and
+# /account (see Settings > Web Applications' "Active WebUI" card). Point it
+# at this fork so that card isn't misleading in local dev too.
+Write-Host "Pointing the active WebUI's description at this fork..."
+try {
+  $appResult = Invoke-Jmap @{
+    using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
+    methodCalls = @(, @("x:Application/query", @{ accountId = $accountId }, "0"))
+  }
+  $appId = $appResult.methodResponses[0][1].ids[0]
+  if ($appId) {
+    Invoke-Jmap @{
+      using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
+      methodCalls = @(, @("x:Application/set", @{
+            accountId = $accountId
+            update    = @{ $appId = @{
+              description = "Stalwart WebUI Fork"
+              resourceUrl = "https://github.com/LinkPhoenix/stalwart-webui-fork/releases/latest/download/webui.zip"
+            } }
+          }, "0"))
+    } | Out-Null
+  }
+} catch {}
+
 Write-Host "Done. $DevAdminName@$DevDomain / $DevAdminSecret is ready - run scripts/dev-token.ps1 to get a token."

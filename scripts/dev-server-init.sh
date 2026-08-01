@@ -61,5 +61,16 @@ else
   jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:OidcProvider/set\",{\"accountId\":\"$ACCOUNT_ID\",\"update\":{\"singleton\":{\"accessTokenExpiry\":$DEFAULT_TOKEN_EXPIRY_MS}}},\"0\"]]}" > /dev/null
   jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:Action/set\",{\"accountId\":\"$ACCOUNT_ID\",\"create\":{\"a1\":{\"@type\":\"ReloadSettings\"}}},\"0\"]]}" > /dev/null 2>&1 || true
 
+  # Cosmetic only: Stalwart seeds a default "Stalwart Web Interface" /
+  # stalwartlabs/webui entry for the x:Application record serving /admin
+  # and /account (see Settings > Web Applications' "Active WebUI" card).
+  # Point it at this fork so that card isn't misleading in local dev too.
+  echo "Pointing the active WebUI's description at this fork..."
+  APP_RESULT=$(jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:Application/query\",{\"accountId\":\"$ACCOUNT_ID\"},\"0\"]]}") || true
+  APP_ID=$(printf '%s' "$APP_RESULT" | grep -o '"ids":\["[^"]*"' | cut -d'"' -f4)
+  if [ -n "$APP_ID" ]; then
+    jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:Application/set\",{\"accountId\":\"$ACCOUNT_ID\",\"update\":{\"$APP_ID\":{\"description\":\"Stalwart WebUI Fork\",\"resourceUrl\":\"https://github.com/LinkPhoenix/stalwart-webui-fork/releases/latest/download/webui.zip\"}}},\"0\"]]}" > /dev/null 2>&1 || true
+  fi
+
   echo "Done. devadmin@$DEV_DOMAIN / $DEVADMIN_SECRET is ready — run scripts/dev-token.sh to get a token."
 fi

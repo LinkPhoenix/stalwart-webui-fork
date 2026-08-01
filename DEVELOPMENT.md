@@ -55,10 +55,15 @@ bash ./scripts/dev-server-init.sh
 
 This completes the bootstrap wizard (default domain `example.org`, no TLS
 certificate request — safe for local/offline use), creates a real
-`devadmin@example.org` admin account, and sets the server's default OAuth
-access token lifetime to 3 hours. It's idempotent — safe to re-run, it
-no-ops once the server is already bootstrapped. You only need to re-run it
-after `docker compose down -v` (which wipes the volumes).
+`devadmin@example.org` admin account, sets the server's default OAuth
+access token lifetime to 3 hours, and points the `x:Application` record
+serving `/admin`/`/account` at this fork's description and release URL
+(cosmetic — otherwise Settings > Web Applications' "Active WebUI" card
+shows Stalwart's default "Stalwart Web Interface" / upstream release URL,
+even though what's actually running is this fork served by Vite). It's
+idempotent — safe to re-run, it no-ops once the server is already
+bootstrapped. You only need to re-run it after `docker compose down -v`
+(which wipes the volumes).
 
 ## 3. Get an access token
 

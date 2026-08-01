@@ -590,7 +590,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
           objectName ?? 'x:Application',
           accountId,
           {},
-          ['id', 'description', 'enabled', 'urlPrefix'],
+          ['id', 'description', 'enabled', 'urlPrefix', 'resourceUrl'],
         );
         if (cancelled) return;
         const active = result.list.find((item) => isActiveWebApplication(item));
@@ -1573,6 +1573,19 @@ export function DynamicList({ viewName }: DynamicListProps) {
               <span className="text-muted-foreground">{t('webApplications.version', 'Version')}:</span>
               <Badge variant="secondary">{__APP_VERSION__}</Badge>
             </div>
+            {typeof activeWebApp.resourceUrl === 'string' && activeWebApp.resourceUrl && (
+              <div className="flex items-start gap-2 text-sm">
+                <span className="shrink-0 text-muted-foreground">{t('webApplications.resourceUrl', 'Source')}:</span>
+                <a
+                  href={activeWebApp.resourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-primary hover:underline"
+                >
+                  {activeWebApp.resourceUrl}
+                </a>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
