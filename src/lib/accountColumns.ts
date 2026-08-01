@@ -5,6 +5,7 @@
  */
 
 import type { Schema } from '@/types/schema';
+import type { ClientSortableColumn } from './schemaDeviationTypes';
 
 /**
  * SCHEMA-DEVIATION: account-quota-usage-column (see SCHEMA_DEVIATIONS.md)
@@ -25,17 +26,31 @@ import type { Schema } from '@/types/schema';
  * Both lists also get a synthetic `aliasCount` column — DynamicList
  * resolves it from the real `aliases` objectList property (an id-keyed
  * map, per JMAP's objectList wire format) and renders its entry count.
+ *
+ * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+ *
+ * Email Address, Full Name (`description`), `quotaUsage`, and
+ * `aliasCount` are tagged `clientSortable` — DynamicList's generic
+ * client-sort mechanism picks this flag up from the column definition
+ * itself, the same way it already resolves `quotaUsage`/`aliasCount`,
+ * instead of hardcoding which lists/columns support it.
  */
+function sortable(column: { name: string; label: string }): ClientSortableColumn {
+  return { ...column, clientSortable: true };
+}
+
 export function withAccountListColumns(schema: Schema): Schema {
   let lists = schema.lists;
 
   const userList = lists['x:Account/User'];
   if (userList) {
     const columns = [
-      ...userList.columns.filter((c) => c.name !== 'createdAt'),
+      ...userList.columns
+        .filter((c) => c.name !== 'createdAt')
+        .map((c) => (c.name === 'emailAddress' || c.name === 'description' ? sortable(c) : c)),
       { name: 'roles', label: 'Role' },
-      { name: 'quotaUsage', label: 'Usage / Quota' },
-      { name: 'aliasCount', label: 'Aliases' },
+      sortable({ name: 'quotaUsage', label: 'Usage / Quota' }),
+      sortable({ name: 'aliasCount', label: 'Aliases' }),
     ];
     lists = { ...lists, 'x:Account/User': { ...userList, columns } };
   }
@@ -43,9 +58,9 @@ export function withAccountListColumns(schema: Schema): Schema {
   const groupList = lists['x:Account/Group'];
   if (groupList) {
     const columns = [
-      ...groupList.columns,
-      { name: 'quotaUsage', label: 'Usage / Quota' },
-      { name: 'aliasCount', label: 'Aliases' },
+      ...groupList.columns.map((c) => (c.name === 'emailAddress' || c.name === 'description' ? sortable(c) : c)),
+      sortable({ name: 'quotaUsage', label: 'Usage / Quota' }),
+      sortable({ name: 'aliasCount', label: 'Aliases' }),
     ];
     lists = { ...lists, 'x:Account/Group': { ...groupList, columns } };
   }

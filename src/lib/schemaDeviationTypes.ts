@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import type { FilterEnum } from '@/types/schema';
+import type { Column, FilterEnum } from '@/types/schema';
 
 /**
  * Type augmentations for tracked schema deviations (see SCHEMA_DEVIATIONS.md).
@@ -22,4 +22,11 @@ export type ClientOnlyFilterEnum = FilterEnum & { clientOnly?: boolean };
 
 export function isClientOnlyFilterEnum(f: FilterEnum): f is ClientOnlyFilterEnum {
   return (f as ClientOnlyFilterEnum).clientOnly === true;
+}
+
+// SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+export type ClientSortableColumn = Column & { clientSortable?: boolean };
+
+export function isClientSortableColumn(c: Column): boolean {
+  return (c as ClientSortableColumn).clientSortable === true;
 }

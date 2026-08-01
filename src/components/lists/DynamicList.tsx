@@ -76,7 +76,7 @@ import {
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
-import { isClientOnlyFilterEnum } from '@/lib/schemaDeviationTypes';
+import { isClientOnlyFilterEnum, isClientSortableColumn } from '@/lib/schemaDeviationTypes';
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
@@ -275,16 +275,27 @@ function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNod
 /**
  * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
  *
- * Columns sortable client-side (fetch-all + in-memory sort) on the
- * Accounts/Groups lists, keyed by column name, each mapped to a
- * comparable value extracted from the fetched item.
+ * Generic, table-level client-sort mechanism: any column tagged
+ * `clientSortable` in the schema (see ClientSortableColumn /
+ * withAccountListColumns) gets fetch-all-then-sort-in-memory behavior on
+ * click, for whichever list declares it — this isn't specific to Accounts
+ * or Groups, and needs no per-list wiring in this component.
+ *
+ * Real columns compare their own property directly; synthetic deviation
+ * columns (quotaUsage, aliasCount) aren't real properties, so they need an
+ * override to compute a comparable value from what's actually on the item.
  */
-const CLIENT_SORT_ACCESSORS: Record<string, (item: Record<string, unknown>) => string | number> = {
-  emailAddress: (item) => String(item.emailAddress ?? ''),
-  description: (item) => String(item.description ?? ''),
+const CLIENT_SORT_VALUE_OVERRIDES: Record<string, (item: Record<string, unknown>) => string | number> = {
   quotaUsage: (item) => (typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0),
   aliasCount: (item) => Object.keys((item.aliases as Record<string, unknown>) ?? {}).length,
 };
+
+function getClientSortValue(colName: string, item: Record<string, unknown>): string | number {
+  const override = CLIENT_SORT_VALUE_OVERRIDES[colName];
+  if (override) return override(item);
+  const raw = item[colName];
+  return typeof raw === 'number' ? raw : String(raw ?? '');
+}
 
 function getFieldsRecord(resolvedSchema: ResolvedSchema): Record<string, Field> {
   if (resolvedSchema.type === 'single') {
@@ -568,12 +579,16 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
   const [sort, setSort] = useState<SortState | null>(readUrlSort);
   // SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
-  // The server doesn't declare (or accept) a `sort` for any property on
-  // either list, so Email/Full Name/Usage/Aliases are sorted client-side
-  // instead, only when the user actually picks one of them.
-  const supportsClientSort = isAccountsList || viewName === 'x:Account/Group';
-  const clientSortField =
-    supportsClientSort && sort && CLIENT_SORT_ACCESSORS[sort.field] ? sort.field : null;
+  // Any column the schema tags `clientSortable` (currently Email/Full Name/
+  // Usage/Aliases on Accounts and Groups — see withAccountListColumns) is
+  // sorted client-side instead of via a JMAP `sort`, only when the user
+  // actually picks one of them. Not list-specific: any list whose columns
+  // carry the flag gets this for free.
+  const clientSortableColumns = useMemo(
+    () => new Set((resolved?.list?.columns ?? []).filter(isClientSortableColumn).map((c) => c.name)),
+    [resolved?.list?.columns],
+  );
+  const clientSortField = sort && clientSortableColumns.has(sort.field) ? sort.field : null;
 
   // Filters marked `clientOnly` (currently Level/Event on the Logs list) are
   // not supported by the server's query engine, so they narrow an
@@ -733,11 +748,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
             setMailboxDepths(depths);
           }
           if (clientSortField) {
-            const accessor = CLIENT_SORT_ACCESSORS[clientSortField];
             const direction = sort!.ascending ? 1 : -1;
             matched = [...matched].sort((a, b) => {
-              const av = accessor(a);
-              const bv = accessor(b);
+              const av = getClientSortValue(clientSortField, a);
+              const bv = getClientSortValue(clientSortField, b);
               const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
               return cmp * direction;
             });
@@ -1379,8 +1393,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }
 
   function renderSortIndicator(colName: string): React.ReactNode {
-    const isClientSortable = supportsClientSort && colName in CLIENT_SORT_ACCESSORS;
-    if (!sortableFields.has(colName) && !isClientSortable) return null;
+    if (!sortableFields.has(colName) && !clientSortableColumns.has(colName)) return null;
     const isActive = sort?.field === colName;
     return (
       <button

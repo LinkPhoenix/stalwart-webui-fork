@@ -76,10 +76,10 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 
 ### `account-client-sort` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `CLIENT_SORT_ACCESSORS`, `clientSortField`, and the `fetchData` branch that also triggers on `clientSortField`
-- **What**: on the `x:Account/User` and `x:Account/Group` lists, clicking the Email/Full Name/Usage/Aliases column headers sorts by fetching every matching row (bypassing server pagination, same mechanism as `mailbox-client-hierarchy-sort`) and sorting it client-side, instead of sending a JMAP `sort` to the server.
+- **Where**: table-level mechanism in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) (`clientSortableColumns`, `getClientSortValue`, the `fetchData` branch triggered by `clientSortField`) reading a `clientSortable` flag set per-column in [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts) (type: [`ClientSortableColumn`](src/lib/schemaDeviationTypes.ts))
+- **What**: any column tagged `clientSortable` in the schema gets fetch-all-then-sort-in-memory on click (bypassing server pagination, same mechanism as `mailbox-client-hierarchy-sort`), instead of sending a JMAP `sort` to the server. The mechanism itself is generic and not tied to any specific list — currently only `withAccountListColumns` tags columns with it, for Email Address, Full Name, Usage, and Aliases on `x:Account/User` and `x:Account/Group`.
 - **Why**: neither list's schema declares any sortable property at all (`list.sort` is absent) — confirmed against a live server: `x:Account/query` with `sort: [{"property":"emailAddress",...}]` returns `unsupportedSort` for every property tried, including the real ones. This is a systemic gap in the current Stalwart server, not specific to this fork's synthetic columns.
-- **Ideal fix**: the server's `x:Account/User`/`x:Account/Group` query methods accept `sort` on at least `emailAddress`, `description`, `usedDiskQuota`, and the schema declares them in `list.sort`; the client-sort branch and `CLIENT_SORT_ACCESSORS` are deleted in favor of the normal server-paginated `sortableFields` path already used elsewhere.
+- **Ideal fix**: the server's `x:Account/User`/`x:Account/Group` query methods accept `sort` on at least `emailAddress`, `description`, `usedDiskQuota`, and the schema declares them in `list.sort`; `withAccountListColumns` stops tagging those columns `clientSortable` and they fall through to the normal server-paginated `sortableFields` path already used elsewhere. The generic mechanism itself only goes away once nothing tags any column `clientSortable` anymore.
 
 ## Not a deviation (for reference)
 
