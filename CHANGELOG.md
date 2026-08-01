@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.1.3] - 2026-08-01
+
+### Fixed
+- Column sort headers now cycle unsorted → ascending → descending → unsorted, so a third click clears the sort and restores the list's default order (previously stuck alternating between ascending and descending).
+
 ## [1.1.2] - 2026-08-01
 
 ### Added

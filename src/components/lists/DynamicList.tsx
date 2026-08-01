@@ -1018,12 +1018,16 @@ export function DynamicList({ viewName }: DynamicListProps) {
     });
   }, []);
 
+  // Cycle: unsorted → ascending → descending → unsorted (default).
   const toggleSort = useCallback((field: string) => {
     setSort((prev) => {
-      if (prev?.field === field) {
-        return { field, ascending: !prev.ascending };
+      if (prev?.field !== field) {
+        return { field, ascending: true };
       }
-      return { field, ascending: true };
+      if (prev.ascending) {
+        return { field, ascending: false };
+      }
+      return null;
     });
   }, []);
 
