@@ -503,6 +503,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // (see withAccountListColumns, account-quota-usage-column deviation)
   // include the synthetic `quotaUsage` column gets it resolved and rendered.
   const hasQuotaUsageColumn = (resolved?.list?.columns ?? []).some((c) => c.name === 'quotaUsage');
+  // SCHEMA-DEVIATION: account-alias-count-column (see SCHEMA_DEVIATIONS.md)
+  const hasAliasCountColumn = (resolved?.list?.columns ?? []).some((c) => c.name === 'aliasCount');
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -671,6 +673,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
             properties.splice(quotaIdx, 1, 'usedDiskQuota', 'quotas');
           }
         }
+        if (hasAliasCountColumn) {
+          const aliasIdx = properties.indexOf('aliasCount');
+          if (aliasIdx !== -1) {
+            properties.splice(aliasIdx, 1, 'aliases');
+          }
+        }
         if (isMailboxList && !properties.includes('parentId')) {
           properties.push('parentId');
         }
@@ -755,7 +763,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, hasQuotaUsageColumn, isMailboxList, activeClientFilters],
+    [
+      resolved,
+      schema,
+      buildFilter,
+      buildSort,
+      isWebApplications,
+      isAccountsList,
+      hasQuotaUsageColumn,
+      hasAliasCountColumn,
+      isMailboxList,
+      activeClientFilters,
+    ],
   );
 
   useEffect(() => {
@@ -1680,6 +1699,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             formatUserRole(item, schema!)
                           ) : hasQuotaUsageColumn && col.name === 'quotaUsage' ? (
                             renderQuotaUsage(item, t)
+                          ) : hasAliasCountColumn && col.name === 'aliasCount' ? (
+                            Object.keys((item.aliases as Record<string, unknown>) ?? {}).length
                           ) : isMailboxList && col.name === 'name' ? (
                             (() => {
                               const depth = mailboxDepths.get(item.id as string) ?? 0;

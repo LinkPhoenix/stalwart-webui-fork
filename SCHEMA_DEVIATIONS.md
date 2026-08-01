@@ -67,6 +67,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: the `x:Application` list schema is not guaranteed to expose `enabled` as a list column, even though it's a real object property (fetched separately via `properties.push('enabled')`).
 - **Ideal fix**: the server's `x:Application` list schema always includes `enabled` as a real column; the fallback branch is deleted (only the reordering logic remains, which is not a deviation).
 
+### `account-alias-count-column` 🟡
+
+- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), rendering in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
+- **What**: adds a synthetic `aliasCount` column to the `x:Account/User` and `x:Account/Group` lists — not a real schema property; `DynamicList` resolves it from the real `aliases` objectList property and renders its entry count.
+- **Why**: neither list's schema exposes alias count as a column, only the full `aliases` list on the detail view.
+- **Ideal fix**: the server's `x:Account/User` and `x:Account/Group` list schemas include a computed alias-count column natively; this column definition is deleted.
+
 ## Not a deviation (for reference)
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in
