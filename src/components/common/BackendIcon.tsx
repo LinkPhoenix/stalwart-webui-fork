@@ -94,12 +94,6 @@ export function BackendIcon({ backend, className, fallback = null }: BackendIcon
   );
 }
 
-export function isBackendIconKnown(backend: string | null | undefined): boolean {
-  if (!backend) return false;
-  const key = backend.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return Boolean(BACKEND_ICONS[key] ?? BACKEND_ICONS[backend.toLowerCase()]);
-}
-
 interface BackendVariantIconProps {
   variant: { name: string; label: string };
   className?: string;
