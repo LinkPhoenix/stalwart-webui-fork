@@ -159,6 +159,11 @@ interface SidebarSubItemProps {
 }
 
 function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, edition, onUpsell }: SidebarSubItemProps) {
+  // Picking a plain link closes any sibling group left open at this same
+  // accordion level — it's not part of a collapsible, so nothing should
+  // stay expanded on its account once it's the one that's active.
+  const level = useContext(AccordionLevelContext);
+
   if (item.type === 'link') {
     if (!checkLinkVisible(item.viewName)) return null;
 
@@ -185,6 +190,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
           if (isLocked) {
             onUpsell();
           } else {
+            level?.setOpenId(null);
             setLastVisitedSection(sectionName, item.viewName);
             navigate(path);
           }
@@ -245,6 +251,11 @@ interface SidebarTopItemProps {
 }
 
 function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onUpsell }: SidebarTopItemProps) {
+  // Picking a plain link closes any sibling group left open at this same
+  // accordion level — it's not part of a collapsible, so nothing should
+  // stay expanded on its account once it's the one that's active.
+  const level = useContext(AccordionLevelContext);
+
   if ('link' in item) {
     const { name, icon, viewName } = item.link;
 
@@ -271,6 +282,7 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
           if (isLocked) {
             onUpsell();
           } else {
+            level?.setOpenId(null);
             setLastVisitedSection(sectionName, viewName);
             navigate(path);
           }
