@@ -334,6 +334,11 @@ export function Sidebar() {
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  // Set by handleSectionClick right before navigating: switching sections
+  // from the footer should keep the sidebar open so the new section's pages
+  // are still browsable, instead of closing right back up like a leaf-page
+  // navigation would.
+  const skipCloseOnNavigateRef = useRef(false);
 
   // Build the permission checks from the permissions array itself: the store
   // accessors are stable refs, so depending on them alone would keep a stale
@@ -346,6 +351,10 @@ export function Sidebar() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (skipCloseOnNavigateRef.current) {
+      skipCloseOnNavigateRef.current = false;
+      return;
+    }
     if (window.matchMedia('(max-width: 767px)').matches) {
       setSidebarOpen(false);
     }
@@ -371,7 +380,10 @@ export function Sidebar() {
       last ??
       findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
       findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
-    if (first) navigate(`/${target.name}/${first}`);
+    if (first) {
+      skipCloseOnNavigateRef.current = true;
+      navigate(`/${target.name}/${first}`);
+    }
   };
 
   return (
