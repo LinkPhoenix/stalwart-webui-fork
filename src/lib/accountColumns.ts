@@ -15,22 +15,29 @@ import type { Schema } from '@/types/schema';
  * renders through the normal field pipeline, but `quotaUsage` is synthetic
  * (not a real server property) — DynamicList resolves it to the
  * `usedDiskQuota` + `quotas.maxDiskQuota` pair and formats it specially.
+ *
+ * The Groups list gets the same `quotaUsage` column (groups have their own
+ * `usedDiskQuota`/`quotas`, same as users), but not `roles` — that column
+ * is specific to the Users list.
  */
 export function withAccountListColumns(schema: Schema): Schema {
-  const list = schema.lists['x:Account/User'];
-  if (!list) return schema;
+  let lists = schema.lists;
 
-  const columns = [
-    ...list.columns.filter((c) => c.name !== 'createdAt'),
-    { name: 'roles', label: 'Role' },
-    { name: 'quotaUsage', label: 'Usage / Quota' },
-  ];
+  const userList = lists['x:Account/User'];
+  if (userList) {
+    const columns = [
+      ...userList.columns.filter((c) => c.name !== 'createdAt'),
+      { name: 'roles', label: 'Role' },
+      { name: 'quotaUsage', label: 'Usage / Quota' },
+    ];
+    lists = { ...lists, 'x:Account/User': { ...userList, columns } };
+  }
 
-  return {
-    ...schema,
-    lists: {
-      ...schema.lists,
-      'x:Account/User': { ...list, columns },
-    },
-  };
+  const groupList = lists['x:Account/Group'];
+  if (groupList) {
+    const columns = [...groupList.columns, { name: 'quotaUsage', label: 'Usage / Quota' }];
+    lists = { ...lists, 'x:Account/Group': { ...groupList, columns } };
+  }
+
+  return { ...schema, lists };
 }

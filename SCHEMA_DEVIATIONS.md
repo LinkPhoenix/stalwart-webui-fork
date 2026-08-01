@@ -49,9 +49,9 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 ### `account-quota-usage-column` 🟡
 
 - **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts)
-- **What**: adds a synthetic `quotaUsage` column to the `x:Account/User` list that isn't a real schema property — `DynamicList` resolves it from the `usedDiskQuota` + `quotas.maxDiskQuota` pair and formats it specially. Also re-adds `roles` (a real property, just not in the list's default columns).
-- **Why**: the Accounts list schema doesn't expose usage/role as list columns, only as detail-view fields.
-- **Ideal fix**: the server's `x:Account/User` list schema includes `roles` and a computed usage/quota column natively; this file is deleted.
+- **What**: adds a synthetic `quotaUsage` column to the `x:Account/User` and `x:Account/Group` lists — not a real schema property, `DynamicList` resolves it from the `usedDiskQuota` + `quotas.maxDiskQuota` pair and formats it specially. Also re-adds `roles` on the Users list only (a real property, just not in the list's default columns).
+- **Why**: neither the Accounts nor the Groups list schema exposes usage/role as list columns, only as detail-view fields, even though both object types have real `usedDiskQuota`/`quotas` fields.
+- **Ideal fix**: the server's `x:Account/User` and `x:Account/Group` list schemas include `roles` (Users) and a computed usage/quota column natively; this file is deleted.
 
 ### `mailbox-client-hierarchy-sort` 🟡
 

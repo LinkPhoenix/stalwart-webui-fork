@@ -257,7 +257,7 @@ function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNod
   const quotas = item.quotas as Record<string, unknown> | undefined;
   const rawLimit = quotas && typeof quotas.maxDiskQuota === 'number' ? quotas.maxDiskQuota : 0;
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 0;
-  const limitLabel = limit ? formatSize(limit) : t('list.unlimitedQuota', 'Unlimited');
+  const limitLabel = limit ? formatSize(limit) : t('list.unlimitedQuota', '∞');
 
   if (used >= 0) {
     return `${formatSize(used)} / ${limitLabel}`;
@@ -499,6 +499,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const isLogEntries = viewName === 'x:Log' || objectName === 'x:Log';
   const isAccountsList = viewName === 'x:Account/User';
   const isMailboxList = viewName === 'Mailbox';
+  // Not tied to a specific viewName: any list whose schema-driven columns
+  // (see withAccountListColumns, account-quota-usage-column deviation)
+  // include the synthetic `quotaUsage` column gets it resolved and rendered.
+  const hasQuotaUsageColumn = (resolved?.list?.columns ?? []).some((c) => c.name === 'quotaUsage');
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -661,7 +665,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         if (isWebApplications && !properties.includes('enabled')) {
           properties.push('enabled');
         }
-        if (isAccountsList) {
+        if (hasQuotaUsageColumn) {
           const quotaIdx = properties.indexOf('quotaUsage');
           if (quotaIdx !== -1) {
             properties.splice(quotaIdx, 1, 'usedDiskQuota', 'quotas');
@@ -751,7 +755,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setLoading(false);
       }
     },
-    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, isMailboxList, activeClientFilters],
+    [resolved, schema, buildFilter, buildSort, isWebApplications, isAccountsList, hasQuotaUsageColumn, isMailboxList, activeClientFilters],
   );
 
   useEffect(() => {
@@ -1674,7 +1678,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             )
                           ) : isAccountsList && col.name === 'roles' ? (
                             formatUserRole(item, schema!)
-                          ) : isAccountsList && col.name === 'quotaUsage' ? (
+                          ) : hasQuotaUsageColumn && col.name === 'quotaUsage' ? (
                             renderQuotaUsage(item, t)
                           ) : isMailboxList && col.name === 'name' ? (
                             (() => {
