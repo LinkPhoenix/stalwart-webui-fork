@@ -65,7 +65,33 @@ idempotent — safe to re-run, it no-ops once the server is already
 bootstrapped. You only need to re-run it after `docker compose down -v`
 (which wipes the volumes).
 
-## 3. Get an access token
+## 3. Seed sample data (optional)
+
+```bash
+# Windows / PowerShell
+pwsh ./scripts/dev-seed.ps1
+
+# Linux / macOS / any POSIX shell (including most AI agent sandboxes)
+bash ./scripts/dev-seed.sh
+```
+
+Populates Users, Groups, Mailing Lists, and Roles with sample data so
+every admin panel screen has something to test against:
+
+- **Users**: `alice@example.org` / `AlicePass123!` (User role, in
+  engineering, 1 alias), `bob@example.org` / `BobPass123!` (User role, in
+  engineering + marketing), `carol@example.org` / `CarolPass123!` (Admin
+  role, in marketing) — alongside the `devadmin`/`admin` accounts from
+  step 2.
+- **Groups**: `engineering`, `marketing`.
+- **Mailing lists**: `newsletter@example.org`, `support@example.org`.
+- **Roles**: `Support Agent`, `Read-only Auditor` (custom, alongside the
+  built-in System Administrator/Tenant Administrator/Group/User roles).
+
+Idempotent — does nothing if `alice` already exists. Only needed once per
+fresh volume, same as step 2.
+
+## 4. Get an access token
 
 For local development it's simpler to skip interactive login and use a
 bearer token directly via `VITE_ACCESS_TOKEN` (see `.env.development`).
@@ -92,7 +118,7 @@ The `STALWART_RECOVERY_ADMIN` account is intentionally not used here: it's
 a break-glass credential and its tokens always expire in a fixed 1 hour
 regardless of server configuration, so it can't honor a custom duration.
 
-## 4. Run the WebUI
+## 5. Run the WebUI
 
 ```bash
 npm install   # first time only
@@ -102,7 +128,7 @@ npm run dev
 Open `http://localhost:5173`. You should land directly in the admin panel
 (no login screen) since `VITE_ACCESS_TOKEN` is set.
 
-## 5. Verify your change
+## 6. Verify your change
 
 ```bash
 npm run typecheck
@@ -125,6 +151,7 @@ npm run dev:server:down
 docker compose down -v   # also removes the stalwart-etc/stalwart-data volumes
 npm run dev:server
 bash ./scripts/dev-server-init.sh   # re-run: fresh volume needs bootstrapping again
+bash ./scripts/dev-seed.sh          # optional: re-seed sample data too
 ```
 
 ## Troubleshooting
@@ -148,11 +175,12 @@ bash ./scripts/dev-server-init.sh   # re-run: fresh volume needs bootstrapping a
 
 ## Notes for AI agents
 
-- This whole workflow (steps 1–4) is scriptable end-to-end without a
+- This whole workflow (steps 1–5) is scriptable end-to-end without a
   browser: `npm run dev:server`, then `bash scripts/dev-server-init.sh`
-  (first time only), then `bash scripts/dev-token.sh`, then the app is
-  reachable at `http://localhost:5173` with `VITE_ACCESS_TOKEN` already
-  set. Verify backend connectivity directly with `curl`, e.g.
+  and `bash scripts/dev-seed.sh` (first time only), then
+  `bash scripts/dev-token.sh`, then the app is reachable at
+  `http://localhost:5173` with `VITE_ACCESS_TOKEN` already set. Verify
+  backend connectivity directly with `curl`, e.g.
   `curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/jmap/session`.
 - Read [AGENTS.md](AGENTS.md) before touching anything under `src/` —
   the schema-fidelity rule applies to all development, local test server

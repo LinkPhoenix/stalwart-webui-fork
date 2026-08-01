@@ -28,6 +28,8 @@ scripts/*
 !scripts/dev-token.sh
 !scripts/dev-server-init.ps1
 !scripts/dev-server-init.sh
+!scripts/dev-seed.ps1
+!scripts/dev-seed.sh
 *.md
 !README.md
 !CHANGELOG.md

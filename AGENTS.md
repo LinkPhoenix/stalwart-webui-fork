@@ -10,6 +10,7 @@ Community fork of [stalwartlabs/webui](https://github.com/stalwartlabs/webui), a
 
 - `npm run dev:server` - Start a local disposable Stalwart test server (Docker); `npm run dev:server:down` to stop it
 - `bash scripts/dev-server-init.sh` (or `pwsh ./scripts/dev-server-init.ps1`) - One-time setup of that server (bootstrap, dev admin account, 3h default token lifetime); idempotent
+- `bash scripts/dev-seed.sh` (or `pwsh ./scripts/dev-seed.ps1`) - Optional: seed sample Users/Groups/Mailing Lists/Roles for testing; idempotent
 - `bash scripts/dev-token.sh [duration_seconds]` (or `pwsh ./scripts/dev-token.ps1 [-DurationSeconds N]`) - Get a dev access token from that server, 3h by default
 - `npm run dev` - Dev server (proxies `/api` and `/jmap` to the test server)
 - `npm run typecheck` - `tsc --noEmit`
