@@ -118,7 +118,7 @@ Every tagged release of this fork publishes a `webui.zip` build via CI (see [`.g
 Prerequisites:
 
 - Node.js 18 or later
-- A running Stalwart instance (for JMAP API calls) — see [DEVELOPMENT.md](DEVELOPMENT.md) for how to spin up a disposable local test server with Docker in one command, no manual Stalwart setup required.
+- A running Stalwart instance (for JMAP API calls) — see [DEVELOPMENT.md](DEVELOPMENT.md) for how to spin up a disposable local test server with Docker, no manual Stalwart setup required.
 
 Install dependencies:
 

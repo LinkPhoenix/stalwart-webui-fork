@@ -122,6 +122,25 @@ npm run dev:server
 bash ./scripts/dev-server-init.sh   # re-run: fresh volume needs bootstrapping again
 ```
 
+## Troubleshooting
+
+- **UI shows a login screen instead of the admin panel, or the page fails
+  to load data**: `npm run dev` only reads `.env.development.local` at
+  startup. If you regenerate a token, or restart the Docker container,
+  while `npm run dev` is already running, stop it (Ctrl+C) and start it
+  again — it won't pick up the new token or reconnect on its own.
+- **`Failed to fetch` / connection refused in the browser console**: the
+  test server isn't running or isn't ready yet. Check with
+  `docker ps --filter name=stalwart-webui-dev` and
+  `npm run dev:server:logs`; wait for `Network listener started ...
+  localPort = 8080` before retrying.
+- **401s after everything was working**: your token expired. Re-run
+  `scripts/dev-token.sh` (or `.ps1`) and restart `npm run dev`.
+- **`scripts/dev-server-init.sh` fails with connection errors**: the
+  container needs a few seconds after `npm run dev:server` before it
+  accepts requests — the script retries for ~30s, but if your machine is
+  slow, just re-run it.
+
 ## Notes for AI agents
 
 - This whole workflow (steps 1–4) is scriptable end-to-end without a
