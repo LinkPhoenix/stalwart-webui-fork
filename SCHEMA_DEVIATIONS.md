@@ -74,6 +74,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: neither list's schema exposes alias count as a column, only the full `aliases` list on the detail view.
 - **Ideal fix**: the server's `x:Account/User` and `x:Account/Group` list schemas include a computed alias-count column natively; this column definition is deleted.
 
+### `account-client-sort` 🟡
+
+- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `CLIENT_SORT_ACCESSORS`, `clientSortField`, and the `fetchData` branch that also triggers on `clientSortField`
+- **What**: on the `x:Account/User` and `x:Account/Group` lists, clicking the Email/Full Name/Usage/Aliases column headers sorts by fetching every matching row (bypassing server pagination, same mechanism as `mailbox-client-hierarchy-sort`) and sorting it client-side, instead of sending a JMAP `sort` to the server.
+- **Why**: neither list's schema declares any sortable property at all (`list.sort` is absent) — confirmed against a live server: `x:Account/query` with `sort: [{"property":"emailAddress",...}]` returns `unsupportedSort` for every property tried, including the real ones. This is a systemic gap in the current Stalwart server, not specific to this fork's synthetic columns.
+- **Ideal fix**: the server's `x:Account/User`/`x:Account/Group` query methods accept `sort` on at least `emailAddress`, `description`, `usedDiskQuota`, and the schema declares them in `list.sort`; the client-sort branch and `CLIENT_SORT_ACCESSORS` are deleted in favor of the normal server-paginated `sortableFields` path already used elsewhere.
+
 ## Not a deviation (for reference)
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in

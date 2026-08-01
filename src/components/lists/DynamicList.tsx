@@ -272,6 +272,20 @@ function renderQuotaUsage(item: Record<string, unknown>, t: TFn): React.ReactNod
   );
 }
 
+/**
+ * SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+ *
+ * Columns sortable client-side (fetch-all + in-memory sort) on the
+ * Accounts/Groups lists, keyed by column name, each mapped to a
+ * comparable value extracted from the fetched item.
+ */
+const CLIENT_SORT_ACCESSORS: Record<string, (item: Record<string, unknown>) => string | number> = {
+  emailAddress: (item) => String(item.emailAddress ?? ''),
+  description: (item) => String(item.description ?? ''),
+  quotaUsage: (item) => (typeof item.usedDiskQuota === 'number' ? item.usedDiskQuota : 0),
+  aliasCount: (item) => Object.keys((item.aliases as Record<string, unknown>) ?? {}).length,
+};
+
 function getFieldsRecord(resolvedSchema: ResolvedSchema): Record<string, Field> {
   if (resolvedSchema.type === 'single') {
     return resolvedSchema.fields.properties;
@@ -553,6 +567,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>(readUrlFilters);
 
   const [sort, setSort] = useState<SortState | null>(readUrlSort);
+  // SCHEMA-DEVIATION: account-client-sort (see SCHEMA_DEVIATIONS.md)
+  // The server doesn't declare (or accept) a `sort` for any property on
+  // either list, so Email/Full Name/Usage/Aliases are sorted client-side
+  // instead, only when the user actually picks one of them.
+  const supportsClientSort = isAccountsList || viewName === 'x:Account/Group';
+  const clientSortField =
+    supportsClientSort && sort && CLIENT_SORT_ACCESSORS[sort.field] ? sort.field : null;
 
   // Filters marked `clientOnly` (currently Level/Event on the Logs list) are
   // not supported by the server's query engine, so they narrow an
@@ -685,7 +706,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         const filter = buildFilter();
         const sortArr = buildSort();
 
-        if (activeClientFilters.length > 0 || isMailboxList) {
+        if (activeClientFilters.length > 0 || isMailboxList || clientSortField) {
           // No server-side pagination possible once a client-only filter is
           // active (SCHEMA-DEVIATION: log-client-filters): fetch every
           // server-matching row up front, narrow it in the browser, then
@@ -693,11 +714,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
           // this too (SCHEMA-DEVIATION: mailbox-client-hierarchy-sort) — a
           // mailbox's parent can land on a different server page than the
           // mailbox itself, so the full set is required to place each row
-          // under its parent correctly.
+          // under its parent correctly. Sorting by Email/Full Name/Usage/
+          // Aliases on Accounts/Groups needs it too (SCHEMA-DEVIATION:
+          // account-client-sort) since the server doesn't support sorting
+          // on any property of either list.
           const { list: fullList } = await jmapQueryAllAndGet(
             obj.objectName,
             accountId,
-            { filter: Object.keys(filter).length > 0 ? filter : undefined, sort: sortArr },
+            { filter: Object.keys(filter).length > 0 ? filter : undefined, sort: clientSortField ? undefined : sortArr },
             properties,
           );
           let matched = fullList.filter((item) =>
@@ -707,6 +731,16 @@ export function DynamicList({ viewName }: DynamicListProps) {
             const { items: ordered, depths } = sortMailboxesByHierarchy(matched);
             matched = ordered;
             setMailboxDepths(depths);
+          }
+          if (clientSortField) {
+            const accessor = CLIENT_SORT_ACCESSORS[clientSortField];
+            const direction = sort!.ascending ? 1 : -1;
+            matched = [...matched].sort((a, b) => {
+              const av = accessor(a);
+              const bv = accessor(b);
+              const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+              return cmp * direction;
+            });
           }
           setClientAllItems(matched);
           setClientPage(0);
@@ -773,6 +807,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
       hasQuotaUsageColumn,
       hasAliasCountColumn,
       isMailboxList,
+      clientSortField,
+      sort,
       activeClientFilters,
     ],
   );
@@ -1343,7 +1379,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }
 
   function renderSortIndicator(colName: string): React.ReactNode {
-    if (!sortableFields.has(colName)) return null;
+    const isClientSortable = supportsClientSort && colName in CLIENT_SORT_ACCESSORS;
+    if (!sortableFields.has(colName) && !isClientSortable) return null;
     const isActive = sort?.field === colName;
     return (
       <button
