@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.1.1] - 2026-08-01
+
+### Fixed
+- Mobile sidebar no longer snaps shut when switching between Management/Settings/Account — it now stays open so you can pick a page in the new section, and only closes once you actually navigate to one.
+- Favicon replaced with upstream's original: this fork's had drifted to a mis-cropped export (visible padding around the logo, lower color depth) despite showing the same logo and color.
+
+### Changed
+- The "Active WebUI" card (Settings > Web Applications) now also shows the resource URL the active WebUI was installed from, alongside its description and version.
+
 ## [1.1.0] - 2026-07-30
 
 ### Fixed
