@@ -16,6 +16,9 @@ export default defineConfig({
     },
   },
   server: {
+    // Preview tooling assigns a free port via $PORT; fall back to Vite's
+    // own default for plain `npm run dev`.
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
     // Same-origin proxy to the local Stalwart container: avoids CORS entirely
     // (VITE_API_BASE_URL stays empty in .env.development.local).
     proxy: {
