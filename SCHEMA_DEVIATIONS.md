@@ -69,8 +69,8 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 
 ### `account-alias-count-column` 🟡
 
-- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), rendering in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
-- **What**: adds a synthetic `aliasCount` column to the `x:Account/User`, `x:Account/Group`, and `x:MailingList` lists — not a real schema property; `DynamicList` resolves it from the real `aliases` objectList property and renders its entry count.
+- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
+- **What**: adds a synthetic `aliasCount` column to the `x:Account/User`, `x:Account/Group`, `x:MailingList`, and `x:Domain` lists — not a real schema property; `DynamicList` resolves it from the real `aliases` property (an objectList on Accounts/Groups/Mailing Lists, a `set` of domain names on Domains — same id-keyed wire format either way) and renders its entry count.
 - **Why**: none of these lists' schemas expose alias count as a column, only the full `aliases` list on the detail view.
 - **Ideal fix**: the server's list schemas include a computed alias-count column natively; these column definitions are deleted.
 
