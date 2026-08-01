@@ -27,6 +27,10 @@ scripts/
 *.md
 !README.md
 !CHANGELOG.md
+!AGENTS.md
+!CLAUDE.md
+!SCHEMA_DEVIATIONS.md
+!.agents/rules/*.md
 /SPEC-*
 # Tool-generated artifacts during agent sessions
 .playwright-mcp/
