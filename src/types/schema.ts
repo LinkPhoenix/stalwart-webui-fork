@@ -256,7 +256,11 @@ export interface MassActionSeparator {
 }
 
 export type ItemAction =
-  ItemActionDelete | ItemActionSetProperty | ItemActionQuery | ItemActionView | ItemActionSeparator;
+  | ItemActionDelete
+  | ItemActionSetProperty
+  | ItemActionQuery
+  | ItemActionView
+  | ItemActionSeparator;
 
 export interface ItemActionDelete {
   type: 'delete';
