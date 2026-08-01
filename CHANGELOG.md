@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.1.2] - 2026-08-01
+
+### Added
+- Brand-accurate "Stalwart" color theme (red/pink accent from the official site tokens). The previous theme named "Stalwart" was only the neutral black/white look and is now labeled "Default".
+- Changelog page in the header user dropdown, rendering this repository's `CHANGELOG.md` so release notes stay in sync with every release.
+- Usage/Quota column on the Groups list (same synthetic column as Accounts); unlimited quota renders as ∞ instead of the word "Unlimited".
+- Aliases count column on Accounts, Groups, Mailing Lists, and Domains (resolved from each object's real `aliases` property).
+- Enabled Permissions and Disabled Permissions count columns on the Roles list.
+- Client-side column sorting on Accounts, Groups, Mailing Lists, Roles, and Domains for the most useful columns (Email/Name/Description, Usage/Quota, Aliases, permission counts, Domain Name, Enabled). The backend rejects sort on these properties (`unsupportedSort`), so lists fetch then sort/paginate locally when a sortable header is clicked — same approach as mailbox hierarchy sort.
+- `scripts/dev-seed` (`.sh` / `.ps1`) to populate the local test server with sample Users, Groups, Mailing Lists, and Roles after `dev-server-init` (idempotent; documented in DEVELOPMENT.md).
+
+### Changed
+- Default color theme is now the new Stalwart theme (previously Ocean since 1.0.9); existing saved preferences are unaffected.
+- Client-side sort is driven by a shared `clientSortable` column flag instead of hardcoded view/column maps, so any list can opt in without touching `DynamicList` branching.
+
+### Fixed
+- Sidebar: expanding a collapsible group (e.g. Directory) and then navigating to an unrelated top-level link (e.g. Cluster) now collapses that group instead of leaving it open.
+- Vite respects the `$PORT` environment variable so preview/dev tooling that assigns a free port can bind the same port Vite actually listens on.
+
 ## [1.1.1] - 2026-08-01
 
 ### Fixed

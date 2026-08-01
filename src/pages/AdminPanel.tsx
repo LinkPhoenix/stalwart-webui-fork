@@ -27,6 +27,7 @@ import { LoadingFallback } from '@/components/common/LoadingFallback';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { friendlyName } from '@/hooks/useGlobalSearch';
 import { AppearancePage } from '@/features/appearance/AppearancePage';
+import { ChangelogPage } from '@/features/changelog/ChangelogPage';
 import {
   findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
@@ -101,6 +102,7 @@ export default function AdminPanel() {
   // what the user sees in the navigation, e.g. "MTA-STS · Settings".
   const pageTitle = useMemo(() => {
     if (section === 'Appearance') return t('appearance.label', 'Appearance');
+    if (section === 'Changelog') return t('changelog.label', 'Changelog');
     if (!section) return t('dashboard.title', 'Dashboard');
     if (!viewName) return section;
     const entry =
@@ -220,9 +222,9 @@ export default function AdminPanel() {
       }
     }
 
-    if (section === 'Appearance') {
-      // Appearance is a client-side page outside the schema layouts: keep the
-      // sidebar bound to a real section while it is open.
+    if (section === 'Appearance' || section === 'Changelog') {
+      // Appearance and Changelog are client-side pages outside the schema
+      // layouts: keep the sidebar bound to a real section while open.
       if (!layouts.some((l) => l.name === activeSection)) {
         setActiveSection(layouts[0]?.name ?? '');
       }
@@ -337,6 +339,8 @@ export default function AdminPanel() {
               <ErrorBoundary key={activeAccountId ?? 'none'}>
                 {section === 'Appearance' ? (
                   <AppearancePage />
+                ) : section === 'Changelog' ? (
+                  <ChangelogPage />
                 ) : (
                   <MainContent viewName={viewName} id={id} section={section} />
                 )}

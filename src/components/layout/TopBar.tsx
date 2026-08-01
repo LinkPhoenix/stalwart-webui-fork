@@ -7,7 +7,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as LucideIcons from 'lucide-react';
-const { User, LogOut, Check, Menu, Sparkles, Search, Palette } = LucideIcons;
+const { User, LogOut, Check, Menu, Sparkles, Search, Palette, ScrollText } = LucideIcons;
 import { Button } from '@/components/ui/button';
 import { CommandPalette } from '@/components/common/CommandPalette';
 import {
@@ -201,6 +201,11 @@ export function TopBar() {
             <DropdownMenuItem onClick={() => navigate('/Appearance')}>
               <Palette className="mr-2 h-4 w-4" />
               {t('appearance.label', 'Appearance')}
+            </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={() => navigate('/Changelog')}>
+              <ScrollText className="mr-2 h-4 w-4" />
+              {t('changelog.label', 'Changelog')}
             </DropdownMenuItem>
 
             <DropdownMenuItem

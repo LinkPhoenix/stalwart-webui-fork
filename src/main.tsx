@@ -24,8 +24,11 @@ import { getBasePath } from './lib/basePath';
     const theme = state?.theme;
     const dark = theme === 'dark' || (theme !== 'light' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', dark);
-    const colorTheme = state?.colorTheme;
+    // Match uiStore defaults (stalwart + square) so the first paint is correct
+    // before zustand rehydrates — including brand-new sessions with no persisted state.
+    const colorTheme = state?.colorTheme ?? 'stalwart';
     if (
+      colorTheme === 'stalwart' ||
       colorTheme === 'ocean' ||
       colorTheme === 'forest' ||
       colorTheme === 'violet' ||
@@ -35,7 +38,7 @@ import { getBasePath } from './lib/basePath';
     ) {
       document.documentElement.dataset.theme = colorTheme;
     }
-    if (state?.radius === 'square') {
+    if ((state?.radius ?? 'square') === 'square') {
       document.documentElement.dataset.radius = 'square';
     }
     // eslint-disable-next-line no-empty

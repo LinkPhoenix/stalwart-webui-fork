@@ -73,7 +73,7 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       theme:
         typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-      colorTheme: 'ocean',
+      colorTheme: 'stalwart',
       radius: 'square',
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
       activeSection: '',
@@ -116,7 +116,7 @@ export const useUIStore = create<UIState>()(
         return (state) => {
           if (state) {
             applyThemeClass(state.theme);
-            applyColorThemeAttribute(state.colorTheme ?? 'ocean');
+            applyColorThemeAttribute(state.colorTheme ?? 'stalwart');
             applyRadiusAttribute(state.radius ?? 'square');
           }
         };

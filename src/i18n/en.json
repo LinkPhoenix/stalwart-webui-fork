@@ -56,6 +56,11 @@
     "welcome": "Welcome to Stalwart",
     "welcomeSubtitle": "Let's get your server set up."
   },
+  "changelog": {
+    "description": "What's new in this fork, release by release.",
+    "label": "Changelog",
+    "officialNotice": "The official WebUI is maintained by the Stalwart team and is available at"
+  },
   "common": {
     "apply": "Apply",
     "back": "Back",
