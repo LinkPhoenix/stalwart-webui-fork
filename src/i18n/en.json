@@ -17,6 +17,7 @@
     "switchToLight": "Switch to light mode",
     "theme": {
       "amber": "Amber",
+      "default": "Default",
       "forest": "Forest",
       "ocean": "Ocean",
       "rose": "Rose",

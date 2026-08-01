@@ -100,10 +100,55 @@
 
 /* Color themes. Each theme re-hues the neutral tokens at the same lightness
    and chroma as the default palette (contrast is preserved) and replaces
-   primary/ring with the theme color. The default "Stalwart" theme is the
+   primary/ring with the theme color. The neutral "Default" theme is the
    bare :root/.dark above and needs no data-theme attribute. Dark theme
    blocks must stay after their light counterpart: both selectors have the
    same specificity, so source order decides. */
+
+/* "Stalwart" theme: matches the brand colors from stalw.art's own site
+   (src/styles/tokens.css there) — brand red #db2d54/#ff4570 converted to
+   oklch, neutrals kept close to true gray (unlike the other theme
+   presets below, which lightly re-hue their neutrals) since that's what
+   the real site does: saturated color only on the accent, not the
+   backdrop. */
+:root[data-theme='stalwart'] {
+  --foreground: oklch(0.147 0.009 285.3);
+  --content-background: oklch(0.974 0.003 286.4);
+  --primary: oklch(0.586 0.207 14.6);
+  --primary-foreground: oklch(0.985 0.002 285.3);
+  --secondary: oklch(0.965 0.005 285.3);
+  --secondary-foreground: oklch(0.205 0.017 285.3);
+  --muted: oklch(0.93 0.005 285.3);
+  --muted-foreground: oklch(0.431 0.016 285.7);
+  --accent: oklch(0.965 0.005 285.3);
+  --accent-foreground: oklch(0.205 0.017 285.3);
+  --border: oklch(0.926 0.005 286.3);
+  --input: oklch(0.926 0.005 286.3);
+  --ring: oklch(0.586 0.207 14.6);
+  --chart-1: 350 65% 52%;
+}
+
+.dark[data-theme='stalwart'] {
+  --background: oklch(0.136 0.007 285.5);
+  --foreground: oklch(0.968 0.003 286.4);
+  --card: oklch(0.19 0.012 285.2);
+  --card-foreground: oklch(0.968 0.003 286.4);
+  --popover: oklch(0.221 0.016 285.1);
+  --popover-foreground: oklch(0.968 0.003 286.4);
+  --content-background: oklch(0.11 0.006 285.5);
+  --primary: oklch(0.672 0.221 12.3);
+  --primary-foreground: oklch(0.15 0.03 14.6);
+  --secondary: oklch(0.256 0.019 285);
+  --secondary-foreground: oklch(0.968 0.003 286.4);
+  --muted: oklch(0.256 0.019 285);
+  --muted-foreground: oklch(0.719 0.014 286);
+  --accent: oklch(0.28 0.02 285.1);
+  --accent-foreground: oklch(0.968 0.003 286.4);
+  --border: oklch(0.272 0.017 285.2);
+  --input: oklch(0.272 0.017 285.2);
+  --ring: oklch(0.672 0.221 12.3);
+  --chart-1: 350 80% 65%;
+}
 
 :root[data-theme='ocean'] {
   --foreground: oklch(0.145 0.02 264);

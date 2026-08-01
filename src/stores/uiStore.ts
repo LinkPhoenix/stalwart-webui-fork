@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type Theme = 'light' | 'dark';
-export type ColorTheme = 'stalwart' | 'ocean' | 'forest' | 'violet' | 'rose' | 'amber' | 'teal';
+export type ColorTheme = 'default' | 'stalwart' | 'ocean' | 'forest' | 'violet' | 'rose' | 'amber' | 'teal';
 export type Radius = 'rounded' | 'square';
 
 interface UIState {
@@ -35,8 +35,8 @@ function applyThemeClass(theme: Theme) {
 }
 
 function applyColorThemeAttribute(colorTheme: ColorTheme) {
-  // The default theme is defined directly on :root/.dark, so it needs no attribute.
-  if (colorTheme === 'stalwart') {
+  // The neutral "Default" theme is defined directly on :root/.dark, so it needs no attribute.
+  if (colorTheme === 'default') {
     document.documentElement.removeAttribute('data-theme');
   } else {
     document.documentElement.dataset.theme = colorTheme;
@@ -49,10 +49,16 @@ function applyRadiusAttribute(radius: Radius) {
 
 export const COLOR_THEMES: { value: ColorTheme; labelKey: string; fallback: string; swatch: string }[] = [
   {
+    value: 'default',
+    labelKey: 'appearance.theme.default',
+    fallback: 'Default',
+    swatch: 'linear-gradient(135deg, oklch(0.205 0.017 285.823) 50%, oklch(0.92 0.007 285.823) 50%)',
+  },
+  {
     value: 'stalwart',
     labelKey: 'appearance.theme.stalwart',
     fallback: 'Stalwart',
-    swatch: 'linear-gradient(135deg, oklch(0.205 0.017 285.823) 50%, oklch(0.92 0.007 285.823) 50%)',
+    swatch: 'oklch(0.586 0.207 14.6)',
   },
   { value: 'ocean', labelKey: 'appearance.theme.ocean', fallback: 'Ocean', swatch: 'oklch(0.546 0.215 262.9)' },
   { value: 'forest', labelKey: 'appearance.theme.forest', fallback: 'Forest', swatch: 'oklch(0.527 0.137 150.1)' },
