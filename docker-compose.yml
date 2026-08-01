@@ -1,0 +1,30 @@
+services:
+  stalwart:
+    image: stalwartlabs/stalwart:latest
+    container_name: stalwart-webui-dev
+    restart: unless-stopped
+    ports:
+      # HTTP management/JMAP API — the only port the WebUI dev proxy needs
+      # (see server.proxy in vite.config.ts).
+      - "8080:8080"
+      # Mail protocols, only needed if you're testing actual mail flows
+      # (sending/receiving, not just admin UI screens).
+      - "25:25"
+      - "587:587"
+      - "465:465"
+      - "143:143"
+      - "993:993"
+      - "110:110"
+      - "995:995"
+      - "4190:4190"
+    volumes:
+      - stalwart-etc:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
+    environment:
+      # Disposable local dev credentials — do not reuse for anything real.
+      # Matches scripts/dev-token.ps1's defaults.
+      STALWART_RECOVERY_ADMIN: "admin@example.org:c8321iEscHDy0GWV"
+
+volumes:
+  stalwart-etc:
+  stalwart-data:

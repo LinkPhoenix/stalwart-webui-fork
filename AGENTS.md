@@ -8,11 +8,15 @@ Community fork of [stalwartlabs/webui](https://github.com/stalwartlabs/webui), a
 
 ## Commands
 
-- `npm run dev` - Dev server
+- `npm run dev:server` - Start a local disposable Stalwart test server (Docker); `npm run dev:server:down` to stop it
+- `bash scripts/dev-token.sh` (or `pwsh ./scripts/dev-token.ps1` on Windows) - Get a dev access token from that server
+- `npm run dev` - Dev server (proxies `/api` and `/jmap` to the test server)
 - `npm run typecheck` - `tsc --noEmit`
 - `npm run lint` - ESLint
 - `npm run test` - Vitest (`npm run test:watch` to watch)
 - `npm run build` - `tsc -b && vite build`
+
+Full local dev workflow, including how to run it end-to-end without a browser: [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Rules
 

@@ -6,6 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "docker compose up -d",
+    "dev:server:down": "docker compose down",
+    "dev:server:logs": "docker compose logs -f stalwart",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "eslint .",

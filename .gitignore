@@ -23,13 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 .ignore
-scripts/
+scripts/*
+!scripts/dev-token.ps1
+!scripts/dev-token.sh
 *.md
 !README.md
 !CHANGELOG.md
 !AGENTS.md
 !CLAUDE.md
 !SCHEMA_DEVIATIONS.md
+!DEVELOPMENT.md
 !.agents/rules/*.md
 /SPEC-*
 # Tool-generated artifacts during agent sessions

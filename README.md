@@ -118,7 +118,7 @@ Every tagged release of this fork publishes a `webui.zip` build via CI (see [`.g
 Prerequisites:
 
 - Node.js 18 or later
-- A running Stalwart instance (for JMAP API calls)
+- A running Stalwart instance (for JMAP API calls) — see [DEVELOPMENT.md](DEVELOPMENT.md) for how to spin up a disposable local test server with Docker in one command, no manual Stalwart setup required.
 
 Install dependencies:
 
@@ -146,11 +146,13 @@ VITE_OAUTH_SCOPES=
 
 ### Bypassing OAuth for development
 
-Set `VITE_ACCESS_TOKEN` to a valid bearer token to skip the login page and go straight to the admin panel. You can obtain a token from the Stalwart server's token endpoint or use an API key:
+Set `VITE_ACCESS_TOKEN` to a valid bearer token to skip the login page and go straight to the admin panel:
 
 ```
 VITE_ACCESS_TOKEN=your-bearer-token-here
 ```
+
+Against the local test server from [DEVELOPMENT.md](DEVELOPMENT.md), `scripts/dev-token.ps1` / `scripts/dev-token.sh` fetch one for you automatically.
 
 ### Running the dev server
 
