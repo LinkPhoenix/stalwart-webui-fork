@@ -30,6 +30,7 @@ scripts/*
 !scripts/dev-server-init.sh
 !scripts/dev-seed.ps1
 !scripts/dev-seed.sh
+!scripts/dev-seed-reports.ps1
 *.md
 !README.md
 !CHANGELOG.md
