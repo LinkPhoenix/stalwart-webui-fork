@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
@@ -78,12 +78,19 @@ import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
 import { isClientOnlyFilterEnum, isClientSortableColumn } from '@/lib/schemaDeviationTypes';
 // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+import { getBasePath } from '@/lib/basePath';
 import {
   getReportSummaryValue,
   isReportSummaryColumn,
   listNeedsReportProperty,
   REPORT_SUMMARY_COLUMNS,
 } from '@/lib/reportSummaries';
+
+/** App-relative path → absolute URL path including Vite/Stalwart basename. */
+function appHref(path: string): string {
+  const base = getBasePath();
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
@@ -1233,15 +1240,33 @@ export function DynamicList({ viewName }: DynamicListProps) {
     [resolved, viewName, viewToSection, navigate, fetchData, currentAnchor, t],
   );
 
-  const handleRowClick = useCallback(
-    (item: Record<string, unknown>) => {
+  const itemDetailPath = useCallback(
+    (itemId: string): string | null => {
       const section = viewToSection[viewName];
-      if (section && item.id) {
-        navigate(`/${section}/${viewName}/${item.id}`);
-      }
+      return section ? `/${section}/${viewName}/${itemId}` : null;
     },
-    [viewName, viewToSection, navigate],
+    [viewName, viewToSection],
   );
+
+  const itemActionPath = useCallback(
+    (action: ItemAction, itemId: string): string | null => {
+      if (action.type !== 'view' && action.type !== 'query') return null;
+      const targetSection = viewToSection[action.objectName] ?? viewToSection[viewName];
+      if (!targetSection) return null;
+      if (action.type === 'view') {
+        return `/${targetSection}/${action.objectName}/${itemId}`;
+      }
+      const params = new URLSearchParams();
+      params.set(`f.${action.fieldName}`, itemId);
+      return `/${targetSection}/${action.objectName}?${params.toString()}`;
+    },
+    [viewName, viewToSection],
+  );
+
+  const createPath = useMemo(() => {
+    const section = viewToSection[viewName];
+    return section ? `/${section}/${viewName}/new` : null;
+  }, [viewName, viewToSection]);
 
   const canCreate = resolved ? hasObjectPermission(resolved.obj.permissionPrefix, 'Create') : false;
   const canUpdate = resolved ? hasObjectPermission(resolved.obj.permissionPrefix, 'Update') : false;
@@ -1516,26 +1541,34 @@ export function DynamicList({ viewName }: DynamicListProps) {
             const needsConfirmation = action.type === 'delete' || action.type === 'setProperty';
 
             return (
-              <DropdownMenuItem
-                key={`${action.type}-${idx}`}
-                className={isDestructive ? 'text-destructive' : undefined}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (locked) {
-                    setUpsellOpen(true);
-                  } else if (needsConfirmation) {
-                    setConfirmAction({
-                      label: action.label,
-                      onConfirm: () => executeItemAction(action, item),
-                    });
-                  } else {
-                    executeItemAction(action, item);
-                  }
-                }}
-              >
-                {action.label}
-                {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
-              </DropdownMenuItem>
+              needsConfirmation || locked || !itemActionPath(action, item.id as string) ? (
+                <DropdownMenuItem
+                  key={`${action.type}-${idx}`}
+                  className={isDestructive ? 'text-destructive' : undefined}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (locked) {
+                      setUpsellOpen(true);
+                    } else if (needsConfirmation) {
+                      setConfirmAction({
+                        label: action.label,
+                        onConfirm: () => executeItemAction(action, item),
+                      });
+                    } else {
+                      executeItemAction(action, item);
+                    }
+                  }}
+                >
+                  {action.label}
+                  {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem key={`${action.type}-${idx}`} asChild>
+                  <Link to={itemActionPath(action, item.id as string)!} onClick={(e) => e.stopPropagation()}>
+                    {action.label}
+                  </Link>
+                </DropdownMenuItem>
+              )
             );
           })}
         </DropdownMenuContent>
@@ -1593,17 +1626,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
             </DropdownMenu>
           )}
 
-          {canCreate && obj.objectType.type === 'object' && (
-            <Button
-              onClick={() => {
-                const section = viewToSection[viewName];
-                if (section) {
-                  navigate(`/${section}/${viewName}/new`);
-                }
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {t('list.create', 'Create {{name}}', { name: list.singularName })}
+          {canCreate && obj.objectType.type === 'object' && createPath && (
+            <Button asChild>
+              <Link to={createPath}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('list.create', 'Create {{name}}', { name: list.singularName })}
+              </Link>
             </Button>
           )}
         </div>
@@ -1783,11 +1811,33 @@ export function DynamicList({ viewName }: DynamicListProps) {
               ) : (
                 items.map((item) => {
                   const itemId = item.id as string;
+                  const detailPath = itemDetailPath(itemId);
+                  const openDetail = (newTab: boolean) => {
+                    if (!detailPath) return;
+                    if (newTab) {
+                      window.open(appHref(detailPath), '_blank', 'noopener,noreferrer');
+                    } else {
+                      navigate(detailPath);
+                    }
+                  };
                   return (
                     <tr
                       key={itemId}
                       className="border-b cursor-pointer transition-colors hover:bg-muted/50"
-                      onClick={() => handleRowClick(item)}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')) {
+                          return;
+                        }
+                        openDetail(e.metaKey || e.ctrlKey);
+                      }}
+                      onAuxClick={(e) => {
+                        if (e.button !== 1) return;
+                        if ((e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')) {
+                          return;
+                        }
+                        e.preventDefault();
+                        openDetail(true);
+                      }}
                     >
                       {hasMassActions && (
                         <td className="px-3 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -1798,57 +1848,79 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           />
                         </td>
                       )}
-                      {displayColumns.map((col) => (
-                        <td key={col.name} className="px-3 py-2 whitespace-nowrap">
-                          {isWebApplications && col.name === 'enabled' && !fields[col.name] ? (
-                            item.enabled === true ? (
+                      {displayColumns.map((col, colIdx) => {
+                        const cell = (() => {
+                          if (isWebApplications && col.name === 'enabled' && !fields[col.name]) {
+                            return item.enabled === true ? (
                               <Check className="h-4 w-4 text-green-600" />
                             ) : (
                               <X className="h-4 w-4 text-red-500" />
-                            )
-                          ) : isAccountsList && col.name === 'roles' ? (
-                            formatUserRole(item, schema!)
-                          ) : hasQuotaUsageColumn && col.name === 'quotaUsage' ? (
-                            renderQuotaUsage(item, t)
-                          ) : col.name in COUNT_COLUMN_SOURCES && activeCountColumns.includes(col.name) ? (
-                            getCountColumnValue(col.name, item)
-                          ) : needsReportProperty && isReportSummaryColumn(col.name) ? (
-                            // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
-                            col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType ? (
-                              (() => {
-                                const raw = String(getReportSummaryValue(col.name, item));
-                                if (raw === '-') return <span className="text-muted-foreground">-</span>;
-                                const label =
-                                  schema?.enums?.ArfFeedbackType?.find((e) => e.name === raw)?.label ?? raw;
-                                return <Badge variant="secondary">{label}</Badge>;
-                              })()
+                            );
+                          }
+                          if (isAccountsList && col.name === 'roles') {
+                            return formatUserRole(item, schema!);
+                          }
+                          if (hasQuotaUsageColumn && col.name === 'quotaUsage') {
+                            return renderQuotaUsage(item, t);
+                          }
+                          if (col.name in COUNT_COLUMN_SOURCES && activeCountColumns.includes(col.name)) {
+                            return getCountColumnValue(col.name, item);
+                          }
+                          if (needsReportProperty && isReportSummaryColumn(col.name)) {
+                            if (col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType) {
+                              const raw = String(getReportSummaryValue(col.name, item));
+                              if (raw === '-') return <span className="text-muted-foreground">-</span>;
+                              const label =
+                                schema?.enums?.ArfFeedbackType?.find((e) => e.name === raw)?.label ?? raw;
+                              return <Badge variant="secondary">{label}</Badge>;
+                            }
+                            return getReportSummaryValue(col.name, item);
+                          }
+                          if (isMailboxList && col.name === 'name') {
+                            const depth = mailboxDepths.get(item.id as string) ?? 0;
+                            return (
+                              <div style={{ paddingLeft: depth * 20 }} className="flex items-center gap-1.5">
+                                {depth > 0 && (
+                                  <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                )}
+                                <span>{String(item.name ?? '')}</span>
+                              </div>
+                            );
+                          }
+                          return renderCellValue(
+                            item[col.name],
+                            fields[col.name],
+                            col.name,
+                            schema!,
+                            resolved.obj.objectName,
+                            getDisplayName,
+                          );
+                        })();
+
+                        return (
+                          <td key={col.name} className="px-3 py-2 whitespace-nowrap">
+                            {colIdx === 0 && detailPath ? (
+                              <Link
+                                to={detailPath}
+                                className="text-inherit no-underline hover:underline"
+                                onClick={(e) => {
+                                  // Plain left-click: let the row handler navigate once.
+                                  // Modified clicks / middle-click: keep native Link behaviour.
+                                  if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) {
+                                    e.preventDefault();
+                                  } else {
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              >
+                                {cell}
+                              </Link>
                             ) : (
-                              getReportSummaryValue(col.name, item)
-                            )
-                          ) : isMailboxList && col.name === 'name' ? (
-                            (() => {
-                              const depth = mailboxDepths.get(item.id as string) ?? 0;
-                              return (
-                                <div style={{ paddingLeft: depth * 20 }} className="flex items-center gap-1.5">
-                                  {depth > 0 && (
-                                    <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                  )}
-                                  <span>{String(item.name ?? '')}</span>
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            renderCellValue(
-                              item[col.name],
-                              fields[col.name],
-                              col.name,
-                              schema!,
-                              resolved.obj.objectName,
-                              getDisplayName,
-                            )
-                          )}
-                        </td>
-                      ))}
+                              cell
+                            )}
+                          </td>
+                        );
+                      })}
                       {hasItemActions && (
                         <td className="px-3 py-2 text-right whitespace-nowrap">{renderItemActions(item)}</td>
                       )}

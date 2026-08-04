@@ -44,7 +44,7 @@ export function getActionInfo(
     : { label: t('globalSearch.create', 'Create'), Icon: Plus };
 }
 
-function getNavigationPath(
+export function getNavigationPath(
   entryType: SearchIndexEntry['type'],
   objectKind: ObjectKind,
   section: string,

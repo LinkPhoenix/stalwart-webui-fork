@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSchemaStore } from '@/stores/schemaStore';
@@ -104,11 +104,11 @@ export function DashboardView({ dashboardId, section }: DashboardViewProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {dashboards.length > 1 && (
-          <Tabs value={dashboardId} onValueChange={(id) => navigate(`/${section}/Dashboard/${id}`)}>
+          <Tabs value={dashboardId}>
             <TabsList>
               {dashboards.map((d) => (
-                <TabsTrigger key={d.id} value={d.id}>
-                  {d.label}
+                <TabsTrigger key={d.id} value={d.id} asChild>
+                  <Link to={`/${section}/Dashboard/${d.id}`}>{d.label}</Link>
                 </TabsTrigger>
               ))}
             </TabsList>

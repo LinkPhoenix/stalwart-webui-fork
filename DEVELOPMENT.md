@@ -91,6 +91,21 @@ every admin panel screen has something to test against:
 Idempotent — does nothing if `alice` already exists. Only needed once per
 fresh volume, same as step 2.
 
+To also exercise Management → Reports (DMARC/TLS/ARF summary columns),
+after the seed above run:
+
+```bash
+# Windows / PowerShell (requires the Stalwart test fixtures path; defaults
+# to ../../project-rust/stalwart/tests/resources/smtp/reports relative to
+# this repo when that checkout exists)
+pwsh ./scripts/dev-seed-reports.ps1
+```
+
+That configures inbound report addresses + retention, restarts the
+container so SMTP picks them up, then delivers sample `.eml` fixtures over
+SMTP to `alice@example.org`. External reports cannot be created via JMAP.
+Idempotent if any DMARC external report already exists.
+
 ## 4. Get an access token
 
 For local development it's simpler to skip interactive login and use a

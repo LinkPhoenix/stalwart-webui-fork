@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 const { ChevronDown, Lock } = LucideIcons;
 import { cn } from '@/lib/utils';
@@ -153,12 +153,11 @@ interface SidebarSubItemProps {
   depth: number;
   sectionName: string;
   currentPath: string;
-  navigate: ReturnType<typeof useNavigate>;
   edition: string;
   onUpsell: () => void;
 }
 
-function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, edition, onUpsell }: SidebarSubItemProps) {
+function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpsell }: SidebarSubItemProps) {
   // Picking a plain link closes any sibling group left open at this same
   // accordion level — it's not part of a collapsible, so nothing should
   // stay expanded on its account once it's the one that's active.
@@ -175,29 +174,40 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
 
     if (isHidden) return null;
 
+    const className = cn(
+      sidebarItemClass,
+      sidebarItemSquareClass,
+      isActive && 'bg-accent text-accent-foreground hover:bg-accent',
+      depth > 0 && 'text-sm',
+    );
+    const style = { paddingLeft: `${(depth + 1) * 12 + 8}px` };
+
+    if (isLocked) {
+      return (
+        <Button
+          variant="ghost"
+          data-sidebar-active={isActive || undefined}
+          className={className}
+          style={style}
+          onClick={onUpsell}
+        >
+          <span className="truncate">{item.name || 'Overview'}</span>
+          <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
+        </Button>
+      );
+    }
+
     return (
-      <Button
-        variant="ghost"
-        data-sidebar-active={isActive || undefined}
-        className={cn(
-          sidebarItemClass,
-          sidebarItemSquareClass,
-          isActive && 'bg-accent text-accent-foreground hover:bg-accent',
-          depth > 0 && 'text-sm',
-        )}
-        style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
-        onClick={() => {
-          if (isLocked) {
-            onUpsell();
-          } else {
+      <Button variant="ghost" data-sidebar-active={isActive || undefined} className={className} style={style} asChild>
+        <Link
+          to={path}
+          onClick={() => {
             level?.setOpenId(null);
             setLastVisitedSection(sectionName, item.viewName);
-            navigate(path);
-          }
-        }}
-      >
-        <span className="truncate">{item.name || 'Overview'}</span>
-        {isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+          }}
+        >
+          <span className="truncate">{item.name || 'Overview'}</span>
+        </Link>
       </Button>
     );
   }
@@ -227,7 +237,6 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, navigate, editi
                 depth={depth + 1}
                 sectionName={sectionName}
                 currentPath={currentPath}
-                navigate={navigate}
                 edition={edition}
                 onUpsell={onUpsell}
               />
@@ -245,12 +254,11 @@ interface SidebarTopItemProps {
   item: LayoutItem;
   sectionName: string;
   currentPath: string;
-  navigate: ReturnType<typeof useNavigate>;
   edition: string;
   onUpsell: () => void;
 }
 
-function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onUpsell }: SidebarTopItemProps) {
+function SidebarTopItem({ item, sectionName, currentPath, edition, onUpsell }: SidebarTopItemProps) {
   // Picking a plain link closes any sibling group left open at this same
   // accordion level — it's not part of a collapsible, so nothing should
   // stay expanded on its account once it's the one that's active.
@@ -269,28 +277,39 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
 
     if (isHidden) return null;
 
+    const className = cn(
+      sidebarItemClass,
+      sidebarItemSquareClass,
+      isActive && 'bg-accent text-accent-foreground hover:bg-accent',
+    );
+
+    if (isLocked) {
+      return (
+        <Button
+          variant="ghost"
+          data-sidebar-active={isActive || undefined}
+          className={className}
+          onClick={onUpsell}
+        >
+          <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
+          <span className="truncate">{name}</span>
+          <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
+        </Button>
+      );
+    }
+
     return (
-      <Button
-        variant="ghost"
-        data-sidebar-active={isActive || undefined}
-        className={cn(
-          sidebarItemClass,
-          sidebarItemSquareClass,
-          isActive && 'bg-accent text-accent-foreground hover:bg-accent',
-        )}
-        onClick={() => {
-          if (isLocked) {
-            onUpsell();
-          } else {
+      <Button variant="ghost" data-sidebar-active={isActive || undefined} className={className} asChild>
+        <Link
+          to={path}
+          onClick={() => {
             level?.setOpenId(null);
             setLastVisitedSection(sectionName, viewName);
-            navigate(path);
-          }
-        }}
-      >
-        <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
-        <span className="truncate">{name}</span>
-        {isLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+          }}
+        >
+          <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
+          <span className="truncate">{name}</span>
+        </Link>
       </Button>
     );
   }
@@ -319,7 +338,6 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
                 depth={1}
                 sectionName={sectionName}
                 currentPath={currentPath}
-                navigate={navigate}
                 edition={edition}
                 onUpsell={onUpsell}
               />
@@ -334,7 +352,6 @@ function SidebarTopItem({ item, sectionName, currentPath, navigate, edition, onU
 }
 
 export function Sidebar() {
-  const navigate = useNavigate();
   const location = useLocation();
   const activeSection = useUIStore((s) => s.activeSection);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
@@ -384,18 +401,19 @@ export function Sidebar() {
   const layout: Layout | undefined = layouts.find((l) => l.name === activeSection);
   if (!layout) return null;
 
-  const handleSectionClick = (target: Layout) => {
+  const handleSectionActivate = (target: Layout) => {
     setActiveSection(target.name);
+    skipCloseOnNavigateRef.current = true;
+  };
+
+  const sectionPath = (target: Layout): string | null => {
     const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
     const last = findLastVisitedLinkInLayout(schema, target, edition, canGet, hasPermission);
     const first =
       last ??
       findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
       findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
-    if (first) {
-      skipCloseOnNavigateRef.current = true;
-      navigate(`/${target.name}/${first}`);
-    }
+    return first ? `/${target.name}/${first}` : null;
   };
 
   return (
@@ -418,7 +436,6 @@ export function Sidebar() {
                   item={item}
                   sectionName={layout.name}
                   currentPath={location.pathname}
-                  navigate={navigate}
                   edition={edition}
                   onUpsell={() => setUpsellOpen(true)}
                 />
@@ -438,24 +455,42 @@ export function Sidebar() {
                     .join('')
                 ] as LucideIcons.LucideIcon | undefined;
                 const isActive = target.name === activeSection;
+                const to = sectionPath(target);
+                const buttonClass = cn(
+                  'h-9 w-9',
+                  "[[data-radius='square']_&]:h-12 [[data-radius='square']_&]:flex-1 [[data-radius='square']_&]:border-r [[data-radius='square']_&]:border-border [[data-radius='square']_&]:last:border-r-0 [[data-radius='square']_&]:hover:bg-foreground/[0.03]",
+                  isActive && 'bg-accent text-accent-foreground',
+                );
                 return (
                   <Tooltip key={target.name}>
                     <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={target.name}
-                        aria-current={isActive ? 'page' : undefined}
-                        onClick={() => handleSectionClick(target)}
-                        className={cn(
-                          'h-9 w-9',
-                          "[[data-radius='square']_&]:h-12 [[data-radius='square']_&]:flex-1 [[data-radius='square']_&]:border-r [[data-radius='square']_&]:border-border [[data-radius='square']_&]:last:border-r-0 [[data-radius='square']_&]:hover:bg-foreground/[0.03]",
-                          isActive && 'bg-accent text-accent-foreground',
-                        )}
-                      >
-                        {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
-                      </Button>
+                      {to ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={target.name}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={buttonClass}
+                          asChild
+                        >
+                          <Link to={to} onClick={() => handleSectionActivate(target)}>
+                            {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={target.name}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={buttonClass}
+                          onClick={() => setActiveSection(target.name)}
+                        >
+                          {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
+                        </Button>
+                      )}
                     </TooltipTrigger>
                     <TooltipContent side="top">{target.name}</TooltipContent>
                   </Tooltip>

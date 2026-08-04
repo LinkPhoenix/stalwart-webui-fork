@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -15,7 +16,13 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { friendlyName, getActionInfo, getObjectKind, useGlobalSearch } from '@/hooks/useGlobalSearch';
+import {
+  friendlyName,
+  getActionInfo,
+  getNavigationPath,
+  getObjectKind,
+  useGlobalSearch,
+} from '@/hooks/useGlobalSearch';
 import type { SearchIndexEntry } from '@/stores/schemaStore';
 
 interface CommandPaletteProps {
@@ -64,19 +71,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   const flatIdx = results.indexOf(entry);
                   const objectKind = schema ? getObjectKind(schema, entry.viewName) : null;
                   const { label: actionLabel, Icon: ActionIcon } = getActionInfo(entry.type, objectKind, t);
+                  const to = getNavigationPath(entry.type, objectKind, entry.section, entry.viewName);
 
                   return (
                     <CommandItem
                       key={`${type}-${entry.viewName}-${flatIdx}`}
                       value={`${type}-${entry.viewName}-${flatIdx}`}
+                      asChild
                       onSelect={() => selectEntry(entry)}
                     >
-                      <ActionIcon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="flex flex-1 flex-col overflow-hidden">
-                        <span className="truncate font-medium">{friendlyName(entry.text)}</span>
-                        <span className="truncate text-xs text-muted-foreground">{entry.breadcrumb}</span>
-                      </div>
-                      <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">{actionLabel}</span>
+                      <Link to={to} onClick={closePalette}>
+                        <ActionIcon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="flex flex-1 flex-col overflow-hidden">
+                          <span className="truncate font-medium">{friendlyName(entry.text)}</span>
+                          <span className="truncate text-xs text-muted-foreground">{entry.breadcrumb}</span>
+                        </div>
+                        <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground">{actionLabel}</span>
+                      </Link>
                     </CommandItem>
                   );
                 })}

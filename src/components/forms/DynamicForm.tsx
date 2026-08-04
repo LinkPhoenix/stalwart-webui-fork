@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
-import { useNavigate, useBlocker } from 'react-router-dom';
+import { Link, useNavigate, useBlocker } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -741,13 +741,22 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
   })();
 
   const sectionsToRender = buildSections(combinedForm, currentFields, isCreate, edition);
+  const listPath = viewToSection[viewName] ? `/${viewToSection[viewName]}/${viewName}` : null;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
-        <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        {listPath ? (
+          <Button type="button" variant="ghost" size="icon" asChild>
+            <Link to={listPath} aria-label={t('common.back', 'Back')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
         <div className="flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">{formTitle}</h1>
           {formSubtitle && <p className="text-sm text-muted-foreground mt-1">{formSubtitle}</p>}
@@ -858,9 +867,25 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
           {isDirty && (
             <span className="text-xs text-muted-foreground">{t('form.unsavedChangesLabel', 'Unsaved changes')}</span>
           )}
-          <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={saving}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
+          {listPath ? (
+            <Button type="button" variant="outline" asChild>
+              <Link
+                to={listPath}
+                aria-disabled={saving || undefined}
+                tabIndex={saving ? -1 : undefined}
+                className={saving ? 'pointer-events-none opacity-50' : undefined}
+                onClick={(e) => {
+                  if (saving) e.preventDefault();
+                }}
+              >
+                {t('common.cancel', 'Cancel')}
+              </Link>
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={saving}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          )}
           {!readOnly && (
             <Button type="button" onClick={handleSave} disabled={saving || (!isCreate && !isDirty)}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}

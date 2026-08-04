@@ -78,6 +78,17 @@ export function TopBar() {
     ? visibleLayouts(schema, edition, (prefix) => hasObjectPermission(prefix, 'Get'), hasPermission)
     : [];
 
+  const sectionLink = (layout: (typeof navigableLayouts)[number]): string | null => {
+    if (!schema) return null;
+    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
+    const lastLink = findLastVisitedLinkInLayout(schema, layout, edition, canGet, hasPermission);
+    const firstLink =
+      lastLink ??
+      findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPermission) ??
+      findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPermission);
+    return firstLink ? `/${layout.name}/${firstLink}` : null;
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4">
       <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden">
@@ -147,24 +158,21 @@ export function TopBar() {
                 <DropdownMenuGroup>
                   {navigableLayouts.map((layout) => {
                     const Icon = getIcon(layout.icon);
+                    const to = sectionLink(layout);
+                    if (!to) {
+                      return (
+                        <DropdownMenuItem key={layout.name} onClick={() => setActiveSection(layout.name)}>
+                          <Icon className="mr-2 h-4 w-4" />
+                          {layout.name}
+                        </DropdownMenuItem>
+                      );
+                    }
                     return (
-                      <DropdownMenuItem
-                        key={layout.name}
-                        onClick={() => {
-                          setActiveSection(layout.name);
-                          const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-                          const lastLink = findLastVisitedLinkInLayout(schema, layout, edition, canGet, hasPermission);
-                          const firstLink =
-                            lastLink ??
-                            findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPermission) ??
-                            findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPermission);
-                          if (firstLink) {
-                            navigate(`/${layout.name}/${firstLink}`);
-                          }
-                        }}
-                      >
-                        <Icon className="mr-2 h-4 w-4" />
-                        {layout.name}
+                      <DropdownMenuItem key={layout.name} asChild>
+                        <Link to={to} onClick={() => setActiveSection(layout.name)}>
+                          <Icon className="mr-2 h-4 w-4" />
+                          {layout.name}
+                        </Link>
                       </DropdownMenuItem>
                     );
                   })}
@@ -198,14 +206,18 @@ export function TopBar() {
               </>
             )}
 
-            <DropdownMenuItem onClick={() => navigate('/Appearance')}>
-              <Palette className="mr-2 h-4 w-4" />
-              {t('appearance.label', 'Appearance')}
+            <DropdownMenuItem asChild>
+              <Link to="/Appearance">
+                <Palette className="mr-2 h-4 w-4" />
+                {t('appearance.label', 'Appearance')}
+              </Link>
             </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => navigate('/Changelog')}>
-              <ScrollText className="mr-2 h-4 w-4" />
-              {t('changelog.label', 'Changelog')}
+            <DropdownMenuItem asChild>
+              <Link to="/Changelog">
+                <ScrollText className="mr-2 h-4 w-4" />
+                {t('changelog.label', 'Changelog')}
+              </Link>
             </DropdownMenuItem>
 
             <DropdownMenuItem

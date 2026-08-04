@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ export function DynamicViewPage({ viewName, objectId }: DynamicViewPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const schema = useSchemaStore((s) => s.schema);
+  const viewToSection = useSchemaStore((s) => s.viewToSection);
+  const listPath = viewToSection[viewName] ? `/${viewToSection[viewName]}/${viewName}` : null;
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,13 +75,24 @@ export function DynamicViewPage({ viewName, objectId }: DynamicViewPageProps) {
     );
   }
 
+  const backButton = listPath ? (
+    <Button variant="outline" size="sm" asChild>
+      <Link to={listPath}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        {t('common.back', 'Back')}
+      </Link>
+    </Button>
+  ) : (
+    <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+      <ArrowLeft className="mr-2 h-4 w-4" />
+      {t('common.back', 'Back')}
+    </Button>
+  );
+
   if (error || !data || !schema) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('common.back', 'Back')}
-        </Button>
+        {backButton}
         <div className="text-destructive p-4">{error ?? t('view.failedToLoad', 'Failed to load')}</div>
       </div>
     );
@@ -100,10 +113,7 @@ export function DynamicViewPage({ viewName, objectId }: DynamicViewPageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('common.back', 'Back')}
-        </Button>
+        {backButton}
         <h1 className="text-xl font-semibold">{title}</h1>
       </div>
 

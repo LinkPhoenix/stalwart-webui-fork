@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, FileText, Clock, Timer, Activity, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -58,9 +58,26 @@ export function TraceDetailView({ viewName, objectId }: TraceDetailViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const schema = useSchemaStore((s) => s.schema);
+  const viewToSection = useSchemaStore((s) => s.viewToSection);
+  const listPath = viewToSection[viewName] ? `/${viewToSection[viewName]}/${viewName}` : null;
   const [events, setEvents] = useState<TraceEvent[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const backButton = (size: 'default' | 'sm' = 'default') =>
+    listPath ? (
+      <Button variant="outline" size={size} asChild>
+        <Link to={listPath}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t('common.back', 'Back')}
+        </Link>
+      </Button>
+    ) : (
+      <Button variant="outline" size={size} onClick={() => navigate(-1)}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        {t('common.back', 'Back')}
+      </Button>
+    );
 
   useEffect(() => {
     if (!schema) return;
@@ -110,10 +127,7 @@ export function TraceDetailView({ viewName, objectId }: TraceDetailViewProps) {
   if (error) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {t('common.back', 'Back')}
-        </Button>
+        {backButton()}
         <div className="text-destructive p-4">{error}</div>
       </div>
     );
@@ -151,10 +165,7 @@ export function TraceDetailView({ viewName, objectId }: TraceDetailViewProps) {
 
   return (
     <div className="space-y-6">
-      <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        {t('common.back', 'Back')}
-      </Button>
+      {backButton('sm')}
 
       <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
         <Card>
