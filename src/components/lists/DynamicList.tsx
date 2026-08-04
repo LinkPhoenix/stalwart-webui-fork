@@ -1775,7 +1775,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 {displayColumns.map((col) => (
                   <th
                     key={col.name}
-                    className="px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap"
+                    className={
+                      col.name === 'subject'
+                        ? 'max-w-[20rem] px-3 py-3 text-left font-medium text-muted-foreground'
+                        : 'px-3 py-3 text-left font-medium text-muted-foreground whitespace-nowrap'
+                    }
                   >
                     <div className="flex items-center">
                       {col.label}
@@ -1904,7 +1908,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         })();
 
                         return (
-                          <td key={col.name} className="px-3 py-2 whitespace-nowrap">
+                          <td
+                            key={col.name}
+                            className={
+                              col.name === 'subject'
+                                ? 'max-w-[20rem] px-3 py-2'
+                                : 'px-3 py-2 whitespace-nowrap'
+                            }
+                          >
                             {colIdx === 0 && detailPath ? (
                               <Link
                                 to={detailPath}
@@ -1919,8 +1930,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
                                   }
                                 }}
                               >
-                                {cell}
+                                {col.name === 'subject' ? (
+                                  <span className="block truncate" title={String(item.subject ?? '')}>
+                                    {cell}
+                                  </span>
+                                ) : (
+                                  cell
+                                )}
                               </Link>
+                            ) : col.name === 'subject' ? (
+                              <span className="block truncate" title={String(item.subject ?? '')}>
+                                {cell}
+                              </span>
                             ) : (
                               cell
                             )}
