@@ -4,12 +4,17 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-08-04
+
 ### Added
 - Middle-click / “Open in new tab” on admin navigation: sidebar links, section switcher, TopBar sections/Appearance/Changelog, list Create and row primary cells (plus Ctrl/Cmd-click and middle-click on the whole row), view/query row actions, command palette results, form Back/Cancel, read-only view and trace Back buttons, and dashboard tabs ([webui#7](https://github.com/stalwartlabs/webui/issues/7)).
 - Summary columns on inbound/outbound DMARC and TLS report lists, and on ARF reports: Pass/Quarantine/Reject (DMARC), Successful/Failed Sessions (TLS), Incidents + Feedback Type (ARF), derived from the nested `report` property ([webui#13](https://github.com/stalwartlabs/webui/issues/13); tracked as `report-summary-columns` in SCHEMA_DEVIATIONS.md).
 - Coloured badges on report summary cells when Quarantine, Reject, or Failed Sessions are greater than zero (amber / red) so problems stand out without opening each row.
-- Report list Subject column truncates at a max width (full text on hover) so long subjects no longer force horizontal scrolling.
 - `scripts/dev-seed-reports.ps1` to SMTP-inject Stalwart test-suite sample DMARC/TLS/ARF reports into the local disposable server (JMAP create is forbidden for external reports).
+- README screenshots for DMARC, TLS, and ARF report list summary columns.
+
+### Fixed
+- Report list Subject column truncates at a max width (full text on hover) so long subjects no longer force horizontal scrolling.
 
 ## [1.1.3] - 2026-08-01
 

@@ -88,6 +88,10 @@ Captured against a local dev server seeded with sample data (see [DEVELOPMENT.md
 | ![Mailing lists](./docs/screenshots/mailing-lists.png) | ![User menu](./docs/screenshots/user-menu.png) |
 | Appearance — light mode | Appearance — dark mode, Stalwart theme |
 | ![Appearance light](./docs/screenshots/appearance-light.png) | ![Appearance dark](./docs/screenshots/appearance-dark.png) |
+| DMARC inbox — Pass / Quarantine / Reject + truncated Subject | TLS inbox — Successful / Failed Sessions (red badges) |
+| ![DMARC reports](./docs/screenshots/dmarc-reports.png) | ![TLS reports](./docs/screenshots/tls-reports.png) |
+| ARF inbox — Incidents + Feedback Type | |
+| ![ARF reports](./docs/screenshots/arf-reports.png) | |
 
 ## Get Started
 
