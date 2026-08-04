@@ -96,6 +96,15 @@ fresh volume, same as step 2.
 For local development it's simpler to skip interactive login and use a
 bearer token directly via `VITE_ACCESS_TOKEN` (see `.env.development`).
 
+> **Note:** the interactive login form (the one shown at `/login`) does
+> not work against `npm run dev` alone — don't spend time debugging it.
+> `/api/discover` returns a relative `authorization_endpoint` (`/login`),
+> which in production is served by the Stalwart backend itself, but in
+> dev is intercepted by the Vite-served React SPA instead, so the OAuth
+> flow silently loops back to an empty login form instead of reaching a
+> real authorization server. Always use `dev-token.sh`/`dev-token.ps1`
+> below for local development.
+
 ```bash
 # Windows / PowerShell
 pwsh ./scripts/dev-token.ps1              # 3 hour token (server default)
