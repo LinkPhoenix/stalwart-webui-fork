@@ -25,10 +25,12 @@ Full local dev workflow, including how to run it end-to-end without a browser: [
 The detailed rules live in `.agents/rules/`. Read the relevant file before acting:
 
 - **Schema fidelity** - [.agents/rules/schema-fidelity.md](.agents/rules/schema-fidelity.md) - Stay schema-driven; how to handle cases the schema can't cover yet
+- **Releases** - [.agents/rules/releases.md](.agents/rules/releases.md) - Cut versions so GitHub Release notes are the tagged CHANGELOG section, never `[Unreleased]`
 
 ## Universal Rules
 
-- This applies to every AI coding agent working in this repo (Claude Code, Codex, Kimi, or any other) — not just one tool.
+- This applies to every AI coding agent working in this repo (Claude Code, Codex, Kimi, Cursor, ChatGPT, cloud agents, or any other) — not just one tool.
 - Never hardcode object types, field names, filters, or columns as a shortcut. Read `.agents/rules/schema-fidelity.md` before adding anything that touches lists, forms, or navigation.
 - **CRITICAL**: `src/types/schema.ts` mirrors the official server/webui schema contract and must never be edited to accommodate a deviation, not even to add an optional field. Deviation-only type augmentations go in `src/lib/schemaDeviationTypes.ts` (or the deviation's own module) as an intersection with the official type — see `.agents/rules/schema-fidelity.md`.
 - Any client-side workaround for something the official schema doesn't support yet must be documented in `SCHEMA_DEVIATIONS.md` and tagged `// SCHEMA-DEVIATION: <id>` in code. Never add one silently.
+- When releasing (`chore: release`, version bump, `v*` tag): read `.agents/rules/releases.md`. After the tag workflow finishes, **verify** the GitHub Release body shows that version’s CHANGELOG section — not an empty or `[Unreleased]` body.

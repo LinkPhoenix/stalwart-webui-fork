@@ -34,9 +34,27 @@ jobs:
         working-directory: dist
         run: zip -r ../webui.zip .
 
+      # Extract the CHANGELOG section for this tag (v1.2.3 → ## [1.2.3]), never
+      # ## [Unreleased]. The old `awk ... c==1` always took the first heading,
+      # which is Unreleased and left GitHub releases empty after a cut.
       - name: Build release body
         run: |
-          awk '/^## \[/{c++} c==1' CHANGELOG.md > release_body.md
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found = 1; print; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release_body.md
+          if [ ! -s release_body.md ]; then
+            echo "::error::No CHANGELOG.md section found for version ${VERSION} (expected '## [${VERSION}]')."
+            exit 1
+          fi
+          if grep -qE '^## \[Unreleased\]' release_body.md; then
+            echo "::error::Release body resolved to [Unreleased]; refusing to publish empty/wrong notes."
+            exit 1
+          fi
+          echo "Release notes for ${VERSION}:"
+          cat release_body.md
 
       - name: Release
         uses: softprops/action-gh-release@v3

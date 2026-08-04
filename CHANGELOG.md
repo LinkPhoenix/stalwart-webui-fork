@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Fixed
+- GitHub Release notes now extract the CHANGELOG section for the tagged version instead of always taking the first heading (`## [Unreleased]`), which left v1.1.4 (and would leave future cuts) with empty release notes.
+
 ## [1.1.4] - 2026-08-04
 
 ### Added

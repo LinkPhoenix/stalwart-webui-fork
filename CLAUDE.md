@@ -1,1 +1,1 @@
-Read [AGENTS.md](AGENTS.md) first — it is the source of truth for this repo's rules (tech stack, commands, and the schema-fidelity rule in `.agents/rules/`). It applies to every AI agent working here, Claude Code included.
+Read [AGENTS.md](AGENTS.md) first — it is the source of truth for this repo's rules (tech stack, commands, schema fidelity, and releases in `.agents/rules/`). It applies to every AI agent working here, Claude Code included.
