@@ -11,10 +11,14 @@ import type { Components } from 'react-markdown';
 
 import { Card, CardContent } from '@/components/ui/card';
 import changelogSource from '../../../CHANGELOG.md?raw';
+import { stripUnreleasedChangelog } from './stripUnreleased';
 
 // Renders this fork's actual CHANGELOG.md — the single source of truth for
 // release notes, kept up to date after every release — instead of a
 // separately maintained copy that could drift from it.
+// ## [Unreleased] is kept in the file for developers but never shown in the UI.
+const publishedChangelog = stripUnreleasedChangelog(changelogSource);
+
 const components: Components = {
   h1: () => null,
   h2: ({ children }) => (
@@ -72,7 +76,7 @@ export function ChangelogPage() {
         </p>
       </div>
 
-      <ReactMarkdown components={components}>{changelogSource}</ReactMarkdown>
+      <ReactMarkdown components={components}>{publishedChangelog}</ReactMarkdown>
     </div>
   );
 }

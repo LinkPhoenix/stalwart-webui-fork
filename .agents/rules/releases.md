@@ -30,3 +30,9 @@ v1.1.4 shipped with only `## [Unreleased]` in the GitHub release because CI used
 - Tag/push a release while the new version’s notes still sit only under `## [Unreleased]`.
 - Assume “CHANGELOG updated in the repo” means the GitHub Release page is correct — always open/check the published release.
 - “Fix” release notes by inventing text that is not in `CHANGELOG.md`; copy the version section.
+
+## In-app Changelog page
+
+- The WebUI Changelog page (`src/features/changelog/`) imports `CHANGELOG.md` but **must never show** the `## [Unreleased]` section (heading or bullets). End users only see published `## [X.Y.Z]` versions.
+- Filtering is done by `stripUnreleasedChangelog` before render. Keep that behavior; do not render the raw file as-is.
+- `## [Unreleased]` remains valid in the repo file for developers working on the next cut.

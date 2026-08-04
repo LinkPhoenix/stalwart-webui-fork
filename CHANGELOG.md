@@ -4,9 +4,6 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
-### Fixed
-- GitHub Release notes now extract the CHANGELOG section for the tagged version instead of always taking the first heading (`## [Unreleased]`), which left v1.1.4 (and would leave future cuts) with empty release notes.
-
 ## [1.1.4] - 2026-08-04
 
 ### Added
@@ -18,6 +15,8 @@ All notable changes to this project will be documented in this file. This projec
 
 ### Fixed
 - Report list Subject column truncates at a max width (full text on hover) so long subjects no longer force horizontal scrolling.
+- GitHub Release notes now extract the CHANGELOG section for the tagged version instead of always taking the first heading (`## [Unreleased]`), which left empty release notes.
+- The in-app Changelog page no longer shows the `## [Unreleased]` section — only published version headings are visible to users.
 
 ## [1.1.3] - 2026-08-01
 
