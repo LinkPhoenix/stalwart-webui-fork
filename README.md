@@ -69,7 +69,7 @@ Additions in this fork:
 - **User menu**: current account name/email and an account switcher in the header dropdown, alongside a dedicated Appearance settings page (light/dark, 8 color themes including a brand-accurate "Stalwart" theme, rounded/square corners).
 - **Mailboxes list**: shown as an indented hierarchy instead of a flat list.
 - **Log Entries**: client-side Level/Event filters and a rate-limited manual refresh button.
-- **Report lists**: Pass/Quarantine/Reject counts on DMARC, Successful/Failed Sessions on TLS, Incidents + Feedback Type on ARF (derived client-side from each report’s nested data).
+- **Report lists**: Pass/Quarantine/Reject counts on DMARC, Successful/Failed Sessions on TLS, Incidents + Feedback Type on ARF (derived client-side from each report’s nested data); Quarantine/Reject/Failed Sessions use coloured badges when non-zero.
 - **Open in new tab**: sidebar, header menu, list Create/rows, command palette, and Back/Cancel use real links so middle-click and the browser context menu work.
 
 ## Screenshots

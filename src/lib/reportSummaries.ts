@@ -137,3 +137,27 @@ export function getReportSummaryValue(
       return '-';
   }
 }
+
+/**
+ * Visual tone for attention-grabbing report summary cells.
+ * Quarantine → warn (amber); Reject / Failed Sessions → danger (red);
+ * zero counts stay muted/plain so only problems stand out.
+ */
+export type ReportSummaryTone = 'muted' | 'warn' | 'danger' | 'plain';
+
+export function getReportSummaryTone(colName: string, value: string | number): ReportSummaryTone {
+  if (colName === REPORT_SUMMARY_COLUMNS.arfFeedbackType) return 'plain';
+
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 'muted';
+
+  switch (colName) {
+    case REPORT_SUMMARY_COLUMNS.dmarcQuarantineCount:
+      return 'warn';
+    case REPORT_SUMMARY_COLUMNS.dmarcRejectCount:
+    case REPORT_SUMMARY_COLUMNS.tlsFailedSessions:
+      return 'danger';
+    default:
+      return 'plain';
+  }
+}

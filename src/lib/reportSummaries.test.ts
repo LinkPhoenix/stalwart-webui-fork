@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  getReportSummaryTone,
   getReportSummaryValue,
   isReportSummaryColumn,
   listNeedsReportProperty,
@@ -92,5 +93,15 @@ describe('getReportSummaryValue / column helpers', () => {
     expect(isReportSummaryColumn('from')).toBe(false);
     expect(listNeedsReportProperty([{ name: 'from' }, { name: 'dmarcPassCount' }])).toBe(true);
     expect(listNeedsReportProperty([{ name: 'from' }])).toBe(false);
+  });
+
+  it('tones quarantine/reject/failed only when count > 0', () => {
+    expect(getReportSummaryTone('dmarcQuarantineCount', 0)).toBe('muted');
+    expect(getReportSummaryTone('dmarcQuarantineCount', 3)).toBe('warn');
+    expect(getReportSummaryTone('dmarcRejectCount', 1)).toBe('danger');
+    expect(getReportSummaryTone('tlsFailedSessions', 14)).toBe('danger');
+    expect(getReportSummaryTone('tlsFailedSessions', 0)).toBe('muted');
+    expect(getReportSummaryTone('dmarcPassCount', 10)).toBe('plain');
+    expect(getReportSummaryTone('tlsSuccessfulSessions', 100)).toBe('plain');
   });
 });

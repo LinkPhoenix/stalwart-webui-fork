@@ -85,6 +85,7 @@ import {
   listNeedsReportProperty,
   REPORT_SUMMARY_COLUMNS,
 } from '@/lib/reportSummaries';
+import { ReportSummaryCell } from '@/components/lists/ReportSummaryCell';
 
 /** App-relative path → absolute URL path including Vite/Stalwart basename. */
 function appHref(path: string): string {
@@ -1867,14 +1868,19 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             return getCountColumnValue(col.name, item);
                           }
                           if (needsReportProperty && isReportSummaryColumn(col.name)) {
-                            if (col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType) {
-                              const raw = String(getReportSummaryValue(col.name, item));
-                              if (raw === '-') return <span className="text-muted-foreground">-</span>;
-                              const label =
-                                schema?.enums?.ArfFeedbackType?.find((e) => e.name === raw)?.label ?? raw;
-                              return <Badge variant="secondary">{label}</Badge>;
-                            }
-                            return getReportSummaryValue(col.name, item);
+                            const feedbackTypeLabel =
+                              col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType
+                                ? schema?.enums?.ArfFeedbackType?.find(
+                                    (e) => e.name === String(getReportSummaryValue(col.name, item)),
+                                  )?.label
+                                : undefined;
+                            return (
+                              <ReportSummaryCell
+                                colName={col.name}
+                                item={item}
+                                feedbackTypeLabel={feedbackTypeLabel}
+                              />
+                            );
                           }
                           if (isMailboxList && col.name === 'name') {
                             const depth = mailboxDepths.get(item.id as string) ?? 0;
