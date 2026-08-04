@@ -17,6 +17,7 @@ import { withAccountListColumns } from '@/lib/accountColumns';
 import { withMailingListColumns } from '@/lib/mailingListColumns';
 import { withRoleListColumns } from '@/lib/roleColumns';
 import { withDomainColumns } from '@/lib/domainColumns';
+import { withReportListColumns } from '@/lib/reportColumns';
 import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -156,8 +157,10 @@ export default function AdminPanel() {
         if (cancelled) return;
 
         setSchema(
-          withDomainColumns(
-            withRoleListColumns(withMailingListColumns(withAccountListColumns(withClientLogFilters(schemaData)))),
+          withReportListColumns(
+            withDomainColumns(
+              withRoleListColumns(withMailingListColumns(withAccountListColumns(withClientLogFilters(schemaData)))),
+            ),
           ),
         );
 

@@ -77,6 +77,13 @@ import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from 
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
 import { isClientOnlyFilterEnum, isClientSortableColumn } from '@/lib/schemaDeviationTypes';
+// SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+import {
+  getReportSummaryValue,
+  isReportSummaryColumn,
+  listNeedsReportProperty,
+  REPORT_SUMMARY_COLUMNS,
+} from '@/lib/reportSummaries';
 
 const PAGE_SIZE = 25;
 const MAX_REPORTED_ERRORS = 3;
@@ -314,6 +321,8 @@ const CLIENT_SORT_VALUE_OVERRIDES: Record<string, (item: Record<string, unknown>
 
 function getClientSortValue(colName: string, item: Record<string, unknown>): string | number {
   if (colName in COUNT_COLUMN_SOURCES) return getCountColumnValue(colName, item);
+  // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+  if (isReportSummaryColumn(colName)) return getReportSummaryValue(colName, item);
   const override = CLIENT_SORT_VALUE_OVERRIDES[colName];
   if (override) return override(item);
   const raw = item[colName];
@@ -558,6 +567,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
     () => (resolved?.list?.columns ?? []).filter((c) => c.name in COUNT_COLUMN_SOURCES).map((c) => c.name),
     [resolved?.list?.columns],
   );
+  // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+  const needsReportProperty = listNeedsReportProperty(resolved?.list?.columns ?? []);
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -743,6 +754,23 @@ export function DynamicList({ viewName }: DynamicListProps) {
             properties.splice(idx, 1, COUNT_COLUMN_SOURCES[countCol]);
           }
         }
+        // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+        // Replace every synthetic summary column with a single `report` fetch.
+        if (needsReportProperty) {
+          let reportInserted = false;
+          for (let i = properties.length - 1; i >= 0; i--) {
+            if (!isReportSummaryColumn(properties[i])) continue;
+            if (!reportInserted) {
+              properties[i] = 'report';
+              reportInserted = true;
+            } else {
+              properties.splice(i, 1);
+            }
+          }
+          if (!reportInserted && !properties.includes('report')) {
+            properties.push('report');
+          }
+        }
         if (isMailboxList && !properties.includes('parentId')) {
           properties.push('parentId');
         }
@@ -848,6 +876,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       isAccountsList,
       hasQuotaUsageColumn,
       activeCountColumns,
+      needsReportProperty,
       isMailboxList,
       clientSortField,
       sort,
@@ -1783,6 +1812,19 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             renderQuotaUsage(item, t)
                           ) : col.name in COUNT_COLUMN_SOURCES && activeCountColumns.includes(col.name) ? (
                             getCountColumnValue(col.name, item)
+                          ) : needsReportProperty && isReportSummaryColumn(col.name) ? (
+                            // SCHEMA-DEVIATION: report-summary-columns (see SCHEMA_DEVIATIONS.md)
+                            col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType ? (
+                              (() => {
+                                const raw = String(getReportSummaryValue(col.name, item));
+                                if (raw === '-') return <span className="text-muted-foreground">-</span>;
+                                const label =
+                                  schema?.enums?.ArfFeedbackType?.find((e) => e.name === raw)?.label ?? raw;
+                                return <Badge variant="secondary">{label}</Badge>;
+                              })()
+                            ) : (
+                              getReportSummaryValue(col.name, item)
+                            )
                           ) : isMailboxList && col.name === 'name' ? (
                             (() => {
                               const depth = mailboxDepths.get(item.id as string) ?? 0;

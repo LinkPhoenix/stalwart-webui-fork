@@ -88,6 +88,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: the Roles list schema only exposes Description as a column; seeing how broad or restrictive a role is requires opening it and counting permissions by hand.
 - **Ideal fix**: the server's `x:Role` list schema includes computed enabled/disabled permission count columns natively; this column definition is deleted.
 
+### `report-summary-columns` 🟡
+
+- **Where**: [`src/lib/reportColumns.ts`](src/lib/reportColumns.ts), [`src/lib/reportSummaries.ts`](src/lib/reportSummaries.ts), resolved in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
+- **What**: adds synthetic summary columns to inbound/outbound DMARC and TLS report lists, and to ARF reports — Pass/Quarantine/Reject (DMARC, summing nested `report.records` by `evaluatedDisposition`, with Pass including `pass`+`none`), Successful/Failed Sessions (TLS, summing nested `report.policies`), Incidents + Feedback Type (ARF, from nested `report`). DynamicList fetches the real `report` property once and derives the cell values (and client-sort keys) from it.
+- **Why**: those lists' schemas only show envelope metadata (From/Subject/Received or Domain/dates), so admins must open each report to spot failures — tracked upstream as [stalwartlabs/webui#13](https://github.com/stalwartlabs/webui/issues/13).
+- **Ideal fix**: the server's list schemas expose computed summary columns (or denormalized count properties) natively; `reportColumns.ts` / `reportSummaries.ts` and the DynamicList branch are deleted.
+
 ## Not a deviation (for reference)
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in
