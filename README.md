@@ -63,12 +63,29 @@ Additions in this fork:
 - **`Ctrl+K` / `Cmd+K` command palette** to search pages, form sections, and fields across the admin panel.
 - **Calendar date/time picker** replacing native date inputs, themed for dark mode.
 - **Accounts list**: Role and Usage/Quota columns, with a highlight and recalculate hint for stale negative disk-usage values.
+- **Aliases counts**: Accounts, Groups, Domains, and Mailing Lists lists all show an Aliases column.
+- **Sortable list columns**: the most relevant column on every list (Accounts, Groups, Domains, Mailing Lists, Roles) can be sorted client-side.
+- **Roles list**: Enabled/Disabled Permissions count columns, so you can see a role's scope without opening it.
+- **User menu**: current account name/email and an account switcher in the header dropdown, alongside a dedicated Appearance settings page (light/dark, 8 color themes including a brand-accurate "Stalwart" theme, rounded/square corners).
 - **Mailboxes list**: shown as an indented hierarchy instead of a flat list.
 - **Log Entries**: client-side Level/Event filters and a rate-limited manual refresh button.
 
 ## Screenshots
 
 <img src="./img/demo.gif">
+
+Captured against a local dev server seeded with sample data (see [DEVELOPMENT.md](DEVELOPMENT.md)) — all addresses below are examples (`@example.org`), not real accounts.
+
+| | |
+|---|---|
+| Accounts — Usage/Quota + Aliases columns | Roles — permission counts |
+| ![Accounts list](./docs/screenshots/accounts-list.png) | ![Roles list](./docs/screenshots/roles-list.png) |
+| Groups — Usage/Quota + Aliases columns | Domains — Aliases column |
+| ![Groups list](./docs/screenshots/groups-list.png) | ![Domains list](./docs/screenshots/domains-list.png) |
+| Mailing Lists — Aliases column | User menu (header) |
+| ![Mailing lists](./docs/screenshots/mailing-lists.png) | ![User menu](./docs/screenshots/user-menu.png) |
+| Appearance — light mode | Appearance — dark mode, Stalwart theme |
+| ![Appearance light](./docs/screenshots/appearance-light.png) | ![Appearance dark](./docs/screenshots/appearance-dark.png) |
 
 ## Get Started
 
