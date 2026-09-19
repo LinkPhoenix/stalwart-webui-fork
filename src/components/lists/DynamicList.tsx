@@ -199,13 +199,13 @@ function bulkResultSummary(
   const title =
     actionType === 'delete'
       ? t('list.bulkMixedDelete', '{{success}} deleted, {{failed}} failed.', {
-          success: successCount,
-          failed: totalErrors,
-        })
+        success: successCount,
+        failed: totalErrors,
+      })
       : t('list.bulkMixedUpdate', '{{success}} updated, {{failed}} failed.', {
-          success: successCount,
-          failed: totalErrors,
-        });
+        success: successCount,
+        failed: totalErrors,
+      });
   return {
     title,
     description,
@@ -708,6 +708,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   );
 
   const [anchorStack, setAnchorStack] = useState<string[]>([]);
+  const [pageHistory, setPageHistory] = useState<Record<string, unknown>[][]>([]);
   const [currentAnchor, setCurrentAnchor] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAllMode, setSelectAllMode] = useState(false);
@@ -810,6 +811,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setItems([]);
     setTotal(null);
     setAnchorStack([]);
+    setPageHistory([]);
     setCurrentAnchor(null);
     setSelectedIds(new Set());
     setSelectAllMode(false);
@@ -1177,6 +1179,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     if (!resolved?.list) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnchorStack([]);
+    setPageHistory([]);
     setCurrentAnchor(null);
     fetchData(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1252,8 +1255,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
     refreshCooldownTimer.current = setTimeout(() => setRefreshOnCooldown(false), REFRESH_COOLDOWN_MS);
   }, [refreshOnCooldown, fetchData, currentAnchor]);
 
+  const isFirstPage = clientAllItems !== null ? clientPage === 0 : anchorStack.length === 0;
+
   useEffect(() => {
-    if (!isLogEntries || !logAutoRefresh) return;
+    if (!isLogEntries || !logAutoRefresh || !isFirstPage) return;
 
     const tick = () => {
       if (document.visibilityState === 'hidden') return;
@@ -1262,7 +1267,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
     const id = window.setInterval(tick, LOG_AUTO_REFRESH_MS);
     return () => window.clearInterval(id);
-  }, [isLogEntries, logAutoRefresh, handleRefresh]);
+  }, [isLogEntries, logAutoRefresh, isFirstPage, handleRefresh]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -1299,6 +1304,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     if (firstId) {
       setAnchorStack((prev) => [...prev, firstId]);
     }
+    setPageHistory((prev) => [...prev, items]);
     setCurrentAnchor(lastId);
     fetchData(lastId, 1);
   }, [items, fetchData, clientAllItems, clientPage]);
@@ -1316,17 +1322,24 @@ export function DynamicList({ viewName }: DynamicListProps) {
     }
 
     const newStack = [...anchorStack];
-    const prevFirstId = newStack.pop()!;
+    newStack.pop();
     setAnchorStack(newStack);
 
     if (newStack.length === 0) {
+      setPageHistory([]);
       setCurrentAnchor(null);
       fetchData(null);
-    } else {
-      setCurrentAnchor(prevFirstId);
-      fetchData(prevFirstId, 0);
+      return;
     }
-  }, [anchorStack, fetchData, clientAllItems, clientPage]);
+
+    const previousPages = [...pageHistory];
+    const previousItems = previousPages.pop();
+    if (!previousItems) return;
+    setPageHistory(previousPages);
+    setItems(previousItems);
+setCurrentAnchor((previousItems[0]?.id as string) ?? null);
+    setSelectedIds(new Set());
+  }, [anchorStack, clientAllItems, clientPage, fetchData, pageHistory]);
 
   const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === items.length) {
@@ -2444,8 +2457,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             const feedbackTypeLabel =
                               col.name === REPORT_SUMMARY_COLUMNS.arfFeedbackType
                                 ? schema?.enums?.ArfFeedbackType?.find(
-                                    (e) => e.name === String(getReportSummaryValue(col.name, item)),
-                                  )?.label
+                                  (e) => e.name === String(getReportSummaryValue(col.name, item)),
+                                )?.label
                                 : undefined;
                             return (
                               <ReportSummaryCell
@@ -2535,14 +2548,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
           <div className="min-w-0">
             {total !== null
               ? t('list.showing', 'Showing {{from}}-{{to}} of {{total}} {{name}}', {
-                  from: rangeStart,
-                  to: rangeEnd,
-                  total,
-                  name: list.pluralName,
-                })
+                from: rangeStart,
+                to: rangeEnd,
+                total,
+                name: list.pluralName,
+              })
               : t('list.showingItems', 'Showing {{count}} items', {
-                  count: items.length,
-                })}
+                count: items.length,
+              })}
           </div>
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             <Button variant="outline" size="sm" disabled={!hasPrevPage || loading} onClick={handlePrevPage}>
