@@ -662,6 +662,30 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [problemsOnly, setProblemsOnly] = useState(
     () => new URLSearchParams(window.location.search).get('problemsOnly') === '1',
   );
+  const [columnPreferences, setColumnPreferences] = useState<{ order: string[]; hidden: string[] }>(() => {
+    try {
+      const raw = localStorage.getItem(`list-columns:${viewName}`);
+      return raw ? JSON.parse(raw) : { order: [], hidden: [] };
+    } catch {
+      return { order: [], hidden: [] };
+    }
+  });
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`list-columns:${viewName}`);
+      setColumnPreferences(raw ? JSON.parse(raw) : { order: [], hidden: [] });
+    } catch {
+      setColumnPreferences({ order: [], hidden: [] });
+    }
+  }, [viewName]);
+  const saveColumnPreferences = useCallback((next: { order: string[]; hidden: string[] }) => {
+    setColumnPreferences(next);
+    try {
+      localStorage.setItem(`list-columns:${viewName}`, JSON.stringify(next));
+    } catch {
+      // Keep the current view usable when browser storage is unavailable.
+    }
+  }, [viewName]);
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -702,6 +726,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
     return columns;
   }, [resolved?.list?.columns, isWebApplications, isSieveScriptList, t]);
+
+  const visibleColumns = useMemo(() => {
+    const orderIndex = new Map(columnPreferences.order.map((name, index) => [name, index]));
+    return displayColumns
+      .filter((column) => !columnPreferences.hidden.includes(column.name))
+      .sort((a, b) => (orderIndex.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(b.name) ?? Number.MAX_SAFE_INTEGER));
+  }, [displayColumns, columnPreferences]);
 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -1989,6 +2020,51 @@ export function DynamicList({ viewName }: DynamicListProps) {
           )}
 
           {displayColumns.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" aria-label={t('list.customizeColumns', 'Customize columns')}>
+                  <Columns3 className="mr-2 h-4 w-4" />
+                  {t('list.columns', 'Columns')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
+                {displayColumns.map((column, index) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.name}
+                    checked={!columnPreferences.hidden.includes(column.name)}
+                    disabled={!columnPreferences.hidden.includes(column.name) && visibleColumns.length <= 1}
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={(checked) => saveColumnPreferences({
+                      ...columnPreferences,
+                      hidden: checked
+                        ? columnPreferences.hidden.filter((name) => name !== column.name)
+                        : [...columnPreferences.hidden, column.name],
+                    })}
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                {displayColumns.map((column, index) => (
+                  <DropdownMenuItem
+                    key={`order-${column.name}`}
+                    disabled={index === 0}
+                    onSelect={() => {
+                      const visible = [...visibleColumns];
+                      const current = visible.findIndex((entry) => entry.name === column.name);
+                      if (current <= 0) return;
+                      [visible[current - 1], visible[current]] = [visible[current], visible[current - 1]];
+                      saveColumnPreferences({ ...columnPreferences, order: visible.map((entry) => entry.name) });
+                    }}
+                  >
+                    {t('list.moveColumnLeft', 'Move {{column}} earlier', { column: column.label })}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {displayColumns.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting}>
               {exporting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2260,7 +2336,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                     />
                   </th>
                 )}
-                {displayColumns.map((col) => {
+                {visibleColumns.map((col) => {
                   const sortable = sortableFields.has(col.name) || clientSortableColumns.has(col.name);
                   const isActive = sort?.field === col.name;
                   const ariaSort = !sortable
@@ -2305,7 +2381,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               {loading && items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={visibleColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-12 text-center"
                   >
                     <Loader2 className="mx-auto h-6 w-6 animate-spin" />
@@ -2314,7 +2390,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               ) : items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={displayColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
+                    colSpan={visibleColumns.length + (hasMassActions ? 1 : 0) + (hasItemActions ? 1 : 0)}
                     className="px-3 py-16 text-center"
                   >
                     <div className="flex flex-col items-center gap-3">
@@ -2432,7 +2508,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           />
                         </td>
                       )}
-                      {displayColumns.map((col, colIdx) => {
+                      {visibleColumns.map((col, colIdx) => {
                         const cell = (() => {
                           if (isWebApplications && col.name === 'enabled' && !fields[col.name]) {
                             return item.enabled === true ? (
