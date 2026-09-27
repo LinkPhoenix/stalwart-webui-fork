@@ -804,7 +804,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     return () => {
       cancelled = true;
     };
-  }, [isWebApplications, schema]);
+  }, [isWebApplications, objectName, schema]);
 
   useResetOnChange(viewName, () => {
     setItems([]);
@@ -1040,7 +1040,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
       buildFilter,
       buildSort,
       buildFetchProperties,
-      isAccountsList,
       isMailboxList,
       clientSortField,
       sort,
