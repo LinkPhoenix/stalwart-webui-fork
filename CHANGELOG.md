@@ -4,10 +4,18 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-27
+
 ### Added
+- Sticky table headers and key columns for long lists.
+- Schema-driven column visibility and ordering preferences, saved per list.
+- Removable active-filter chips with a visible active-filter count.
+- Responsive card layout for lists on narrow screens.
+- Adjustable page sizes (25, 50, or 100 rows).
 - Sievepad integration for debugging Sieve scripts directly from their forms.
 
 ### Changed
+- Long text columns wrap within a bounded width and expose their full value on hover.
 - Merged `stalwartlabs/webui` through `dc462b1` (`v1.0.11`), including upstream `v1.0.10` fixes.
 
 ## [1.2.3] - 2026-08-25
