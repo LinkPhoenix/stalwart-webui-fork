@@ -19,10 +19,12 @@ const CERT_EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 const REPORT_SAMPLE_LIMIT = 25;
 
 export type CardTotalStatus = 'ok' | 'unavailable';
+export type CardTotalUnavailableReason = 'requestFailed' | 'queryRejected' | 'missingTotal';
 export type AttentionLevel = 'none' | 'warn' | 'danger';
 
 export interface CardTotal {
   status: CardTotalStatus;
+  unavailableReason?: CardTotalUnavailableReason;
   total?: number;
   /** Present when enrich === 'certificateValidity' and fetch succeeded. */
   valid?: number;
@@ -111,7 +113,7 @@ export async function fetchCardTotals(
       responses = await jmapRequest(methodCalls, signal);
     } catch {
       for (const card of batch) {
-        totals[card.id] = { status: 'unavailable' };
+        totals[card.id] = { status: 'unavailable', unavailableReason: 'requestFailed' };
       }
       continue;
     }
@@ -121,13 +123,13 @@ export async function fetchCardTotals(
       const card = batch[i];
       const response = byCallId.get(String(i));
       if (!response || response[0] === 'error') {
-        totals[card.id] = { status: 'unavailable' };
+        totals[card.id] = { status: 'unavailable', unavailableReason: 'queryRejected' };
         continue;
       }
       const body = response[1] as unknown as JmapQueryResponse;
       const total = typeof body.total === 'number' ? body.total : body.ids?.length;
       if (typeof total !== 'number') {
-        totals[card.id] = { status: 'unavailable' };
+        totals[card.id] = { status: 'unavailable', unavailableReason: 'missingTotal' };
         continue;
       }
       totals[card.id] = { status: 'ok', total };

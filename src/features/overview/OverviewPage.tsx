@@ -45,15 +45,22 @@ function OverviewStatCard({
   const attention = deriveAttention(card, total);
 
   let value: string;
+  let subtitle: string | null = null;
   if (loading && !total) {
     value = '…';
   } else if (!total || total.status === 'unavailable' || typeof total.total !== 'number') {
     value = t('overview.unavailable', '—');
+    if (total?.unavailableReason === 'requestFailed') {
+      subtitle = t('overview.countRequestFailed', 'Could not reach the server. Try refreshing the overview.');
+    } else if (total?.unavailableReason === 'queryRejected') {
+      subtitle = t('overview.countQueryRejected', 'The server could not complete this count query.');
+    } else if (total?.unavailableReason === 'missingTotal') {
+      subtitle = t('overview.countMissingTotal', 'The server response did not include a count.');
+    }
   } else {
     value = total.total.toLocaleString();
   }
 
-  let subtitle: string | null = null;
   if (card.enrich === 'certificateValidity' && total?.status === 'ok' && typeof total.valid === 'number') {
     const parts = [
       t('overview.certificatesValid', '{{count}} valid', { count: total.valid }),
