@@ -7,12 +7,14 @@
 import type { ReactNode } from 'react';
 import { isValidElement, Children } from 'react';
 
-/** RFC 4180: quote a field if it contains a comma, quote, or newline; double up embedded quotes. */
+/**
+ * Quote every field for consistent CSV output and double embedded quotes.
+ * Prefix spreadsheet formula starters with an apostrophe before quoting so
+ * exported values are treated as text by common spreadsheet applications.
+ */
 export function escapeCsvField(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
+  const spreadsheetSafeValue = /^[\s\uFEFF]*[=+\-@＝＋－＠]/u.test(value) ? `'${value}` : value;
+  return `"${spreadsheetSafeValue.replace(/"/g, '""')}"`;
 }
 
 export function buildCsv(headers: string[], rows: string[][]): string {
