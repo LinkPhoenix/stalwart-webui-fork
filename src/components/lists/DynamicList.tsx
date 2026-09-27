@@ -26,8 +26,6 @@ import {
   Inbox,
   Bookmark,
   Columns3,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,9 +43,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -85,11 +80,7 @@ import {
   jmapSet,
   getAccountId,
 } from '@/services/jmap/client';
-import {
-  evaluateFetchAllTotal,
-  FETCH_ALL_HARD_CAP,
-  probeQueryTotal,
-} from '@/lib/fetchAllGuardrails';
+import { evaluateFetchAllTotal, FETCH_ALL_HARD_CAP, probeQueryTotal } from '@/lib/fetchAllGuardrails';
 import { buildQueueOpsLinks } from '@/lib/queueOpsLinks';
 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
@@ -578,7 +569,6 @@ interface ConfirmAction {
   onConfirm: () => void;
 }
 
-
 function isActiveWebApplication(item: Record<string, unknown>): boolean {
   const prefixes = item.urlPrefix;
   const values: string[] = [];
@@ -602,6 +592,15 @@ interface DynamicListProps {
   viewName: string;
 }
 
+function readColumnPreferences(viewName: string): { order: string[]; hidden: string[] } {
+  try {
+    const raw = localStorage.getItem(`list-columns:${viewName}`);
+    return raw ? JSON.parse(raw) : { order: [], hidden: [] };
+  } catch {
+    return { order: [], hidden: [] };
+  }
+}
+
 export function DynamicList({ viewName }: DynamicListProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -622,6 +621,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // itself doesn't change.
   const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const [upsellOpen, setUpsellOpen] = useState(false);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const resolved = useMemo(() => {
     if (!schema) return null;
@@ -662,30 +662,23 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [problemsOnly, setProblemsOnly] = useState(
     () => new URLSearchParams(window.location.search).get('problemsOnly') === '1',
   );
-  const [columnPreferences, setColumnPreferences] = useState<{ order: string[]; hidden: string[] }>(() => {
-    try {
-      const raw = localStorage.getItem(`list-columns:${viewName}`);
-      return raw ? JSON.parse(raw) : { order: [], hidden: [] };
-    } catch {
-      return { order: [], hidden: [] };
-    }
-  });
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(`list-columns:${viewName}`);
-      setColumnPreferences(raw ? JSON.parse(raw) : { order: [], hidden: [] });
-    } catch {
-      setColumnPreferences({ order: [], hidden: [] });
-    }
-  }, [viewName]);
-  const saveColumnPreferences = useCallback((next: { order: string[]; hidden: string[] }) => {
-    setColumnPreferences(next);
-    try {
-      localStorage.setItem(`list-columns:${viewName}`, JSON.stringify(next));
-    } catch {
-      // Keep the current view usable when browser storage is unavailable.
-    }
-  }, [viewName]);
+  const [columnPreferenceState, setColumnPreferenceState] = useState(() => ({
+    viewName,
+    value: readColumnPreferences(viewName),
+  }));
+  const columnPreferences =
+    columnPreferenceState.viewName === viewName ? columnPreferenceState.value : readColumnPreferences(viewName);
+  const saveColumnPreferences = useCallback(
+    (next: { order: string[]; hidden: string[] }) => {
+      setColumnPreferenceState({ viewName, value: next });
+      try {
+        localStorage.setItem(`list-columns:${viewName}`, JSON.stringify(next));
+      } catch {
+        // Keep the current view usable when browser storage is unavailable.
+      }
+    },
+    [viewName],
+  );
 
   const displayColumns = useMemo(() => {
     const columns = resolved?.list?.columns ?? [];
@@ -731,7 +724,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
     const orderIndex = new Map(columnPreferences.order.map((name, index) => [name, index]));
     return displayColumns
       .filter((column) => !columnPreferences.hidden.includes(column.name))
-      .sort((a, b) => (orderIndex.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(b.name) ?? Number.MAX_SAFE_INTEGER));
+      .sort(
+        (a, b) =>
+          (orderIndex.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(b.name) ?? Number.MAX_SAFE_INTEGER),
+      );
   }, [displayColumns, columnPreferences]);
 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
@@ -826,12 +822,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
     void (async () => {
       try {
         const accountId = getAccountId(objectName ?? 'x:Application');
-        const result = await jmapQueryAllAndGet(
-          objectName ?? 'x:Application',
-          accountId,
-          {},
-          ['id', 'description', 'enabled', 'urlPrefix', 'resourceUrl'],
-        );
+        const result = await jmapQueryAllAndGet(objectName ?? 'x:Application', accountId, {}, [
+          'id',
+          'description',
+          'enabled',
+          'urlPrefix',
+          'resourceUrl',
+        ]);
         if (cancelled) return;
         const active = result.list.find((item) => isActiveWebApplication(item));
         setActiveWebApp(active ?? null);
@@ -950,7 +947,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
         const filter = buildFilter();
         const sortArr = buildSort();
 
-        if (activeClientFilters.length > 0 || isMailboxList || clientSortField || (problemsOnly && needsReportProperty)) {
+        if (
+          activeClientFilters.length > 0 ||
+          isMailboxList ||
+          clientSortField ||
+          (problemsOnly && needsReportProperty)
+        ) {
           // No server-side pagination possible once a client-only filter is
           // active (SCHEMA-DEVIATION: log-client-filters): fetch every
           // server-matching row up front, narrow it in the browser, then
@@ -992,12 +994,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               }),
             });
           }
-          const { list: fullList } = await jmapQueryAllAndGet(
-            obj.objectName,
-            accountId,
-            fetchAllQuery,
-            properties,
-          );
+          const { list: fullList } = await jmapQueryAllAndGet(obj.objectName, accountId, fetchAllQuery, properties);
           let matched = fullList.filter((item) =>
             activeClientFilters.every((f) => String(item[f.field] ?? '') === f.value),
           );
@@ -1014,14 +1011,15 @@ export function DynamicList({ viewName }: DynamicListProps) {
             matched = [...matched].sort((a, b) => {
               const av = getClientSortValue(clientSortField, a);
               const bv = getClientSortValue(clientSortField, b);
-              const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+              const cmp =
+                typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
               return cmp * direction;
             });
           }
           setClientAllItems(matched);
           setClientPage(0);
           setTotal(matched.length);
-          setItems(matched.slice(0, PAGE_SIZE));
+          setItems(matched.slice(0, pageSize));
           setSelectedIds(new Set());
           return;
         }
@@ -1030,7 +1028,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         const queryOptions: Record<string, unknown> = {
           filter: Object.keys(filter).length > 0 ? filter : undefined,
           sort: sortArr,
-          limit: PAGE_SIZE,
+          limit: pageSize,
         };
 
         if (anchor === null) {
@@ -1087,6 +1085,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       needsReportProperty,
       viewName,
       t,
+      pageSize,
     ],
   );
 
@@ -1139,12 +1138,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             }),
           });
         }
-        const { list: fetched } = await jmapQueryAllAndGet(
-          obj.objectName,
-          accountId,
-          exportQuery,
-          properties,
-        );
+        const { list: fetched } = await jmapQueryAllAndGet(obj.objectName, accountId, exportQuery, properties);
         rowsSource = fetched;
       }
 
@@ -1218,7 +1212,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setCurrentAnchor(null);
     fetchData(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewName, sort, resolved?.list, appliedFilters, activeAccountId, problemsOnly]);
+  }, [viewName, sort, resolved?.list, appliedFilters, activeAccountId, problemsOnly, pageSize]);
 
   useEffect(() => {
     if (!schema || !resolved?.list || items.length === 0) return;
@@ -1324,7 +1318,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     if (clientAllItems !== null) {
       const nextPage = clientPage + 1;
       setClientPage(nextPage);
-      setItems(clientAllItems.slice(nextPage * PAGE_SIZE, nextPage * PAGE_SIZE + PAGE_SIZE));
+      setItems(clientAllItems.slice(nextPage * pageSize, nextPage * pageSize + pageSize));
       return;
     }
 
@@ -1339,13 +1333,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
     }
     setCurrentAnchor(lastId);
     fetchData(lastId, 1);
-  }, [items, fetchData, clientAllItems, clientPage]);
+  }, [items, fetchData, clientAllItems, clientPage, pageSize]);
 
   const handlePrevPage = useCallback(() => {
     if (clientAllItems !== null) {
       const prevPage = Math.max(0, clientPage - 1);
       setClientPage(prevPage);
-      setItems(clientAllItems.slice(prevPage * PAGE_SIZE, prevPage * PAGE_SIZE + PAGE_SIZE));
+      setItems(clientAllItems.slice(prevPage * pageSize, prevPage * pageSize + pageSize));
       return;
     }
 
@@ -1364,7 +1358,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
       setCurrentAnchor(prevFirstId);
       fetchData(prevFirstId, 0);
     }
-  }, [anchorStack, fetchData, clientAllItems, clientPage]);
+  }, [anchorStack, fetchData, clientAllItems, clientPage, pageSize]);
 
   const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === items.length) {
@@ -1612,8 +1606,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const canDelete = resolved ? hasObjectPermission(resolved.obj.permissionPrefix, 'Destroy') : false;
 
   const filtersActive =
-    problemsOnly ||
-    Object.entries(appliedFilters).some(([key, val]) => !key.endsWith('Op') && val.trim() !== '');
+    problemsOnly || Object.entries(appliedFilters).some(([key, val]) => !key.endsWith('Op') && val.trim() !== '');
 
   const queueOpsLinks = useMemo(() => {
     if (!isQueuedMessages || !schema) return [];
@@ -1663,7 +1656,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // SCHEMA-DEVIATION: bulk-quota-change-action (see SCHEMA_DEVIATIONS.md)
   const canBulkChangeQuota = hasQuotaUsageColumn && canUpdate;
 
-  const pageStart = clientAllItems !== null ? clientPage * PAGE_SIZE : anchorStack.length * PAGE_SIZE;
+  const pageStart = clientAllItems !== null ? clientPage * pageSize : anchorStack.length * pageSize;
   const rangeStart = pageStart + 1;
   const rangeEnd = pageStart + items.length;
   const hasNextPage = clientAllItems !== null ? rangeEnd < clientAllItems.length : total !== null && rangeEnd < total;
@@ -1920,40 +1913,38 @@ export function DynamicList({ viewName }: DynamicListProps) {
             const isDestructive = action.type === 'delete';
             const needsConfirmation = action.type === 'delete' || action.type === 'setProperty';
 
-            return (
-              needsConfirmation || locked || !itemActionPath(action, item.id as string) ? (
-                <DropdownMenuItem
-                  key={`${action.type}-${idx}`}
-                  className={isDestructive ? 'text-destructive' : undefined}
-                  aria-label={
-                    locked
-                      ? `${action.label}. ${t('enterprise.featureDisabled', 'This feature requires an Enterprise license.')}`
-                      : undefined
+            return needsConfirmation || locked || !itemActionPath(action, item.id as string) ? (
+              <DropdownMenuItem
+                key={`${action.type}-${idx}`}
+                className={isDestructive ? 'text-destructive' : undefined}
+                aria-label={
+                  locked
+                    ? `${action.label}. ${t('enterprise.featureDisabled', 'This feature requires an Enterprise license.')}`
+                    : undefined
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (locked) {
+                    setUpsellOpen(true);
+                  } else if (needsConfirmation) {
+                    setConfirmAction({
+                      label: action.label,
+                      onConfirm: () => executeItemAction(action, item),
+                    });
+                  } else {
+                    executeItemAction(action, item);
                   }
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (locked) {
-                      setUpsellOpen(true);
-                    } else if (needsConfirmation) {
-                      setConfirmAction({
-                        label: action.label,
-                        onConfirm: () => executeItemAction(action, item),
-                      });
-                    } else {
-                      executeItemAction(action, item);
-                    }
-                  }}
-                >
+                }}
+              >
+                {action.label}
+                {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" aria-hidden />}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem key={`${action.type}-${idx}`} asChild>
+                <Link to={itemActionPath(action, item.id as string)!} onClick={(e) => e.stopPropagation()}>
                   {action.label}
-                  {locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" aria-hidden />}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem key={`${action.type}-${idx}`} asChild>
-                  <Link to={itemActionPath(action, item.id as string)!} onClick={(e) => e.stopPropagation()}>
-                    {action.label}
-                  </Link>
-                </DropdownMenuItem>
-              )
+                </Link>
+              </DropdownMenuItem>
             );
           })}
         </DropdownMenuContent>
@@ -2028,18 +2019,20 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="max-h-[70vh] overflow-y-auto">
-                {displayColumns.map((column, index) => (
+                {displayColumns.map((column) => (
                   <DropdownMenuCheckboxItem
                     key={column.name}
                     checked={!columnPreferences.hidden.includes(column.name)}
                     disabled={!columnPreferences.hidden.includes(column.name) && visibleColumns.length <= 1}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => saveColumnPreferences({
-                      ...columnPreferences,
-                      hidden: checked
-                        ? columnPreferences.hidden.filter((name) => name !== column.name)
-                        : [...columnPreferences.hidden, column.name],
-                    })}
+                    onCheckedChange={(checked) =>
+                      saveColumnPreferences({
+                        ...columnPreferences,
+                        hidden: checked
+                          ? columnPreferences.hidden.filter((name) => name !== column.name)
+                          : [...columnPreferences.hidden, column.name],
+                      })
+                    }
                   >
                     {column.label}
                   </DropdownMenuCheckboxItem>
@@ -2066,11 +2059,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
           {displayColumns.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting}>
-              {exporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
+              {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               {t('list.exportCsv', 'Export CSV')}
             </Button>
           )}
@@ -2088,11 +2077,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
       {needsReportProperty && (
         <div className="flex items-center gap-2">
-          <Switch
-            id="report-problems-only"
-            checked={problemsOnly}
-            onCheckedChange={setProblemsOnly}
-          />
+          <Switch id="report-problems-only" checked={problemsOnly} onCheckedChange={setProblemsOnly} />
           <Label htmlFor="report-problems-only" className="text-sm font-normal">
             {t('list.problemsOnly', 'Problems only')}
           </Label>
@@ -2108,7 +2093,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 {t('list.filters', 'Filters')}
                 {filtersActive && (
                   <Badge variant="secondary">
-                    {Object.entries(appliedFilters).filter(([key, value]) => !key.endsWith('Op') && value.trim()).length + Number(problemsOnly)}
+                    {Object.entries(appliedFilters).filter(([key, value]) => !key.endsWith('Op') && value.trim())
+                      .length + Number(problemsOnly)}
                   </Badge>
                 )}
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -2117,11 +2103,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             {isLogEntries && (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <Switch
-                    id="log-auto-refresh"
-                    checked={logAutoRefresh}
-                    onCheckedChange={setLogAutoRefresh}
-                  />
+                  <Switch id="log-auto-refresh" checked={logAutoRefresh} onCheckedChange={setLogAutoRefresh} />
                   <Label htmlFor="log-auto-refresh" className="text-sm font-normal">
                     {t('list.autoRefresh', 'Auto-refresh')}
                   </Label>
@@ -2146,7 +2128,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
             )}
           </div>
           {filtersActive && (
-            <div className="mt-2 flex flex-wrap items-center gap-2" aria-label={t('list.activeFilters', 'Active filters')}>
+            <div
+              className="mt-2 flex flex-wrap items-center gap-2"
+              aria-label={t('list.activeFilters', 'Active filters')}
+            >
               {problemsOnly && (
                 <Button variant="secondary" size="sm" className="h-7 gap-1" onClick={() => setProblemsOnly(false)}>
                   {t('list.problemsOnly', 'Problems only')} <X className="h-3 w-3" />
@@ -2178,7 +2163,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         });
                       }}
                     >
-                      <span className="truncate">{definition?.label ?? field}: {value}</span>
+                      <span className="truncate">
+                        {definition?.label ?? field}: {value}
+                      </span>
                       <X className="h-3 w-3 shrink-0" />
                     </Button>
                   );
@@ -2245,9 +2232,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       size="sm"
                       disabled={loading || Object.keys(appliedFilters).length === 0}
                       onClick={() => {
-                        const name = window.prompt(
-                          t('list.filterPresetNamePrompt', 'Name for this filter preset'),
-                        );
+                        const name = window.prompt(t('list.filterPresetNamePrompt', 'Name for this filter preset'));
                         if (!name?.trim()) return;
                         saveLogFilterPreset(name, appliedFilters);
                         setLogPresets(listLogFilterPresets());
@@ -2312,14 +2297,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
       {isWebApplications && activeWebApp && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {t('webApplications.activeWebUI', 'Active WebUI')}
-            </CardTitle>
+            <CardTitle className="text-base">{t('webApplications.activeWebUI', 'Active WebUI')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
-            <p className="text-sm text-muted-foreground">
-              {String(activeWebApp.description ?? '-')}
-            </p>
+            <p className="text-sm text-muted-foreground">{String(activeWebApp.description ?? '-')}</p>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">{t('webApplications.version', 'Version')}:</span>
               <Badge variant="secondary">{__APP_VERSION__}</Badge>
@@ -2347,10 +2328,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             {t('list.queueBacklogTitle', '{{count}} messages waiting in the queue', { count: total })}
           </p>
           <p className="mt-1 text-muted-foreground">
-            {t(
-              'list.queueBacklogBody',
-              'Use Delivery Trace or Log Entries to investigate stuck or delayed mail.',
-            )}
+            {t('list.queueBacklogBody', 'Use Delivery Trace or Log Entries to investigate stuck or delayed mail.')}
           </p>
           {queueOpsLinks.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-3">
@@ -2404,7 +2382,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         headCellPad,
                         'sticky top-0 z-20 bg-muted',
                         col.name === displayColumns[0]?.name ? 'sticky left-0 z-30' : '',
-                        fields[col.name]?.type.type === 'text' || col.name === 'subject'
+                        fields[col.name]?.type.type === 'string' || col.name === 'subject'
                           ? 'max-w-[24rem]'
                           : 'whitespace-nowrap',
                       )}
@@ -2420,7 +2398,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 {hasItemActions && (
                   <th
                     scope="col"
-                    className={cn('sticky top-0 z-20 w-12 bg-muted text-right font-medium text-muted-foreground whitespace-nowrap', headCellPad)}
+                    className={cn(
+                      'sticky top-0 z-20 w-12 bg-muted text-right font-medium text-muted-foreground whitespace-nowrap',
+                      headCellPad,
+                    )}
                   >
                     {t('list.actions', 'Actions')}
                   </th>
@@ -2516,9 +2497,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       tabIndex={detailPath ? 0 : undefined}
                       role={detailPath ? 'link' : undefined}
                       aria-label={
-                        detailPath
-                          ? t('list.openItem', 'Open {{name}}', { name: list.singularName })
-                          : undefined
+                        detailPath ? t('list.openItem', 'Open {{name}}', { name: list.singularName }) : undefined
                       }
                       className={
                         detailPath
@@ -2526,14 +2505,18 @@ export function DynamicList({ viewName }: DynamicListProps) {
                           : 'border-b'
                       }
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')) {
+                        if (
+                          (e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')
+                        ) {
                           return;
                         }
                         openDetail(e.metaKey || e.ctrlKey);
                       }}
                       onAuxClick={(e) => {
                         if (e.button !== 1) return;
-                        if ((e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')) {
+                        if (
+                          (e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')
+                        ) {
                           return;
                         }
                         e.preventDefault();
@@ -2542,7 +2525,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       onKeyDown={(e) => {
                         if (!detailPath) return;
                         if (e.key !== 'Enter' && e.key !== ' ') return;
-                        if ((e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')) {
+                        if (
+                          (e.target as HTMLElement).closest('a, button, input, [role="checkbox"], [role="menuitem"]')
+                        ) {
                           return;
                         }
                         e.preventDefault();
@@ -2550,7 +2535,10 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       }}
                     >
                       {hasMassActions && (
-                        <td className={cn('sticky left-0 z-10 whitespace-nowrap bg-background', bodyCellPad)} onClick={(e) => e.stopPropagation()}>
+                        <td
+                          className={cn('sticky left-0 z-10 whitespace-nowrap bg-background', bodyCellPad)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Checkbox
                             checked={selectedIds.has(itemId)}
                             onCheckedChange={() => toggleSelectItem(itemId)}
@@ -2584,11 +2572,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                                   )?.label
                                 : undefined;
                             return (
-                              <ReportSummaryCell
-                                colName={col.name}
-                                item={item}
-                                feedbackTypeLabel={feedbackTypeLabel}
-                              />
+                              <ReportSummaryCell colName={col.name} item={item} feedbackTypeLabel={feedbackTypeLabel} />
                             );
                           }
                           if (isMailboxList && col.name === 'name') {
@@ -2620,7 +2604,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                               col.name === displayColumns[0]?.name
                                 ? cn('sticky z-10 bg-background', hasMassActions ? 'left-10' : 'left-0')
                                 : '',
-                              fields[col.name]?.type.type === 'text' || col.name === 'subject'
+                              fields[col.name]?.type.type === 'string' || col.name === 'subject'
                                 ? 'max-w-[24rem] whitespace-normal break-words'
                                 : 'whitespace-nowrap',
                             )}
@@ -2659,9 +2643,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         );
                       })}
                       {hasItemActions && (
-                        <td className={cn('text-right whitespace-nowrap', bodyCellPad)}>
-                          {renderItemActions(item)}
-                        </td>
+                        <td className={cn('text-right whitespace-nowrap', bodyCellPad)}>{renderItemActions(item)}</td>
                       )}
                     </tr>
                   );
@@ -2689,13 +2671,37 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <h2 className="break-words font-medium">
-                    {detailPath ? <Link to={detailPath} className="text-inherit hover:underline">{primaryColumn ? renderCellValue(item[primaryColumn.name], fields[primaryColumn.name], primaryColumn.name, schema!, resolved.obj.objectName, getDisplayName) : itemId}</Link> : String(primaryColumn ? item[primaryColumn.name] ?? itemId : itemId)}
+                    {detailPath ? (
+                      <Link to={detailPath} className="text-inherit hover:underline">
+                        {primaryColumn
+                          ? renderCellValue(
+                              item[primaryColumn.name],
+                              fields[primaryColumn.name],
+                              primaryColumn.name,
+                              schema!,
+                              resolved.obj.objectName,
+                              getDisplayName,
+                            )
+                          : itemId}
+                      </Link>
+                    ) : (
+                      String(primaryColumn ? (item[primaryColumn.name] ?? itemId) : itemId)
+                    )}
                   </h2>
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
                     {visibleColumns.slice(1).map((column) => (
                       <div key={column.name} className="grid min-w-0 grid-cols-[minmax(5rem,35%)_1fr] gap-2">
                         <dt className="truncate text-muted-foreground">{column.label}</dt>
-                        <dd className="min-w-0 break-words">{renderCellValue(item[column.name], fields[column.name], column.name, schema!, resolved.obj.objectName, getDisplayName)}</dd>
+                        <dd className="min-w-0 break-words">
+                          {renderCellValue(
+                            item[column.name],
+                            fields[column.name],
+                            column.name,
+                            schema!,
+                            resolved.obj.objectName,
+                            getDisplayName,
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
@@ -2721,6 +2727,30 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 })}
           </div>
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                const nextSize = Number(value);
+                if (!PAGE_SIZE_OPTIONS.includes(nextSize)) return;
+                setAnchorStack([]);
+                setCurrentAnchor(null);
+                setClientPage(0);
+                setSelectedIds(new Set());
+                setSelectAllMode(false);
+                setPageSize(nextSize);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[5.5rem]" aria-label={t('list.pageSize', 'Rows per page')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="sm" disabled={!hasPrevPage || loading} onClick={handlePrevPage}>
               {t('list.previous', 'Previous')}
             </Button>
