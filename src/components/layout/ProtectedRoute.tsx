@@ -6,10 +6,11 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { getDevelopmentAccessToken } from '@/lib/devAccessToken';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const authenticated = useAuthStore((s) => s.isAuthenticated());
-  const bypassToken = import.meta.env.VITE_ACCESS_TOKEN;
+  const bypassToken = getDevelopmentAccessToken(import.meta.env.DEV, import.meta.env.VITE_ACCESS_TOKEN);
   const location = useLocation();
   if (!authenticated && !bypassToken) {
     const originalPath = location.pathname + location.search;

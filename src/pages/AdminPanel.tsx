@@ -18,6 +18,7 @@ import { withMailingListColumns } from '@/lib/mailingListColumns';
 import { withRoleListColumns } from '@/lib/roleColumns';
 import { withDomainColumns } from '@/lib/domainColumns';
 import { withReportListColumns } from '@/lib/reportColumns';
+import { getDevelopmentAccessToken } from '@/lib/devAccessToken';
 import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -120,7 +121,7 @@ export default function AdminPanel() {
   useDocumentTitle(pageTitle);
 
   useEffect(() => {
-    const bypassToken = import.meta.env.VITE_ACCESS_TOKEN;
+    const bypassToken = getDevelopmentAccessToken(import.meta.env.DEV, import.meta.env.VITE_ACCESS_TOKEN);
     if (bypassToken && !accessToken) {
       useAuthStore.getState().setTokens(bypassToken, '', 86400, '');
     }

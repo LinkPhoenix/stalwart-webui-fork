@@ -194,7 +194,7 @@ VITE_OAUTH_SCOPES=
 | Variable | Description |
 |---|---|
 | `VITE_API_BASE_URL` | URL of the Stalwart server. Used for all API requests during development. In production builds (when empty or unset) requests are relative to the current origin. |
-| `VITE_ACCESS_TOKEN` | When set, skips the OAuth flow entirely and uses this token for all requests. Useful for local development and testing. |
+| `VITE_ACCESS_TOKEN` | Development-server-only OAuth bypass for local testing. Production builds reject a non-empty value because `VITE_` values are embedded in browser assets. |
 | `VITE_OAUTH_SCOPES` | Optional OAuth scopes. Omitted from the authorization request when empty. |
 
 ### OAuth client ID
@@ -210,7 +210,8 @@ client ID is configured the attribute is left empty and the panel falls back to 
 
 ### Bypassing OAuth for development
 
-Set `VITE_ACCESS_TOKEN` to a valid bearer token to skip the login page and go straight to the admin panel:
+Set `VITE_ACCESS_TOKEN` to a valid bearer token while running `npm run dev` to skip the login page and go straight to the admin panel.
+Never use this variable to provide production credentials; `npm run build` fails if it is non-empty:
 
 ```
 VITE_ACCESS_TOKEN=your-bearer-token-here

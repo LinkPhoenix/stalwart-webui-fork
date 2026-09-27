@@ -122,6 +122,8 @@ account from seed).
 
 For a quicker loop you can still inject a bearer token via
 `VITE_ACCESS_TOKEN` (see `.env.development`).
+It is honored only by Vite's development server; production builds reject a
+non-empty value because `VITE_` variables are embedded in browser assets.
 
 ```bash
 # Windows / PowerShell
