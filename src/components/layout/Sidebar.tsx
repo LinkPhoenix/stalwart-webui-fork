@@ -46,12 +46,40 @@ function pathMatchesView(currentPath: string, sectionName: string, viewName: str
   return false;
 }
 
-function subtreeContainsActive(items: LayoutSubItem[], currentPath: string, sectionName: string): boolean {
+function layoutViewNames(layout: Layout): string[] {
+  const names: string[] = [];
+
+  function collectSubItems(items: LayoutSubItem[]) {
+    for (const item of items) {
+      if (item.type === 'link') names.push(item.viewName);
+      else collectSubItems(item.items);
+    }
+  }
+
+  for (const item of layout.items) {
+    if ('link' in item) names.push(item.link.viewName);
+    else collectSubItems(item.container.items);
+  }
+  return names;
+}
+
+function activeViewForPath(layout: Layout, currentPath: string): string | null {
+  const sectionPrefix = `/${layout.name}/`;
+  if (!currentPath.startsWith(sectionPrefix)) return null;
+
+  return (
+    layoutViewNames(layout)
+      .filter((viewName) => pathMatchesView(currentPath, layout.name, viewName))
+      .sort((a, b) => b.length - a.length)[0] ?? null
+  );
+}
+
+function subtreeContainsActive(items: LayoutSubItem[], activeViewName: string | null): boolean {
   for (const item of items) {
     if (item.type === 'link') {
-      if (pathMatchesView(currentPath, sectionName, item.viewName)) return true;
+      if (item.viewName === activeViewName) return true;
     } else if (item.type === 'container') {
-      if (subtreeContainsActive(item.items, currentPath, sectionName)) return true;
+      if (subtreeContainsActive(item.items, activeViewName)) return true;
     }
   }
   return false;
@@ -147,12 +175,12 @@ interface SidebarSubItemProps {
   item: LayoutSubItem;
   depth: number;
   sectionName: string;
-  currentPath: string;
+  activeViewName: string | null;
   edition: string;
   onUpsell: () => void;
 }
 
-function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpsell }: SidebarSubItemProps) {
+function SidebarSubItem({ item, depth, sectionName, activeViewName, edition, onUpsell }: SidebarSubItemProps) {
   // Picking a plain link closes any sibling group left open at this same
   // accordion level — it's not part of a collapsible, so nothing should
   // stay expanded on its account once it's the one that's active.
@@ -162,7 +190,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpse
     if (!checkLinkVisible(item.viewName)) return null;
 
     const path = resolveViewPath(sectionName, item.viewName);
-    const isActive = pathMatchesView(currentPath, sectionName, item.viewName);
+    const isActive = item.viewName === activeViewName;
     const enterprise = checkIsEnterprise(item.viewName);
     const isLocked = enterprise && edition === 'community';
     const isHidden = enterprise && edition === 'oss';
@@ -210,7 +238,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpse
   if (item.type === 'container') {
     if (!subtreeHasVisibleLink(item.items, edition)) return null;
 
-    const containsActive = subtreeContainsActive(item.items, currentPath, sectionName);
+    const containsActive = subtreeContainsActive(item.items, activeViewName);
     return (
       <AccordionCollapsible id={item.name} containsActive={containsActive}>
         <CollapsibleTrigger asChild>
@@ -231,7 +259,7 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpse
                 item={sub}
                 depth={depth + 1}
                 sectionName={sectionName}
-                currentPath={currentPath}
+                activeViewName={activeViewName}
                 edition={edition}
                 onUpsell={onUpsell}
               />
@@ -248,12 +276,12 @@ function SidebarSubItem({ item, depth, sectionName, currentPath, edition, onUpse
 interface SidebarTopItemProps {
   item: LayoutItem;
   sectionName: string;
-  currentPath: string;
+  activeViewName: string | null;
   edition: string;
   onUpsell: () => void;
 }
 
-function SidebarTopItem({ item, sectionName, currentPath, edition, onUpsell }: SidebarTopItemProps) {
+function SidebarTopItem({ item, sectionName, activeViewName, edition, onUpsell }: SidebarTopItemProps) {
   // Picking a plain link closes any sibling group left open at this same
   // accordion level — it's not part of a collapsible, so nothing should
   // stay expanded on its account once it's the one that's active.
@@ -265,7 +293,7 @@ function SidebarTopItem({ item, sectionName, currentPath, edition, onUpsell }: S
     if (!checkLinkVisible(viewName)) return null;
 
     const path = resolveViewPath(sectionName, viewName);
-    const isActive = pathMatchesView(currentPath, sectionName, viewName);
+    const isActive = viewName === activeViewName;
     const enterprise = checkIsEnterprise(viewName);
     const isLocked = enterprise && edition === 'community';
     const isHidden = enterprise && edition === 'oss';
@@ -313,7 +341,7 @@ function SidebarTopItem({ item, sectionName, currentPath, edition, onUpsell }: S
     const { name, icon, items } = item.container;
     if (!subtreeHasVisibleLink(items, edition)) return null;
 
-    const containsActive = subtreeContainsActive(items, currentPath, sectionName);
+    const containsActive = subtreeContainsActive(items, activeViewName);
 
     return (
       <AccordionCollapsible id={name} containsActive={containsActive}>
@@ -332,7 +360,7 @@ function SidebarTopItem({ item, sectionName, currentPath, edition, onUpsell }: S
                 item={sub}
                 depth={1}
                 sectionName={sectionName}
-                currentPath={currentPath}
+                activeViewName={activeViewName}
                 edition={edition}
                 onUpsell={onUpsell}
               />
@@ -396,6 +424,7 @@ export function Sidebar() {
 
   const layout: Layout | undefined = layouts.find((l) => l.name === activeSection);
   if (!layout) return null;
+  const activeViewName = activeViewForPath(layout, location.pathname);
 
   const handleSectionActivate = (target: Layout) => {
     setActiveSection(target.name);
@@ -431,7 +460,7 @@ export function Sidebar() {
                   key={'link' in item ? item.link.viewName : item.container.name}
                   item={item}
                   sectionName={layout.name}
-                  currentPath={location.pathname}
+                  activeViewName={activeViewName}
                   edition={edition}
                   onUpsell={() => setUpsellOpen(true)}
                 />
