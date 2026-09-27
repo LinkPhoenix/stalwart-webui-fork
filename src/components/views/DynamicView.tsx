@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import { Check, X, HelpCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, X, HelpCircle, ChevronRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { jmapMapToArray, SECRET_MASK } from '@/lib/jmapUtils';
@@ -30,6 +30,8 @@ export interface DynamicViewProps {
 }
 
 export function DynamicView({ schema, objectName, viewName, data, visibleFields }: DynamicViewProps) {
+  const { t } = useTranslation();
+  const [showEmptyFields, setShowEmptyFields] = useState(false);
   const resolved = useMemo(() => {
     const sch = resolveSchema(schema, objectName);
     if (!sch) return null;
@@ -66,6 +68,7 @@ export function DynamicView({ schema, objectName, viewName, data, visibleFields 
   const { fields, form, sch } = resolved;
 
   const sections: { title?: string; items: { ff: FormField; field: Field }[] }[] = [];
+  let emptyFieldCount = 0;
 
   if (form) {
     for (const section of form.sections) {
@@ -75,7 +78,10 @@ export function DynamicView({ schema, objectName, viewName, data, visibleFields 
         if (visibleFields && !visibleFields.has(ff.name)) continue;
         const field = fields?.properties[ff.name];
         if (!field) continue;
-        if (isEmptyValue(data[ff.name])) continue;
+        if (isEmptyValue(data[ff.name])) {
+          emptyFieldCount += 1;
+          if (!showEmptyFields) continue;
+        }
         items.push({ ff, field });
       }
       if (items.length > 0) {
@@ -86,7 +92,10 @@ export function DynamicView({ schema, objectName, viewName, data, visibleFields 
     const items: { ff: FormField; field: Field }[] = [];
     for (const [name, field] of Object.entries(fields.properties)) {
       if (visibleFields && !visibleFields.has(name)) continue;
-      if (isEmptyValue(data[name])) continue;
+      if (isEmptyValue(data[name])) {
+        emptyFieldCount += 1;
+        if (!showEmptyFields) continue;
+      }
       items.push({ ff: { name, label: name }, field });
     }
     if (items.length > 0) {
@@ -101,10 +110,24 @@ export function DynamicView({ schema, objectName, viewName, data, visibleFields 
 
   return (
     <div className="space-y-4">
-      {variantLabel && (
-        <Badge variant="secondary" className="text-xs">
-          {variantLabel}
-        </Badge>
+      {(variantLabel || emptyFieldCount > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {variantLabel ? (
+            <Badge variant="secondary" className="text-xs">
+              {variantLabel}
+            </Badge>
+          ) : (
+            <span />
+          )}
+          {emptyFieldCount > 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowEmptyFields((shown) => !shown)}>
+              {showEmptyFields ? <EyeOff /> : <Eye />}
+              {showEmptyFields
+                ? t('view.hideEmptyFields', 'Hide empty fields')
+                : t('view.showEmptyFields', 'Show {{count}} empty fields', { count: emptyFieldCount })}
+            </Button>
+          )}
+        </div>
       )}
       {sections.map((section, si) => (
         <Card key={si}>
@@ -177,7 +200,11 @@ function ViewField({
         )}
       </dt>
       <dd className="text-sm min-w-0 break-words">
-        <ViewValue type={field.type} value={value} schema={schema} propertyName={name} />
+        {isEmptyValue(value) ? (
+          <span className="italic text-muted-foreground">{t('field.notSet', 'Not set')}</span>
+        ) : (
+          <ViewValue type={field.type} value={value} schema={schema} propertyName={name} />
+        )}
       </dd>
     </div>
   );

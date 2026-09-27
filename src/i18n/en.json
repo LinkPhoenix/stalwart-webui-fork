@@ -563,8 +563,10 @@
   "view": {
     "couldNotResolve": "Could not resolve object",
     "failedToLoad": "Failed to load",
+    "hideEmptyFields": "Hide empty fields",
     "noGetResponse": "No get response",
-    "objectNotFound": "Object not found"
+    "objectNotFound": "Object not found",
+    "showEmptyFields": "Show {{count}} empty fields"
   },
   "webApplications": {
     "activeWebUI": "Active WebUI",
