@@ -25,6 +25,9 @@ import {
   Download,
   Inbox,
   Bookmark,
+  Columns3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -41,6 +44,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -116,7 +123,8 @@ function appHref(path: string): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-const PAGE_SIZE = 25;
+const DEFAULT_PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const MAX_REPORTED_ERRORS = 3;
 // Combobox threshold: plain <Select> is fine for a handful of options, but
 // unusable (no search) once an enum has dozens of entries.
@@ -2238,13 +2246,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
             paint square corners behind the rounded border.
             `w-max min-w-full` keeps the table at least as wide as the card,
             but lets wide column sets scroll horizontally inside this wrapper. */}
-        <div className="overflow-x-auto overscroll-x-contain rounded-[calc(var(--radius-lg)-1px)] [-webkit-overflow-scrolling:touch]">
+        <div className="max-h-[70vh] overflow-auto overscroll-contain rounded-[calc(var(--radius-lg)-1px)] [-webkit-overflow-scrolling:touch]">
           <table className="w-max min-w-full text-sm">
             <caption className="sr-only">{list.pluralName}</caption>
             <thead>
               <tr className="border-b bg-muted">
                 {hasMassActions && (
-                  <th scope="col" className={cn('w-10 whitespace-nowrap', headCellPad)}>
+                  <th scope="col" className={cn('sticky left-0 z-30 w-10 whitespace-nowrap bg-muted', headCellPad)}>
                     <Checkbox
                       checked={items.length > 0 && selectedIds.size === items.length}
                       onCheckedChange={toggleSelectAll}
@@ -2270,8 +2278,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       className={cn(
                         'text-left font-medium text-muted-foreground',
                         headCellPad,
+                        'sticky top-0 z-20 bg-muted',
+                        col.name === displayColumns[0]?.name ? 'sticky left-0 z-30' : '',
                         col.name === 'subject' ? 'max-w-[20rem]' : 'whitespace-nowrap',
                       )}
+                      style={col.name === displayColumns[0]?.name ? { left: hasMassActions ? '2.5rem' : 0 } : undefined}
                     >
                       <div className="flex items-center">
                         {col.label}
@@ -2283,7 +2294,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 {hasItemActions && (
                   <th
                     scope="col"
-                    className={cn('w-12 text-right font-medium text-muted-foreground whitespace-nowrap', headCellPad)}
+                    className={cn('sticky top-0 z-20 w-12 bg-muted text-right font-medium text-muted-foreground whitespace-nowrap', headCellPad)}
                   >
                     {t('list.actions', 'Actions')}
                   </th>
@@ -2413,7 +2424,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       }}
                     >
                       {hasMassActions && (
-                        <td className={cn('whitespace-nowrap', bodyCellPad)} onClick={(e) => e.stopPropagation()}>
+                        <td className={cn('sticky left-0 z-10 whitespace-nowrap bg-background', bodyCellPad)} onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(itemId)}
                             onCheckedChange={() => toggleSelectItem(itemId)}
@@ -2480,6 +2491,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             key={col.name}
                             className={cn(
                               bodyCellPad,
+                              col.name === displayColumns[0]?.name
+                                ? cn('sticky z-10 bg-background', hasMassActions ? 'left-10' : 'left-0')
+                                : '',
                               col.name === 'subject' ? 'max-w-[20rem]' : 'whitespace-nowrap',
                             )}
                           >
