@@ -2364,7 +2364,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         </div>
       )}
 
-      <div className="min-w-0 rounded-lg border bg-background shadow-sm">
+      <div className="hidden min-w-0 rounded-lg border bg-background shadow-sm md:block">
         {/* The scroll container must clip with the parent's inner radius
             (outer radius minus the 1px border), otherwise filled header rows
             paint square corners behind the rounded border.
@@ -2665,6 +2665,40 @@ export function DynamicList({ viewName }: DynamicListProps) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {items.map((item) => {
+          const itemId = item.id as string;
+          const detailPath = itemDetailPath(itemId);
+          const primaryColumn = visibleColumns[0];
+          return (
+            <article key={itemId} className="rounded-lg border bg-background p-4 shadow-sm">
+              <div className="flex min-w-0 items-start gap-3">
+                {hasMassActions && (
+                  <Checkbox
+                    checked={selectedIds.has(itemId)}
+                    onCheckedChange={() => toggleSelectItem(itemId)}
+                    aria-label={t('list.selectItem', 'Select item')}
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words font-medium">
+                    {detailPath ? <Link to={detailPath} className="text-inherit hover:underline">{primaryColumn ? renderCellValue(item[primaryColumn.name], fields[primaryColumn.name], primaryColumn.name, schema!, resolved.obj.objectName, getDisplayName) : itemId}</Link> : String(primaryColumn ? item[primaryColumn.name] ?? itemId : itemId)}
+                  </h2>
+                  <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                    {visibleColumns.slice(1).map((column) => (
+                      <div key={column.name} className="grid min-w-0 grid-cols-[minmax(5rem,35%)_1fr] gap-2">
+                        <dt className="truncate text-muted-foreground">{column.label}</dt>
+                        <dd className="min-w-0 break-words">{renderCellValue(item[column.name], fields[column.name], column.name, schema!, resolved.obj.objectName, getDisplayName)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {items.length > 0 && (
