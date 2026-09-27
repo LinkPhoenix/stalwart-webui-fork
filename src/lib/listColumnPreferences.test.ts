@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseListColumnPreferences } from './listColumnPreferences';
+import { moveListColumn, parseListColumnPreferences } from './listColumnPreferences';
 
 describe('parseListColumnPreferences', () => {
   it('returns defaults when no saved preferences exist', () => {
@@ -22,5 +22,19 @@ describe('parseListColumnPreferences', () => {
       order: ['email'],
       hidden: [],
     });
+  });
+});
+
+describe('moveListColumn', () => {
+  it('moves a visible column earlier or later', () => {
+    expect(moveListColumn(['name', 'email', 'aliases'], 'email', -1)).toEqual(['email', 'name', 'aliases']);
+    expect(moveListColumn(['name', 'email', 'aliases'], 'email', 1)).toEqual(['name', 'aliases', 'email']);
+  });
+
+  it('keeps the order when the move would go past an edge or the column is missing', () => {
+    const order = ['name', 'email'];
+    expect(moveListColumn(order, 'name', -1)).toBe(order);
+    expect(moveListColumn(order, 'email', 1)).toBe(order);
+    expect(moveListColumn(order, 'aliases', -1)).toBe(order);
   });
 });

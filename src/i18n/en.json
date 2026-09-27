@@ -343,6 +343,8 @@
     "noFilterResults": "No results match these filters",
     "noFilterResultsHint": "Text filters require an exact value, not a partial search.",
     "massAction": "Actions",
+    "moveColumnEarlier": "Move earlier",
+    "moveColumnLater": "Move later",
     "next": "Next",
     "noResults": "No results found",
     "previous": "Previous",

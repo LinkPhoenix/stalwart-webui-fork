@@ -44,6 +44,9 @@ import {
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -82,7 +85,7 @@ import {
 } from '@/services/jmap/client';
 import { evaluateFetchAllTotal, FETCH_ALL_HARD_CAP, probeQueryTotal } from '@/lib/fetchAllGuardrails';
 import { buildQueueOpsLinks } from '@/lib/queueOpsLinks';
-import { parseListColumnPreferences } from '@/lib/listColumnPreferences';
+import { moveListColumn, parseListColumnPreferences } from '@/lib/listColumnPreferences';
 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
@@ -730,6 +733,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
           (orderIndex.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (orderIndex.get(b.name) ?? Number.MAX_SAFE_INTEGER),
       );
   }, [displayColumns, columnPreferences]);
+
+  const moveVisibleColumn = (columnName: string, direction: -1 | 1) => {
+    const visibleOrder = visibleColumns.map((column) => column.name);
+    const order = moveListColumn(visibleOrder, columnName, direction);
+    if (order !== visibleOrder) {
+      saveColumnPreferences({ ...columnPreferences, order });
+    }
+  };
 
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState<number | null>(null);
@@ -2062,20 +2073,23 @@ export function DynamicList({ viewName }: DynamicListProps) {
                   </DropdownMenuCheckboxItem>
                 ))}
                 <DropdownMenuSeparator />
-                {displayColumns.map((column, index) => (
-                  <DropdownMenuItem
-                    key={`order-${column.name}`}
-                    disabled={index === 0}
-                    onSelect={() => {
-                      const visible = [...visibleColumns];
-                      const current = visible.findIndex((entry) => entry.name === column.name);
-                      if (current <= 0) return;
-                      [visible[current - 1], visible[current]] = [visible[current], visible[current - 1]];
-                      saveColumnPreferences({ ...columnPreferences, order: visible.map((entry) => entry.name) });
-                    }}
-                  >
-                    {t('list.moveColumnLeft', 'Move {{column}} earlier', { column: column.label })}
-                  </DropdownMenuItem>
+                {visibleColumns.map((column, index) => (
+                  <DropdownMenuSub key={`order-${column.name}`}>
+                    <DropdownMenuSubTrigger>{column.label}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem disabled={index === 0} onSelect={() => moveVisibleColumn(column.name, -1)}>
+                        <ChevronUp />
+                        {t('list.moveColumnEarlier', 'Move earlier')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={index === visibleColumns.length - 1}
+                        onSelect={() => moveVisibleColumn(column.name, 1)}
+                      >
+                        <ChevronDown />
+                        {t('list.moveColumnLater', 'Move later')}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -2413,12 +2427,12 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         'text-left font-medium text-muted-foreground',
                         headCellPad,
                         'sticky top-0 z-20 bg-muted',
-                        col.name === displayColumns[0]?.name ? 'sticky left-0 z-30' : '',
+                        col.name === visibleColumns[0]?.name ? 'sticky left-0 z-30' : '',
                         fields[col.name]?.type.type === 'string' || col.name === 'subject'
                           ? 'max-w-[24rem]'
                           : 'whitespace-nowrap',
                       )}
-                      style={col.name === displayColumns[0]?.name ? { left: hasMassActions ? '2.5rem' : 0 } : undefined}
+                      style={col.name === visibleColumns[0]?.name ? { left: hasMassActions ? '2.5rem' : 0 } : undefined}
                     >
                       <div className="flex items-center">
                         {col.label}
@@ -2633,7 +2647,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             key={col.name}
                             className={cn(
                               bodyCellPad,
-                              col.name === displayColumns[0]?.name
+                              col.name === visibleColumns[0]?.name
                                 ? cn('sticky z-10 bg-background', hasMassActions ? 'left-10' : 'left-0')
                                 : '',
                               fields[col.name]?.type.type === 'string' || col.name === 'subject'

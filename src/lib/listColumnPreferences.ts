@@ -26,3 +26,13 @@ export function parseListColumnPreferences(raw: string | null): ListColumnPrefer
     return emptyPreferences();
   }
 }
+
+export function moveListColumn(order: string[], columnName: string, direction: -1 | 1): string[] {
+  const currentIndex = order.indexOf(columnName);
+  const nextIndex = currentIndex + direction;
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= order.length) return order;
+
+  const nextOrder = [...order];
+  [nextOrder[currentIndex], nextOrder[nextIndex]] = [nextOrder[nextIndex], nextOrder[currentIndex]];
+  return nextOrder;
+}

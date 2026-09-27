@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- Column reordering follows the visible order, and the first visible column stays pinned after customizations.
+
 ### Fixed
 - Admin lists clear account-scoped rows and ignore stale responses when the active account changes.
 - Admin list preferences recover safely when saved column settings are malformed.
