@@ -2170,7 +2170,15 @@ export function DynamicList({ viewName }: DynamicListProps) {
                     </Button>
                   );
                 })}
-              <Button variant="ghost" size="sm" className="h-7" onClick={resetFilters}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                onClick={() => {
+                  resetFilters();
+                  setProblemsOnly(false);
+                }}
+              >
                 {t('list.resetFilters', 'Clear all')}
               </Button>
             </div>
@@ -2693,19 +2701,36 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       <div key={column.name} className="grid min-w-0 grid-cols-[minmax(5rem,35%)_1fr] gap-2">
                         <dt className="truncate text-muted-foreground">{column.label}</dt>
                         <dd className="min-w-0 break-words">
-                          {renderCellValue(
-                            item[column.name],
-                            fields[column.name],
-                            column.name,
-                            schema!,
-                            resolved.obj.objectName,
-                            getDisplayName,
+                          {isWebApplications && column.name === 'enabled' && !fields[column.name] ? (
+                            item.enabled === true ? (
+                              t('common.yes', 'Yes')
+                            ) : (
+                              t('common.no', 'No')
+                            )
+                          ) : hasQuotaUsageColumn && column.name === 'quotaUsage' ? (
+                            renderQuotaUsage(item, t)
+                          ) : column.name in COUNT_COLUMN_SOURCES && activeCountColumns.includes(column.name) ? (
+                            getCountColumnValue(column.name, item)
+                          ) : needsReportProperty && isReportSummaryColumn(column.name) ? (
+                            <ReportSummaryCell colName={column.name} item={item} />
+                          ) : isMailboxList && column.name === 'name' ? (
+                            String(item.name ?? '')
+                          ) : (
+                            renderCellValue(
+                              item[column.name],
+                              fields[column.name],
+                              column.name,
+                              schema!,
+                              resolved.obj.objectName,
+                              getDisplayName,
+                            )
                           )}
                         </dd>
                       </div>
                     ))}
                   </dl>
                 </div>
+                {hasItemActions && <div className="shrink-0">{renderItemActions(item)}</div>}
               </div>
             </article>
           );
