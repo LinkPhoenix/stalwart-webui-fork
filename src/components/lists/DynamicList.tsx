@@ -2537,6 +2537,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       navigate(detailPath);
                     }
                   };
+                  const interactiveCellClasses = detailPath
+                    ? 'bg-background transition-colors group-hover:bg-muted/50 group-focus-visible:bg-muted/50'
+                    : '';
                   return (
                     <tr
                       key={itemId}
@@ -2547,7 +2550,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                       }
                       className={
                         detailPath
-                          ? 'border-b cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                          ? 'group border-b cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
                           : 'border-b'
                       }
                       onClick={(e) => {
@@ -2582,7 +2585,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
                     >
                       {hasMassActions && (
                         <td
-                          className={cn('sticky left-0 z-10 whitespace-nowrap bg-background', bodyCellPad)}
+                          className={cn(
+                            'sticky left-0 z-10 whitespace-nowrap bg-background',
+                            interactiveCellClasses,
+                            bodyCellPad,
+                          )}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Checkbox
@@ -2647,6 +2654,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                             key={col.name}
                             className={cn(
                               bodyCellPad,
+                              interactiveCellClasses,
                               col.name === visibleColumns[0]?.name
                                 ? cn('sticky z-10 bg-background', hasMassActions ? 'left-10' : 'left-0')
                                 : '',
@@ -2661,13 +2669,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
                                 to={detailPath}
                                 className="text-inherit no-underline hover:underline"
                                 onClick={(e) => {
-                                  // Plain left-click: let the row handler navigate once.
-                                  // Modified clicks / middle-click: keep native Link behaviour.
-                                  if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) {
-                                    e.preventDefault();
-                                  } else {
-                                    e.stopPropagation();
-                                  }
+                                  // Let React Router handle the link while preventing a second row navigation.
+                                  e.stopPropagation();
                                 }}
                               >
                                 {col.name === 'subject' ? (
@@ -2689,7 +2692,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         );
                       })}
                       {hasItemActions && (
-                        <td className={cn('text-right whitespace-nowrap', bodyCellPad)}>{renderItemActions(item)}</td>
+                        <td className={cn('text-right whitespace-nowrap', interactiveCellClasses, bodyCellPad)}>
+                          {renderItemActions(item)}
+                        </td>
                       )}
                     </tr>
                   );
