@@ -30,9 +30,12 @@ scripts/*
 !DEVELOPMENT.md
 !.agents/rules/*.md
 !docs/UPSTREAM_SYNC.md
+!docs/SECURITY_OPERATIONS.md
 /SPEC-*
 # Tool-generated artifacts during agent sessions
 .playwright-mcp/
+/playwright-report/
+/test-results/
 outputs/
 .vite_*.log
 .tmp_*

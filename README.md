@@ -92,6 +92,8 @@ Additions in this fork:
 
 Deliberate client workarounds where the official schema cannot express a feature yet are listed in [SCHEMA_DEVIATIONS.md](SCHEMA_DEVIATIONS.md). Merging upstream WebUI: [docs/UPSTREAM_SYNC.md](docs/UPSTREAM_SYNC.md).
 
+Repository and reverse-proxy security settings: [docs/SECURITY_OPERATIONS.md](docs/SECURITY_OPERATIONS.md).
+
 ## Screenshots
 
 <img src="./img/demo.gif">
