@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { Check, X, HelpCircle, ChevronRight, Loader2, Eye, EyeOff } from 'lucide-react';
@@ -14,8 +15,10 @@ import { jmapMapToArray, SECRET_MASK } from '@/lib/jmapUtils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { resolveSchema, resolveVariantForm, resolveForm } from '@/lib/schemaResolver';
+import { resolveObject, resolveSchema, resolveVariantForm, resolveForm } from '@/lib/schemaResolver';
 import { useObjectList, useObjectLabel } from '@/lib/objectOptions';
+import { useSchemaStore } from '@/stores/schemaStore';
+import { useAccountStore } from '@/stores/accountStore';
 import { formatDuration } from '@/lib/durationFormat';
 import { effectiveNumberFormat } from '@/lib/byteSizeFormat';
 import { SizeDisplay } from '@/components/common/SizeDisplay';
@@ -261,7 +264,7 @@ function ViewValue({
       return <span className="font-mono text-xs">{String(value)}</span>;
 
     case 'objectId':
-      return <span>{String(value)}</span>;
+      return <ObjectIdKeyLabel objectName={type.objectName} keyValue={String(value)} schema={schema} />;
 
     case 'object':
       return <ObjectValue value={value} objectName={type.objectName} schema={schema} />;
@@ -530,14 +533,35 @@ function MapKeyLabel({ keyClass, keyValue, schema }: { keyClass: ScalarType; key
 }
 
 function ObjectIdKeyLabel({ objectName, keyValue, schema }: { objectName: string; keyValue: string; schema: Schema }) {
+  const viewToSection = useSchemaStore((s) => s.viewToSection);
+  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
   const list = useObjectList(objectName, schema);
   const fromList = list.options.find((o) => o.id === keyValue)?.label;
   const { label: cheapLabel, loading } = useObjectLabel(objectName, fromList ? null : keyValue, schema);
   const display = fromList ?? cheapLabel;
+  const candidateViews = [
+    ...(schema.objects[objectName]?.type !== 'view' && viewToSection[objectName] ? [objectName] : []),
+    ...Object.entries(schema.objects)
+      .filter(([viewName, entry]) => entry.type === 'view' && entry.objectName === objectName && viewToSection[viewName])
+      .map(([viewName]) => viewName),
+  ];
+  const detailViews = candidateViews.filter((viewName) => {
+    const resolved = resolveObject(schema, viewName);
+    return resolved && hasObjectPermission(resolved.permissionPrefix, 'Get');
+  });
+  const detailPath =
+    detailViews.length === 1 ? `/${viewToSection[detailViews[0]]}/${detailViews[0]}/${keyValue}` : null;
   if (loading && !display) {
     return <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />;
   }
-  return <>{display ?? keyValue}</>;
+  const label = display ?? keyValue;
+  return detailPath ? (
+    <Link to={detailPath} className="text-inherit underline-offset-4 hover:underline">
+      {label}
+    </Link>
+  ) : (
+    <>{label}</>
+  );
 }
 
 function FieldTooltip({ description }: { description: string }) {
