@@ -2404,7 +2404,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
                         headCellPad,
                         'sticky top-0 z-20 bg-muted',
                         col.name === displayColumns[0]?.name ? 'sticky left-0 z-30' : '',
-                        col.name === 'subject' ? 'max-w-[20rem]' : 'whitespace-nowrap',
+                        fields[col.name]?.type.type === 'text' || col.name === 'subject'
+                          ? 'max-w-[24rem]'
+                          : 'whitespace-nowrap',
                       )}
                       style={col.name === displayColumns[0]?.name ? { left: hasMassActions ? '2.5rem' : 0 } : undefined}
                     >
@@ -2618,8 +2620,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
                               col.name === displayColumns[0]?.name
                                 ? cn('sticky z-10 bg-background', hasMassActions ? 'left-10' : 'left-0')
                                 : '',
-                              col.name === 'subject' ? 'max-w-[20rem]' : 'whitespace-nowrap',
+                              fields[col.name]?.type.type === 'text' || col.name === 'subject'
+                                ? 'max-w-[24rem] whitespace-normal break-words'
+                                : 'whitespace-nowrap',
                             )}
+                            title={typeof item[col.name] === 'string' ? String(item[col.name]) : undefined}
                           >
                             {colIdx === 0 && detailPath ? (
                               <Link
