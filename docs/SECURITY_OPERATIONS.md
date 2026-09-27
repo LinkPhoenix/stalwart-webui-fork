@@ -17,3 +17,7 @@ Configure Stalwart, reverse-proxy, CDN, and observability access logs to redact 
 ## Authorization boundary
 
 The WebUI hides controls based on the permissions returned by Stalwart to make the interface easier to use. The server remains the authorization boundary: keep permissions least-privileged and verify that the Stalwart API rejects unauthorized operations independently of the UI.
+
+## CSV exports
+
+CSV cells that begin with spreadsheet formula characters are prefixed with an apostrophe and quoted. This reduces formula-injection risk for common spreadsheet workflows, but it is not universal protection: spreadsheet applications can handle escaped values differently, and Excel may remove escapes after a save-and-reopen cycle. See the [OWASP CSV Injection guidance](https://community.owasp.org/attacks/CSV_Injection) before changing this policy or using exported files in automated imports.

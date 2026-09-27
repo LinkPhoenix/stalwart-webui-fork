@@ -9,8 +9,9 @@ import { isValidElement, Children } from 'react';
 
 /**
  * Quote every field for consistent CSV output and double embedded quotes.
- * Prefix spreadsheet formula starters with an apostrophe before quoting so
- * exported values are treated as text by common spreadsheet applications.
+ * Prefix spreadsheet formula starters with an apostrophe before quoting to
+ * reduce formula execution in common spreadsheet applications. This is not a
+ * universal guarantee; Excel can remove escapes after a save-and-reopen cycle.
  */
 export function escapeCsvField(value: string): string {
   const spreadsheetSafeValue = /^[\s\uFEFF]*[=+\-@＝＋－＠]/u.test(value) ? `'${value}` : value;
