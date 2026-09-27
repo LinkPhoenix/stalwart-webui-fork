@@ -1,32 +1,35 @@
-import { defineConfig, type Plugin } from 'vitest/config'
-import { loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
-import { version } from './package.json'
-import { assertNoDevelopmentTokenInBuild } from './src/lib/devAccessToken'
+import { defineConfig, type Plugin } from 'vitest/config';
+import { loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { version } from './package.json' with { type: 'json' };
+import { assertNoDevelopmentTokenInBuild } from './src/lib/devAccessToken.ts';
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 /** Restart the dev server when the disposable token / proxy env file changes. */
 function restartOnEnvDevelopmentLocal(): Plugin {
-  const envFile = path.resolve(__dirname, '.env.development.local')
+  const envFile = path.resolve(projectRoot, '.env.development.local');
   return {
     name: 'restart-on-env-development-local',
     configureServer(server) {
-      server.watcher.add(envFile)
+      server.watcher.add(envFile);
       const maybeRestart = (changed: string) => {
         if (path.resolve(changed) === envFile) {
-          void server.restart()
+          void server.restart();
         }
-      }
-      server.watcher.on('change', maybeRestart)
-      server.watcher.on('add', maybeRestart)
+      };
+      server.watcher.on('change', maybeRestart);
+      server.watcher.on('add', maybeRestart);
     },
-  }
+  };
 }
 
 export default defineConfig(({ command, mode }) => {
-  const environment = loadEnv(mode, process.cwd(), 'VITE_')
-  assertNoDevelopmentTokenInBuild(command, environment.VITE_ACCESS_TOKEN)
+  const environment = loadEnv(mode, projectRoot, 'VITE_');
+  assertNoDevelopmentTokenInBuild(command, environment.VITE_ACCESS_TOKEN);
 
   return {
     base: './',
@@ -36,7 +39,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [react(), tailwindcss(), restartOnEnvDevelopmentLocal()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(projectRoot, './src'),
       },
     },
     server: {
@@ -59,9 +62,9 @@ export default defineConfig(({ command, mode }) => {
           target: 'http://localhost:8080',
           changeOrigin: true,
           bypass(req) {
-            const url = req.url ?? ''
+            const url = req.url ?? '';
             if (!/[?&]response_type=/.test(url)) {
-              return '/index.html'
+              return '/index.html';
             }
           },
         },
@@ -75,5 +78,5 @@ export default defineConfig(({ command, mode }) => {
       globals: false,
       environment: 'happy-dom',
     },
-  }
-})
+  };
+});
