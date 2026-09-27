@@ -734,6 +734,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const listFetchRequestId = useRef(0);
 
   const displayNames = useCacheStore((s) => s.displayNames);
   const setDisplayNames = useCacheStore((s) => s.setDisplayNames);
@@ -843,6 +844,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   }, [isWebApplications, objectName, schema]);
 
   useResetOnChange(viewName, () => {
+    listFetchRequestId.current += 1;
     setItems([]);
     setTotal(null);
     setAnchorStack([]);
@@ -861,6 +863,21 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setAppliedFilters(initialFilters);
     setFiltersOpen(Object.keys(initialFilters).length > 0);
     setSort(readUrlSort());
+  });
+
+  useResetOnChange(activeAccountId, () => {
+    listFetchRequestId.current += 1;
+    setItems([]);
+    setTotal(null);
+    setAnchorStack([]);
+    setCurrentAnchor(null);
+    setSelectedIds(new Set());
+    setSelectAllMode(false);
+    setError(null);
+    setClientAllItems(null);
+    setClientPage(0);
+    setMailboxDepths(new Map());
+    setLoading(Boolean(resolved?.list));
   });
 
   const buildFilter = useCallback((): Record<string, unknown> => {
@@ -938,11 +955,14 @@ export function DynamicList({ viewName }: DynamicListProps) {
       if (!resolved || !resolved.list || !schema) return;
 
       const { obj, list } = resolved;
+      const requestId = ++listFetchRequestId.current;
+      const accountId = getAccountId(obj.objectName);
+      const isCurrentRequest = () =>
+        requestId === listFetchRequestId.current && getAccountId(obj.objectName) === accountId;
       setLoading(true);
       setError(null);
 
       try {
-        const accountId = getAccountId(obj.objectName);
         const properties = buildFetchProperties(list.columns);
         const filter = buildFilter();
         const sortArr = buildSort();
@@ -971,6 +991,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             sort: clientSortField ? undefined : sortArr,
           };
           const probeTotal = await probeQueryTotal(obj.objectName, accountId, fetchAllQuery);
+          if (!isCurrentRequest()) return;
           const probe = evaluateFetchAllTotal(probeTotal);
           if (!probe.ok) {
             setError(
@@ -995,6 +1016,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             });
           }
           const { list: fullList } = await jmapQueryAllAndGet(obj.objectName, accountId, fetchAllQuery, properties);
+          if (!isCurrentRequest()) return;
           let matched = fullList.filter((item) =>
             activeClientFilters.every((f) => String(item[f.field] ?? '') === f.value),
           );
@@ -1040,6 +1062,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
         }
 
         const responses = await jmapQueryAndGet(obj.objectName, accountId, queryOptions, properties);
+        if (!isCurrentRequest()) return;
 
         const queryResp = responses[0];
         const getResp = responses[1];
@@ -1066,9 +1089,9 @@ export function DynamicList({ viewName }: DynamicListProps) {
         setItems(getData.list ?? []);
         setSelectedIds(new Set());
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (isCurrentRequest()) setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setLoading(false);
+        if (isCurrentRequest()) setLoading(false);
       }
     },
     [

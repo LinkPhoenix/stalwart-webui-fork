@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Fixed
+- Admin lists clear account-scoped rows and ignore stale responses when the active account changes.
+
 ## [1.3.0] - 2026-09-27
 
 ### Added
