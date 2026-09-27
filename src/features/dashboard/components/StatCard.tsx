@@ -5,6 +5,7 @@
  */
 
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HelpCircle, Info } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { cardValue, formatValue, sparklineData, computeDelta } from '../helpers'
 import { useLiveMetricsStore } from '../stores/liveMetricsStore';
 import { getChartColor } from '@/components/ui/chart';
 import { SchemaIcon } from '@/components/common/SchemaIcon';
+import { Button } from '@/components/ui/button';
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
   return <SchemaIcon name={name} className={className} fallback={HelpCircle} warnUnknown />;
@@ -28,6 +30,7 @@ interface StatCardProps {
 }
 
 export function StatCard({ card, historySamples, historyWindow }: StatCardProps) {
+  const { t } = useTranslation();
   const liveSnapshot = useLiveMetricsStore((s) => s.snapshot);
 
   const value = useMemo(() => {
@@ -65,7 +68,15 @@ export function StatCard({ card, historySamples, historyWindow }: StatCardProps)
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/60"
+                    aria-label={t('common.showDescription', 'Show description')}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="text-xs">{card.description}</p>

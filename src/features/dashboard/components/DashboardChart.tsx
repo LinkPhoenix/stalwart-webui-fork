@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -55,6 +56,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getChartColor } from '@/components/ui/chart';
 import { ChartTooltipContent } from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
 import type { Chart as ChartSchema } from '../types/schema';
 import type { Metric, Period } from '../types/metrics';
 import {
@@ -74,6 +76,7 @@ interface DashboardChartProps {
 }
 
 export function DashboardChart({ chart, historySamples, historyWindow, period }: DashboardChartProps) {
+  const { t } = useTranslation();
   const { from, to } = historyWindow;
   const bucketCount = getBucketCount(period);
   const valueFormat = chart.valueFormat ?? 'number';
@@ -234,7 +237,15 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
             <TooltipProvider>
               <UiTooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/60"
+                    aria-label={t('common.showDescription', 'Show description')}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="text-xs">{chart.description}</p>

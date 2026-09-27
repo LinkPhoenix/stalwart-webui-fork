@@ -5,8 +5,10 @@
  */
 
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { Check, X, HelpCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { jmapMapToArray, SECRET_MASK } from '@/lib/jmapUtils';
 import { Badge } from '@/components/ui/badge';
@@ -144,6 +146,7 @@ function ViewField({
   value: unknown;
   schema: Schema;
 }) {
+  const { t } = useTranslation();
   const isBlock = isBlockType(field.type, value);
 
   return (
@@ -154,7 +157,15 @@ function ViewField({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50 cursor-help shrink-0" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0 text-muted-foreground/50"
+                  aria-label={t('common.showDescription', 'Show description')}
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
                 <div className="text-xs prose prose-sm dark:prose-invert">
@@ -503,11 +514,20 @@ function ObjectIdKeyLabel({ objectName, keyValue, schema }: { objectName: string
 }
 
 function FieldTooltip({ description }: { description: string }) {
+  const { t } = useTranslation();
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50 cursor-help shrink-0" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 text-muted-foreground/50"
+            aria-label={t('common.showDescription', 'Show description')}
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </Button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="text-xs prose prose-sm dark:prose-invert">
