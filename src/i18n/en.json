@@ -92,6 +92,7 @@
     "from": "From",
     "liveMetricsDisconnected": "Live metrics stream disconnected after multiple retries.",
     "liveMetricsFailed": "Failed to connect to live metrics.",
+    "lastUpdated": "Last updated {{time}}",
     "noDashboardsConfigured": "No dashboards configured.",
     "preset24h": "Last 24 hours",
     "preset30d": "Last 30 days",

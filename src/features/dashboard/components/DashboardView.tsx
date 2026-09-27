@@ -55,17 +55,21 @@ export function DashboardView({ dashboardId, section }: DashboardViewProps) {
 
   const cacheKey = dashboard ? `${dashboard.id}|${periodKey(period)}` : '';
   const [fetchVersion, setFetchVersion] = useState(0);
+  const [lastUpdatedByKey, setLastUpdatedByKey] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!dashboard || historyIds.size === 0) return;
     let cancelled = false;
     fetchHistory(dashboard.id, period, historyIds).then(() => {
-      if (!cancelled) setFetchVersion((v) => v + 1);
+      if (cancelled) return;
+      setFetchVersion((v) => v + 1);
+      const fetchedAt = useHistoryMetricsStore.getState().cache.get(cacheKey)?.fetchedAt;
+      if (fetchedAt) setLastUpdatedByKey((current) => ({ ...current, [cacheKey]: fetchedAt }));
     });
     return () => {
       cancelled = true;
     };
-  }, [dashboard, period, historyIds, fetchHistory]);
+  }, [dashboard, period, historyIds, fetchHistory, cacheKey]);
 
   const { historySamples, historyWindow } = useMemo(() => {
     void fetchVersion;
@@ -89,9 +93,13 @@ export function DashboardView({ dashboardId, section }: DashboardViewProps) {
 
   const handleRefresh = useCallback(() => {
     if (dashboard && historyIds.size > 0) {
-      refreshHistory(dashboard.id, period, historyIds).then(() => setFetchVersion((v) => v + 1));
+      refreshHistory(dashboard.id, period, historyIds).then(() => {
+        setFetchVersion((v) => v + 1);
+        const fetchedAt = useHistoryMetricsStore.getState().cache.get(cacheKey)?.fetchedAt;
+        if (fetchedAt) setLastUpdatedByKey((current) => ({ ...current, [cacheKey]: fetchedAt }));
+      });
     }
-  }, [dashboard, period, historyIds, refreshHistory]);
+  }, [dashboard, period, historyIds, refreshHistory, cacheKey]);
 
   if (!dashboard) {
     if (dashboards.length === 0) {
@@ -120,7 +128,18 @@ export function DashboardView({ dashboardId, section }: DashboardViewProps) {
         )}
         {dashboards.length === 1 && <h1 className="text-xl font-semibold">{dashboard.label}</h1>}
 
-        <PeriodSelector onRefresh={handleRefresh} loading={isLoading} />
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <PeriodSelector onRefresh={handleRefresh} loading={isLoading} />
+          {lastUpdatedByKey[cacheKey] && (
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.lastUpdated', 'Last updated {{time}}', {
+                time: new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short' }).format(
+                  lastUpdatedByKey[cacheKey],
+                ),
+              })}
+            </p>
+          )}
+        </div>
       </div>
 
       {liveStatus === 'error' && liveError && (
