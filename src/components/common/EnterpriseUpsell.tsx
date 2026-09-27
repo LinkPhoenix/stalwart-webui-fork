@@ -29,17 +29,25 @@ export function EnterpriseUpsell({ open, onClose, overviewHref }: EnterpriseUpse
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="gap-6">
+        <DialogHeader className="space-y-4">
           <DialogTitle>{t('enterprise.trialTitle')}</DialogTitle>
           <DialogDescription>{t('enterprise.trialDescription')}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           {overviewHref && (
             <Button variant="secondary" asChild onClick={onClose}>
               <Link to={overviewHref}>{t('enterprise.openOverview', 'Open Overview')}</Link>
             </Button>
           )}
+          <a
+            href="https://stalw.art/compare#why-isnt-feature-x-open-source"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline sm:mr-auto sm:text-left"
+          >
+            {t('enterprise.whyNotFree')}
+          </a>
           <Button variant="outline" onClick={onClose}>
             {t('common.close')}
           </Button>

@@ -15,6 +15,7 @@ import {
   deepMerge,
   buildCreateDefaults,
   buildEmbeddedDefaults,
+  buildNewObjectValue,
 } from './schemaResolver';
 import { getDisplayProperty } from './schemaResolver';
 
@@ -863,5 +864,117 @@ describe('getDisplayProperty', () => {
 
   it('returns first column when labelProperty is absent but columns exist', () => {
     expect(getDisplayProperty(schema, 'x:NoLabel')).toBe('title');
+  });
+});
+
+const structSchema: Schema = {
+  objects: {},
+  schemas: {
+    'x:Service': { type: 'single', schemaName: 'x:Service' },
+    'x:Listener': { type: 'single', schemaName: 'x:Listener' },
+    'x:Tls': { type: 'single', schemaName: 'x:Tls' },
+    'x:Store': {
+      type: 'multiple',
+      variants: [
+        { name: 'S3', label: 'S3', schemaName: 'x:S3Store' },
+        { name: 'Manual', label: 'Manual' },
+      ],
+    },
+  },
+  fields: {
+    'x:Service': {
+      properties: {
+        hostname: {
+          description: '',
+          type: { type: 'string', format: 'string', nullable: true },
+          update: 'mutable',
+        },
+        cleartext: { description: '', type: { type: 'boolean' }, update: 'mutable' },
+      },
+    },
+    'x:Listener': {
+      properties: {
+        enabled: { description: '', type: { type: 'boolean' }, update: 'mutable' },
+        proxied: { description: '', type: { type: 'boolean' }, update: 'mutable' },
+        readOnly: { description: '', type: { type: 'boolean' }, update: 'serverSet' },
+        tls: { description: '', type: { type: 'object', objectName: 'x:Tls' }, update: 'mutable' },
+        fallback: {
+          description: '',
+          type: { type: 'object', objectName: 'x:Tls', nullable: true },
+          update: 'mutable',
+        },
+      },
+      defaults: {
+        enabled: true,
+      },
+    },
+    'x:Tls': {
+      properties: {
+        implicit: { description: '', type: { type: 'boolean' }, update: 'mutable' },
+        certificateId: {
+          description: '',
+          type: { type: 'string', format: 'string', nullable: true },
+          update: 'mutable',
+        },
+      },
+    },
+    'x:S3Store': {
+      properties: {
+        bucket: { description: '', type: { type: 'string', format: 'string' }, update: 'mutable' },
+        allowInvalidCerts: { description: '', type: { type: 'boolean' }, update: 'mutable' },
+      },
+      defaults: {
+        bucket: 'stalwart',
+      },
+    },
+  },
+  forms: {},
+  lists: {},
+  enums: {},
+  dashboards: [],
+  layouts: [],
+};
+
+describe('buildNewObjectValue', () => {
+  it('seeds non-nullable booleans a struct has no defaults for', () => {
+    expect(buildNewObjectValue(structSchema, 'x:Service')).toEqual({ cleartext: false });
+  });
+
+  it('keeps schema defaults and only fills the missing booleans', () => {
+    const result = buildNewObjectValue(structSchema, 'x:Listener');
+    expect(result.enabled).toBe(true);
+    expect(result.proxied).toBe(false);
+  });
+
+  it('skips serverSet properties', () => {
+    expect(buildNewObjectValue(structSchema, 'x:Listener')).not.toHaveProperty('readOnly');
+  });
+
+  it('recurses into non-nullable embedded objects and skips nullable ones', () => {
+    const result = buildNewObjectValue(structSchema, 'x:Listener');
+    expect(result.tls).toEqual({ implicit: false });
+    expect(result).not.toHaveProperty('fallback');
+  });
+
+  it('seeds the first variant with its @type, defaults and booleans', () => {
+    expect(buildNewObjectValue(structSchema, 'x:Store')).toEqual({
+      '@type': 'S3',
+      bucket: 'stalwart',
+      allowInvalidCerts: false,
+    });
+  });
+
+  it('honours an explicit variant name', () => {
+    expect(buildNewObjectValue(structSchema, 'x:Store', 'Manual')).toEqual({ '@type': 'Manual' });
+  });
+
+  it('returns an empty object for an unknown object name', () => {
+    expect(buildNewObjectValue(structSchema, 'x:Unknown')).toEqual({});
+  });
+
+  it('still merges parent defaults into embedded children', () => {
+    const result = buildNewObjectValue(embeddedSchema, 'x:Model', 'FtrlCcfh');
+    expect(result.featureL2Normalize).toBe(true);
+    expect((result.parameters as Record<string, unknown>).numFeatures).toBe('20');
   });
 });

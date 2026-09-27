@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Added
+- Sievepad integration for debugging Sieve scripts directly from their forms.
+
+### Changed
+- Merged `stalwartlabs/webui` through `dc462b1` (`v1.0.11`), including upstream `v1.0.10` fixes.
+
 ## [1.2.3] - 2026-08-25
 
 ### Changed

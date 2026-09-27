@@ -8,7 +8,6 @@ import { useState, useEffect, useMemo, useRef, lazy, Suspense, type KeyboardEven
 import { useTranslation } from 'react-i18next';
 import { useBufferedValue, useResetOnChange } from '@/hooks/useBufferedValue';
 import ReactMarkdown from 'react-markdown';
-
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Calendar } from '@/components/ui/calendar';
-
 import {
   Plus,
   X,
@@ -36,12 +34,11 @@ import {
   Clock,
   UnfoldVertical,
 } from 'lucide-react';
-
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
 import { ExpressionEditor } from '@/components/expression/ExpressionEditor';
 import { OtpAuthField } from '@/components/forms/OtpAuthField';
 import { SizeDisplay } from '@/components/common/SizeDisplay';
+import { SievepadButton } from '@/components/forms/SievepadButton';
 
 // Code-split: CodeMirror + its Sieve tokenizer are only needed on the handful
 // of fields that actually hold Sieve script source (see SIEVE_SCRIPT_FIELDS
@@ -66,7 +63,13 @@ import {
   DURATION_UNITS,
 } from '@/lib/durationFormat';
 import { effectiveNumberFormat } from '@/lib/byteSizeFormat';
-import { resolveSchema, resolveVariantForm, resolveObject, buildEmbeddedDefaults } from '@/lib/schemaResolver';
+import {
+  resolveSchema,
+  resolveVariantForm,
+  resolveObject,
+  buildEmbeddedDefaults,
+  buildNewObjectValue,
+} from '@/lib/schemaResolver';
 import { cn } from '@/lib/utils';
 import { useAccountStore } from '@/stores/accountStore';
 import { useEffectiveEdition } from '@/components/forms/FormEditionContext';
@@ -90,6 +93,7 @@ export interface FieldWidgetProps {
    * widget for fields the schema itself designates (e.g. rendering Sieve
    * script content with syntax highlighting) — see SIEVE_SCRIPT_FIELDS below. */
   objectName?: string;
+  sieveScriptName?: string;
 }
 
 // Real schema properties that hold Sieve script source text, keyed by the
@@ -120,7 +124,7 @@ function getRequiredMarker(field: Field, readOnly: boolean): 'required' | 'optio
 
 export function FieldWidget(props: FieldWidgetProps) {
   const { t } = useTranslation();
-  const { field, formField, value, onChange, readOnly, error, schema, objectName } = props;
+  const { field, formField, value, onChange, readOnly, error, schema, objectName, sieveScriptName } = props;
   const ft = field.type;
   const edition = useEffectiveEdition();
   const widgetContainerRef = useRef<HTMLDivElement>(null);
@@ -183,7 +187,15 @@ export function FieldWidget(props: FieldWidgetProps) {
           />
         );
       case 'blobId':
-        return <BlobField value={value} onChange={onChange} readOnly={readOnly} sieveEditor={sieveField} />;
+        return (
+          <BlobField
+            value={value}
+            onChange={onChange}
+            readOnly={readOnly}
+            sieveEditor={sieveField}
+            sieveScriptName={sieveScriptName}
+          />
+        );
       case 'objectId':
         return (
           <ObjectIdField
@@ -314,6 +326,9 @@ export function FieldWidget(props: FieldWidgetProps) {
         </div>
       )}
       {hasExpandableTextarea ? <div ref={widgetContainerRef}>{widget}</div> : widget}
+      {sieveScriptName !== undefined && ft.type === 'string' && (
+        <SievepadButton scriptName={sieveScriptName} source={typeof value === 'string' ? value : ''} />
+      )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
@@ -1210,9 +1225,10 @@ interface BlobFieldProps {
   onChange: (value: unknown) => void;
   readOnly: boolean;
   sieveEditor?: boolean;
+  sieveScriptName?: string;
 }
 
-function BlobField({ value, onChange, readOnly, sieveEditor }: BlobFieldProps) {
+function BlobField({ value, onChange, readOnly, sieveEditor, sieveScriptName }: BlobFieldProps) {
   const { t } = useTranslation();
   const blobId = typeof value === 'string' ? value : null;
   const [content, setContent] = useState<string>('');
@@ -1284,6 +1300,7 @@ function BlobField({ value, onChange, readOnly, sieveEditor }: BlobFieldProps) {
           className="font-mono text-xs"
         />
       )}
+      {sieveScriptName !== undefined && <SievepadButton scriptName={sieveScriptName} source={content} />}
       {modified && (
         <p className="text-xs text-muted-foreground">
           {t('field.contentModified', 'Content modified (will be saved as a new blob)')}
@@ -1780,16 +1797,7 @@ function ObjectListField({
 
   const addItem = () => {
     const nextIndex = entries.length > 0 ? Math.max(...entries.map(([k]) => parseInt(k))) + 1 : 0;
-    let defaults: Record<string, unknown> = {};
-    if (resolvedSchema.type === 'single' && resolvedSchema.fields.defaults) {
-      defaults = { ...resolvedSchema.fields.defaults };
-    } else if (resolvedSchema.type === 'multiple' && resolvedSchema.variants[0]) {
-      defaults = { '@type': resolvedSchema.variants[0].name };
-      if (resolvedSchema.variants[0].fields?.defaults) {
-        defaults = { ...defaults, ...resolvedSchema.variants[0].fields.defaults };
-      }
-    }
-    onChange({ ...mapValue, [String(nextIndex)]: defaults });
+    onChange({ ...mapValue, [String(nextIndex)]: buildNewObjectValue(schema, objectName) });
   };
 
   const removeItem = (key: string) => {
@@ -2264,7 +2272,7 @@ function MapField({ keyClass, valueClass, value, onChange, readOnly, schema, min
     if (valueClass.type === 'number') {
       defaultValue = 0;
     } else if (valueClass.type === 'object') {
-      defaultValue = {};
+      defaultValue = buildNewObjectValue(schema, valueClass.objectName);
     }
 
     onChange({ ...mapValue, [key]: defaultValue });

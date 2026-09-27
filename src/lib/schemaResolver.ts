@@ -260,6 +260,62 @@ export function buildEmbeddedDefaults(
   return result;
 }
 
+export function buildNewObjectValue(schema: Schema, objectName: string, variantName?: string): Record<string, unknown> {
+  const result = buildEmbeddedDefaults(schema, objectName, {}, variantName);
+  return completeStructDefaults(schema, objectName, (result['@type'] as string | undefined) ?? variantName, result);
+}
+
+function completeStructDefaults(
+  schema: Schema,
+  objectName: string,
+  variantName: string | undefined,
+  target: Record<string, unknown>,
+): Record<string, unknown> {
+  const resolved = resolveSchema(schema, objectName);
+  if (!resolved) return target;
+
+  const fields =
+    resolved.type === 'single'
+      ? resolved.fields
+      : ((variantName ? resolved.variants.find((v) => v.name === variantName) : resolved.variants[0])?.fields ?? null);
+  if (!fields) return target;
+
+  for (const [propName, propDef] of Object.entries(fields.properties)) {
+    if (propDef.update === 'serverSet') continue;
+    const t = propDef.type;
+
+    if (t.type === 'boolean') {
+      if (!(propName in target)) {
+        target[propName] = false;
+      }
+      continue;
+    }
+
+    if (t.type !== 'object' || t.nullable) continue;
+
+    const current = target[propName];
+    if (current !== undefined && !isPlainRecord(current)) continue;
+
+    const overrides = isPlainRecord(current) ? current : {};
+    const nestedEntry = schema.schemas[t.objectName];
+    const nestedVariant =
+      nestedEntry?.type === 'multiple'
+        ? ((overrides['@type'] as string | undefined) ?? nestedEntry.variants[0]?.name)
+        : undefined;
+
+    const nested = completeStructDefaults(schema, t.objectName, nestedVariant, { ...overrides });
+    if (Object.keys(nested).length > 0) {
+      target[propName] = nested;
+    }
+  }
+
+  return target;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function getDisplayProperty(schema: Schema, objectName: string): string {
   const list = schema.lists[objectName];
   if (list?.labelProperty) return list.labelProperty;

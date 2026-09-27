@@ -55,6 +55,7 @@ import { toast } from '@/hooks/use-toast';
 import { logFormChange } from '@/lib/debug';
 import { FieldWidget } from '@/components/forms/FieldWidget';
 import { BackendVariantIcon } from '@/components/common/BackendIcon';
+import { isSieveScriptField } from '@/lib/sievepad';
 
 import type { Field, Fields, Form, FormField, Schema } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError, JmapMethodCall } from '@/types/jmap';
@@ -746,6 +747,7 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
 
   const sectionsToRender = buildSections(combinedForm, currentFields, isCreate, edition);
   const listPath = viewToSection[viewName] ? `/${viewToSection[viewName]}/${viewName}` : null;
+  const scriptName = typeof formData.name === 'string' ? formData.name : '';
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
@@ -834,6 +836,9 @@ export function DynamicForm({ viewName, objectId }: DynamicFormProps) {
                     error={fieldError}
                     schema={schema}
                     objectName={resolved.obj.objectName}
+                    sieveScriptName={
+                      isSieveScriptField(resolved.obj.objectName, formField.name) ? scriptName : undefined
+                    }
                   />
                 );
 

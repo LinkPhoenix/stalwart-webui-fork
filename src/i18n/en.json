@@ -178,7 +178,8 @@
     "trialButton": "Start 30-Day Free Trial",
     "requestTrial": "Request a free trial to unlock this feature.",
     "ossHidden": "This feature is not available in the open-source edition.",
-    "openOverview": "Open Overview"
+    "openOverview": "Open Overview",
+    "whyNotFree": "Why is this not free?"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -513,6 +514,15 @@
     "periodValue": "Period value"
   },
   "sections": "Sections",
+  "sievepad": {
+    "debug": "Debug",
+    "defaultName": "Sieve script",
+    "dontShowAgain": "Don't show this again",
+    "failed": "Failed to open Sievepad.",
+    "warningDescription": "A new tab will open sievepad.com with a copy of this script. Sievepad compiles and runs the script entirely in your browser: nothing is uploaded to or stored on any server.",
+    "warningTitle": "Debug in Sievepad"
+  },
+  "toggleTheme": "Toggle theme",
   "tracing": {
     "addFilter": "Add filter",
     "bufferFull": "(buffer full)",
