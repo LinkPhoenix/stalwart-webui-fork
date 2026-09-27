@@ -243,6 +243,12 @@ Run tests in watch mode:
 npm run test:watch
 ```
 
+Run the browser smoke tests (install Chromium once with `npx playwright install chromium`):
+
+```
+npm run test:e2e
+```
+
 ## Building for production
 
 ```
