@@ -102,6 +102,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: the per-account `SieveScript` list's schema already declares `isActive` as a column, but the System/User Sieve script lists under Settings don't, even though the property exists on both objects — so today you have to open each script to see whether it's active.
 - **Ideal fix**: the server's `x:SieveSystemScript`/`x:SieveUserScript` list schemas include `isActive` as a real column like `SieveScript` already does; the fallback branch is deleted.
 
+### `listener-tls-enabled-column` 🟡
+
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:NetworkListener` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **What**: adds the real `useTls` property as a `TLS Enabled` column after Protocol. The existing `tlsImplicit` column identifies implicit TLS, but does not show listeners that enable TLS without implicit TLS.
+- **Why**: admins need to distinguish listeners with no TLS from listeners that enable TLS without opening each listener.
+- **Ideal fix**: the server's `x:NetworkListener` list schema includes `useTls`; the fork column overlay is removed.
+
 ### `account-alias-count-column` 🟡
 
 - **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)

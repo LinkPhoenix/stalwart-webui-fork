@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Added
+- Listener lists show whether TLS is enabled, including non-implicit TLS listeners.
+
 ### Changed
 - Column reordering follows the visible order, and the first visible column stays pinned after customizations.
 
