@@ -82,6 +82,7 @@ import {
 } from '@/services/jmap/client';
 import { evaluateFetchAllTotal, FETCH_ALL_HARD_CAP, probeQueryTotal } from '@/lib/fetchAllGuardrails';
 import { buildQueueOpsLinks } from '@/lib/queueOpsLinks';
+import { parseListColumnPreferences } from '@/lib/listColumnPreferences';
 
 import type { Schema, Field, MassAction, ItemAction, Filter as FilterDef } from '@/types/schema';
 import type { JmapSetResponse, JmapSetError } from '@/types/jmap';
@@ -595,7 +596,7 @@ interface DynamicListProps {
 function readColumnPreferences(viewName: string): { order: string[]; hidden: string[] } {
   try {
     const raw = localStorage.getItem(`list-columns:${viewName}`);
-    return raw ? JSON.parse(raw) : { order: [], hidden: [] };
+    return parseListColumnPreferences(raw);
   } catch {
     return { order: [], hidden: [] };
   }
