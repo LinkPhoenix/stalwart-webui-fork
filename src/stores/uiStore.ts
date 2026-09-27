@@ -17,6 +17,7 @@ interface UIState {
   colorTheme: ColorTheme;
   radius: Radius;
   listDensity: ListDensity;
+  listPageSize: number;
   sidebarOpen: boolean;
   activeSection: string;
 
@@ -24,6 +25,7 @@ interface UIState {
   setColorTheme: (colorTheme: ColorTheme) => void;
   setRadius: (radius: Radius) => void;
   setListDensity: (listDensity: ListDensity) => void;
+  setListPageSize: (pageSize: number) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setActiveSection: (section: string) => void;
@@ -83,6 +85,7 @@ export const useUIStore = create<UIState>()(
       colorTheme: 'stalwart',
       radius: 'square',
       listDensity: 'comfortable',
+      listPageSize: 25,
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
       activeSection: '',
 
@@ -106,6 +109,8 @@ export const useUIStore = create<UIState>()(
         set({ listDensity });
       },
 
+      setListPageSize: (listPageSize) => set({ listPageSize }),
+
       toggleSidebar: () => {
         set({ sidebarOpen: !get().sidebarOpen });
       },
@@ -125,6 +130,7 @@ export const useUIStore = create<UIState>()(
         colorTheme: state.colorTheme,
         radius: state.radius,
         listDensity: state.listDensity,
+        listPageSize: state.listPageSize,
       }),
       onRehydrateStorage: () => {
         return (state) => {

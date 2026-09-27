@@ -118,7 +118,6 @@ function appHref(path: string): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-const DEFAULT_PAGE_SIZE = 25;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const MAX_REPORTED_ERRORS = 3;
 // Combobox threshold: plain <Select> is fine for a handful of options, but
@@ -616,6 +615,8 @@ export function DynamicList({ viewName }: DynamicListProps) {
   const hasPermission = useAccountStore((s) => s.hasPermission);
   const edition = useAccountStore((s) => s.edition);
   const listDensity = useUIStore((s) => s.listDensity);
+  const pageSize = useUIStore((s) => s.listPageSize);
+  const setListPageSize = useUIStore((s) => s.setListPageSize);
   const headCellPad = listDensity === 'compact' ? 'px-3 py-2' : 'px-3 py-3';
   const bodyCellPad = listDensity === 'compact' ? 'px-3 py-1' : 'px-3 py-2';
   // Reactive, unlike the getAccountId() snapshot read inside fetchData: needed
@@ -625,7 +626,6 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // itself doesn't change.
   const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const [upsellOpen, setUpsellOpen] = useState(false);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const resolved = useMemo(() => {
     if (!schema) return null;
@@ -2805,7 +2805,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
                 setClientPage(0);
                 setSelectedIds(new Set());
                 setSelectAllMode(false);
-                setPageSize(nextSize);
+                setListPageSize(nextSize);
               }}
             >
               <SelectTrigger className="h-9 w-[5.5rem]" aria-label={t('list.pageSize', 'Rows per page')}>
