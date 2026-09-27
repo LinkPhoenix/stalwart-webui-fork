@@ -109,6 +109,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: admins need to distinguish listeners with no TLS from listeners that enable TLS without opening each listener.
 - **Ideal fix**: the server's `x:NetworkListener` list schema includes `useTls`; the fork column overlay is removed.
 
+### `dns-provider-description-column` 🟡
+
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:DnsServer` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **What**: adds the real `description` property after the provider type. The list already identifies `description` as its label property, but does not include it among the visible columns.
+- **Why**: providers sharing the same provider type are otherwise difficult to tell apart without opening each configuration.
+- **Ideal fix**: the server's `x:DnsServer` list schema includes `description`; the fork column overlay is removed.
+
 ### `account-alias-count-column` 🟡
 
 - **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)

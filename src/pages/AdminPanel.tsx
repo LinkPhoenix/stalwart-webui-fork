@@ -18,7 +18,7 @@ import { withMailingListColumns } from '@/lib/mailingListColumns';
 import { withRoleListColumns } from '@/lib/roleColumns';
 import { withDomainColumns } from '@/lib/domainColumns';
 import { withReportListColumns } from '@/lib/reportColumns';
-import { withNetworkListenerColumns } from '@/lib/operationsListColumns';
+import { withDnsServerColumns, withNetworkListenerColumns } from '@/lib/operationsListColumns';
 import { getDevelopmentAccessToken } from '@/lib/devAccessToken';
 import { setLocale } from '@/i18n';
 import { TopBar } from '@/components/layout/TopBar';
@@ -166,7 +166,9 @@ export default function AdminPanel() {
             withDomainColumns(
               withRoleListColumns(
                 withMailingListColumns(
-                  withAccountListColumns(withNetworkListenerColumns(withClientLogFilters(schemaData))),
+                  withAccountListColumns(
+                    withNetworkListenerColumns(withDnsServerColumns(withClientLogFilters(schemaData))),
+                  ),
                 ),
               ),
             ),

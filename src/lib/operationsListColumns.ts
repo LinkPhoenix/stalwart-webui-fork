@@ -42,3 +42,7 @@ export function withNetworkListenerColumns(schema: Schema): Schema {
   return addRealPropertyColumn(schema, 'x:NetworkListener', 'useTls', 'TLS Enabled', 'protocol');
 }
 
+// SCHEMA-DEVIATION: dns-provider-description-column (see SCHEMA_DEVIATIONS.md)
+export function withDnsServerColumns(schema: Schema): Schema {
+  return addRealPropertyColumn(schema, 'x:DnsServer', 'description', 'Description', '@type');
+}
