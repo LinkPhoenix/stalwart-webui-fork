@@ -6,9 +6,9 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import * as LucideIcons from 'lucide-react';
-const { ChevronDown, Lock } = LucideIcons;
+import { ChevronDown, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SchemaIcon } from '@/components/common/SchemaIcon';
 import { Button } from '@/components/ui/button';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -29,13 +29,7 @@ import { OVERVIEW_VIEW_NAME } from '@/features/overview/constants';
 import type { Layout, LayoutItem, LayoutSubItem } from '@/types/schema';
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const formatted = name
-    .split('-')
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join('');
-  const IconComp = (LucideIcons as Record<string, unknown>)[formatted] as LucideIcons.LucideIcon | undefined;
-  if (!IconComp) return <LucideIcons.Circle className={className} />;
-  return <IconComp className={className} />;
+  return <SchemaIcon name={name} className={className} />;
 }
 
 function resolveViewPath(sectionName: string, viewName: string): string {
@@ -450,12 +444,6 @@ export function Sidebar() {
           <TooltipProvider>
             <div className="flex items-center justify-around border-t bg-background px-2 py-2 [[data-radius='square']_&]:px-0 [[data-radius='square']_&]:py-0">
               {layouts.map((target) => {
-                const Icon = (LucideIcons as Record<string, unknown>)[
-                  target.icon
-                    .split('-')
-                    .map((s) => s[0].toUpperCase() + s.slice(1))
-                    .join('')
-                ] as LucideIcons.LucideIcon | undefined;
                 const isActive = target.name === activeSection;
                 const to = sectionPath(target);
                 const buttonClass = cn(
@@ -477,7 +465,7 @@ export function Sidebar() {
                           asChild
                         >
                           <Link to={to} onClick={() => handleSectionActivate(target)}>
-                            {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
+                            <SchemaIcon name={target.icon} className="h-4 w-4" />
                           </Link>
                         </Button>
                       ) : (
@@ -490,7 +478,7 @@ export function Sidebar() {
                           className={buttonClass}
                           onClick={() => setActiveSection(target.name)}
                         >
-                          {Icon ? <Icon className="h-4 w-4" /> : <LucideIcons.Circle className="h-4 w-4" />}
+                          <SchemaIcon name={target.icon} className="h-4 w-4" />
                         </Button>
                       )}
                     </TooltipTrigger>

@@ -6,9 +6,9 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import * as LucideIcons from 'lucide-react';
-const { User, LogOut, Check, Menu, Sparkles, Search, Palette, ScrollText } = LucideIcons;
+import { Check, LogOut, Menu, Palette, ScrollText, Search, Sparkles, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SchemaIcon } from '@/components/common/SchemaIcon';
 import { CommandPalette } from '@/components/common/CommandPalette';
 import {
   DropdownMenu,
@@ -32,14 +32,6 @@ import { useEffect, useState } from 'react';
 import { useAccountStore } from '@/stores/accountStore';
 import { useCurrentAccountDetails } from '@/hooks/useCurrentAccount';
 import { useSchemaStore } from '@/stores/schemaStore';
-
-function getIcon(name: string): LucideIcons.LucideIcon {
-  const formatted = name
-    .split('-')
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join('');
-  return ((LucideIcons as Record<string, unknown>)[formatted] as LucideIcons.LucideIcon) || LucideIcons.Circle;
-}
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -157,12 +149,11 @@ export function TopBar() {
                 <DropdownMenuLabel>{t('sections', 'Sections')}</DropdownMenuLabel>
                 <DropdownMenuGroup>
                   {navigableLayouts.map((layout) => {
-                    const Icon = getIcon(layout.icon);
                     const to = sectionLink(layout);
                     if (!to) {
                       return (
                         <DropdownMenuItem key={layout.name} onClick={() => setActiveSection(layout.name)}>
-                          <Icon className="mr-2 h-4 w-4" />
+                          <SchemaIcon name={layout.icon} className="mr-2 h-4 w-4" />
                           {layout.name}
                         </DropdownMenuItem>
                       );
@@ -170,7 +161,7 @@ export function TopBar() {
                     return (
                       <DropdownMenuItem key={layout.name} asChild>
                         <Link to={to} onClick={() => setActiveSection(layout.name)}>
-                          <Icon className="mr-2 h-4 w-4" />
+                          <SchemaIcon name={layout.icon} className="mr-2 h-4 w-4" />
                           {layout.name}
                         </Link>
                       </DropdownMenuItem>

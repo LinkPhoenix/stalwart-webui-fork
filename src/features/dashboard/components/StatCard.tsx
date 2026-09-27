@@ -5,8 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
-import { Info } from 'lucide-react';
+import { HelpCircle, Info } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,23 +15,10 @@ import type { Metric } from '../types/metrics';
 import { cardValue, formatValue, sparklineData, computeDelta } from '../helpers';
 import { useLiveMetricsStore } from '../stores/liveMetricsStore';
 import { getChartColor } from '@/components/ui/chart';
-
-const warnedIcons = new Set<string>();
+import { SchemaIcon } from '@/components/common/SchemaIcon';
 
 function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const formatted = name
-    .split('-')
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join('');
-  const IconComp = (LucideIcons as Record<string, unknown>)[formatted] as LucideIcons.LucideIcon | undefined;
-  if (!IconComp) {
-    if (import.meta.env.DEV && !warnedIcons.has(name)) {
-      warnedIcons.add(name);
-      console.warn(`Unknown icon name: "${name}"`);
-    }
-    return <LucideIcons.HelpCircle className={className} />;
-  }
-  return <IconComp className={className} />;
+  return <SchemaIcon name={name} className={className} fallback={HelpCircle} warnUnknown />;
 }
 
 interface StatCardProps {

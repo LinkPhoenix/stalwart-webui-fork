@@ -7,13 +7,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import * as LucideIcons from 'lucide-react';
-import { Loader2, PanelsTopLeft, RefreshCw } from 'lucide-react';
+import { HelpCircle, Loader2, PanelsTopLeft, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SchemaIcon } from '@/components/common/SchemaIcon';
 import { useAccountStore } from '@/stores/accountStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { OVERVIEW_CARDS, OVERVIEW_SECTIONS } from '@/features/overview/cards';
@@ -28,22 +28,8 @@ import {
 /** Manual refresh is rate-limited so the overview can't hammer JMAP. */
 const REFRESH_COOLDOWN_MS = 10_000;
 
-const warnedIcons = new Set<string>();
-
 function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const formatted = name
-    .split('-')
-    .map((s) => s[0].toUpperCase() + s.slice(1))
-    .join('');
-  const IconComp = (LucideIcons as Record<string, unknown>)[formatted] as LucideIcons.LucideIcon | undefined;
-  if (!IconComp) {
-    if (import.meta.env.DEV && !warnedIcons.has(name)) {
-      warnedIcons.add(name);
-      console.warn(`Unknown icon name: "${name}"`);
-    }
-    return <LucideIcons.HelpCircle className={className} />;
-  }
-  return <IconComp className={className} />;
+  return <SchemaIcon name={name} className={className} fallback={HelpCircle} warnUnknown />;
 }
 
 function OverviewStatCard({
