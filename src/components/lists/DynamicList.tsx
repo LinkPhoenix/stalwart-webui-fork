@@ -2106,6 +2106,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
               <Button variant="ghost" size="sm" className="gap-2">
                 <Filter className="h-4 w-4" />
                 {t('list.filters', 'Filters')}
+                {filtersActive && (
+                  <Badge variant="secondary">
+                    {Object.entries(appliedFilters).filter(([key, value]) => !key.endsWith('Op') && value.trim()).length + Number(problemsOnly)}
+                  </Badge>
+                )}
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
@@ -2140,6 +2145,49 @@ export function DynamicList({ viewName }: DynamicListProps) {
               </div>
             )}
           </div>
+          {filtersActive && (
+            <div className="mt-2 flex flex-wrap items-center gap-2" aria-label={t('list.activeFilters', 'Active filters')}>
+              {problemsOnly && (
+                <Button variant="secondary" size="sm" className="h-7 gap-1" onClick={() => setProblemsOnly(false)}>
+                  {t('list.problemsOnly', 'Problems only')} <X className="h-3 w-3" />
+                </Button>
+              )}
+              {Object.entries(appliedFilters)
+                .filter(([key, value]) => !key.endsWith('Op') && value.trim())
+                .map(([field, value]) => {
+                  const definition = list.filters?.find((candidate) => candidate.field === field);
+                  return (
+                    <Button
+                      key={field}
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 max-w-full gap-1"
+                      title={`${definition?.label ?? field}: ${value}`}
+                      onClick={() => {
+                        setAppliedFilters((previous) => {
+                          const next = { ...previous };
+                          delete next[field];
+                          delete next[`${field}Op`];
+                          return next;
+                        });
+                        setFilterValues((previous) => {
+                          const next = { ...previous };
+                          delete next[field];
+                          delete next[`${field}Op`];
+                          return next;
+                        });
+                      }}
+                    >
+                      <span className="truncate">{definition?.label ?? field}: {value}</span>
+                      <X className="h-3 w-3 shrink-0" />
+                    </Button>
+                  );
+                })}
+              <Button variant="ghost" size="sm" className="h-7" onClick={resetFilters}>
+                {t('list.resetFilters', 'Clear all')}
+              </Button>
+            </div>
+          )}
           <CollapsibleContent>
             <div ref={filtersPanelRef} className="mt-2 rounded-lg border bg-background shadow-sm">
               <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
