@@ -4,18 +4,29 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-27
+
 ### Added
 - Listener lists show whether TLS is enabled, including non-implicit TLS listeners.
 - DNS provider lists show each provider's description alongside its type and timing settings.
 - Directory lists show the directory description alongside its authentication type.
 - Webhook lists show whether each tracer is enabled and its event filter.
+- List page-size preferences are remembered between visits.
+- Detail pages expose fields that are unset in the server response.
+- Related objects link to their detail page when the target can be resolved unambiguously.
+- Dashboard metrics show when their data was last refreshed.
+- Overview counts explain when the server does not provide a count.
 
 ### Changed
 - Column reordering follows the visible order, and the first visible column stays pinned after customizations.
+- List row and primary-cell interactions use consistent navigation targets.
 
 ### Fixed
 - Admin lists clear account-scoped rows and ignore stale responses when the active account changes.
 - Admin list preferences recover safely when saved column settings are malformed.
+- Sidebar navigation selects only the most specific matching route.
+- Description help controls are keyboard accessible.
+- Standard mobile web app metadata is present.
 
 ## [1.3.0] - 2026-09-27
 
