@@ -123,6 +123,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: admins can distinguish and recognize configured directories without opening them individually.
 - **Ideal fix**: the server's `x:Directory` list schema includes `description`; the fork column overlay is removed.
 
+### `webhook-configuration-columns` 🟡
+
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:WebHook` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **What**: adds the real `enable`, `eventsPolicy`, and `events` properties to the Webhooks list.
+- **Why**: the current list shows only the endpoint URL, so admins cannot see whether a webhook is enabled or which events it includes/excludes without opening each configuration.
+- **Ideal fix**: the server's `x:WebHook` list schema includes these real properties; the fork column overlay is removed.
+
 ### `account-alias-count-column` 🟡
 
 - **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)

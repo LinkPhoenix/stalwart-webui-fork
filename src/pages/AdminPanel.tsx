@@ -22,6 +22,7 @@ import {
   withDirectoryColumns,
   withDnsServerColumns,
   withNetworkListenerColumns,
+  withWebhookColumns,
 } from '@/lib/operationsListColumns';
 import { getDevelopmentAccessToken } from '@/lib/devAccessToken';
 import { setLocale } from '@/i18n';
@@ -172,7 +173,9 @@ export default function AdminPanel() {
                 withMailingListColumns(
                   withAccountListColumns(
                     withNetworkListenerColumns(
-                      withDnsServerColumns(withDirectoryColumns(withClientLogFilters(schemaData))),
+                      withDnsServerColumns(
+                        withDirectoryColumns(withWebhookColumns(withClientLogFilters(schemaData))),
+                      ),
                     ),
                   ),
                 ),

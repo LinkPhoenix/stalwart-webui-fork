@@ -51,3 +51,10 @@ export function withDnsServerColumns(schema: Schema): Schema {
 export function withDirectoryColumns(schema: Schema): Schema {
   return addRealPropertyColumn(schema, 'x:Directory', 'description', 'Description', '@type');
 }
+
+// SCHEMA-DEVIATION: webhook-configuration-columns (see SCHEMA_DEVIATIONS.md)
+export function withWebhookColumns(schema: Schema): Schema {
+  const withEnabled = addRealPropertyColumn(schema, 'x:WebHook', 'enable', 'Enabled', 'url');
+  const withPolicy = addRealPropertyColumn(withEnabled, 'x:WebHook', 'eventsPolicy', 'Event Policy', 'enable');
+  return addRealPropertyColumn(withPolicy, 'x:WebHook', 'events', 'Events', 'eventsPolicy');
+}
