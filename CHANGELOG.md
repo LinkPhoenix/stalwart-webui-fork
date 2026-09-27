@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. This projec
 ### Added
 - Listener lists show whether TLS is enabled, including non-implicit TLS listeners.
 - DNS provider lists show each provider's description alongside its type and timing settings.
+- Directory lists show the directory description alongside its authentication type.
 
 ### Changed
 - Column reordering follows the visible order, and the first visible column stays pinned after customizations.

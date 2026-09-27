@@ -46,3 +46,8 @@ export function withNetworkListenerColumns(schema: Schema): Schema {
 export function withDnsServerColumns(schema: Schema): Schema {
   return addRealPropertyColumn(schema, 'x:DnsServer', 'description', 'Description', '@type');
 }
+
+// SCHEMA-DEVIATION: directory-description-column (see SCHEMA_DEVIATIONS.md)
+export function withDirectoryColumns(schema: Schema): Schema {
+  return addRealPropertyColumn(schema, 'x:Directory', 'description', 'Description', '@type');
+}
