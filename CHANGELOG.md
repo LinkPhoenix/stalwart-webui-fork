@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-07
+
+### Fixed
+- Previous navigation restores the immediately preceding page, and log auto-refresh pauses on later pages and resumes on returning to the first page. Thank you [@gaston-senac](https://github.com/gaston-senac) for reporting these bugs and contributing [PR #1](https://github.com/LinkPhoenix/stalwart-webui-fork/pull/1).
+- List refreshes and actions on selected rows preserve the current page instead of shifting rows or resetting client-filtered lists to page one.
+- JMAP results retain query order even when the server returns objects in a different order, including batched retrieval used by client-filtered lists and CSV exports.
+- Failed pagination requests preserve the displayed page and its history. History resets when filters, sort order, page size, view, or account changes.
+- Refreshes recover by page position when an action removes the page's cursor. Deleting the last page's remaining rows reveals the new last page, and actions on all matching rows clear cached page history.
+- Pagination clears selections from the previous page, and action completion waits for the list reload.
+
+### Security
+- Update the transitive development dependency `source-map-js` to 1.2.2 to address [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q).
+
 ## [1.3.1] - 2026-09-27
 
 ### Added
