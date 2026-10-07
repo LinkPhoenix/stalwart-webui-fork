@@ -172,7 +172,12 @@ export async function jmapGetBatched(
     allItems.push(...list);
   }
 
-  return allItems;
+  // /get does not guarantee request order, including within each batch.
+  const itemsById = new Map(allItems.map((item) => [item.id, item]));
+  return ids.flatMap((id) => {
+    const item = itemsById.get(id);
+    return item ? [item] : [];
+  });
 }
 
 export async function jmapQueryAll(

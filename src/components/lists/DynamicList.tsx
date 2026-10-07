@@ -755,7 +755,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     [displayNames],
   );
 
-  const [anchorStack, setAnchorStack] = useState<string[]>([]);
+  const [pageHistory, setPageHistory] = useState<Record<string, unknown>[][]>([]);
   const [currentAnchor, setCurrentAnchor] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectAllMode, setSelectAllMode] = useState(false);
@@ -859,7 +859,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     listFetchRequestId.current += 1;
     setItems([]);
     setTotal(null);
-    setAnchorStack([]);
+    setPageHistory([]);
     setCurrentAnchor(null);
     setSelectedIds(new Set());
     setSelectAllMode(false);
@@ -881,7 +881,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
     listFetchRequestId.current += 1;
     setItems([]);
     setTotal(null);
-    setAnchorStack([]);
+    setPageHistory([]);
     setCurrentAnchor(null);
     setSelectedIds(new Set());
     setSelectAllMode(false);
@@ -963,7 +963,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   );
 
   const fetchData = useCallback(
-    async (anchor: string | null, anchorOffset: number = 1) => {
+    async (anchor: string | null, anchorOffset: number = 1, requestedPage: number = 0) => {
       if (!resolved || !resolved.list || !schema) return;
 
       const { obj, list } = resolved;
@@ -1051,11 +1051,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
             });
           }
           setClientAllItems(matched);
-          setClientPage(0);
+          const restoredPage = Math.min(requestedPage, Math.max(0, Math.ceil(matched.length / pageSize) - 1));
+          setClientPage(restoredPage);
           setTotal(matched.length);
-          setItems(matched.slice(0, pageSize));
+          setItems(matched.slice(restoredPage * pageSize, (restoredPage + 1) * pageSize));
           setSelectedIds(new Set());
-          return;
+          setSelectAllMode(false);
+          return true;
         }
         setClientAllItems(null);
 
@@ -1071,16 +1073,43 @@ export function DynamicList({ viewName }: DynamicListProps) {
         } else {
           queryOptions.anchor = anchor;
           queryOptions.anchorOffset = anchorOffset;
+          if (anchorOffset === 0) queryOptions.calculateTotal = true;
         }
 
-        const responses = await jmapQueryAndGet(obj.objectName, accountId, queryOptions, properties);
+        let responses = await jmapQueryAndGet(obj.objectName, accountId, queryOptions, properties);
         if (!isCurrentRequest()) return;
+
+        if (anchor !== null && anchorOffset === 0 && responses[0][1].type === 'anchorNotFound') {
+          // A delete or update can remove the refresh anchor from the query.
+          // Retry once at the current page's position instead of jumping to page one.
+          delete queryOptions.anchor;
+          delete queryOptions.anchorOffset;
+          queryOptions.position = requestedPage * pageSize;
+          queryOptions.calculateTotal = true;
+          responses = await jmapQueryAndGet(obj.objectName, accountId, queryOptions, properties);
+          if (!isCurrentRequest()) return;
+        }
+
+        let restoredServerPage: number | null = null;
+        const pageResult = responses[0][1] as { ids?: string[]; total?: number };
+        if (anchorOffset === 0 && requestedPage > 0 && pageResult.ids?.length === 0 && pageResult.total != null) {
+          // Deleting the last page's remaining rows should reveal the new last page.
+          restoredServerPage = Math.max(0, Math.ceil(pageResult.total / pageSize) - 1);
+          delete queryOptions.anchor;
+          delete queryOptions.anchorOffset;
+          queryOptions.position = restoredServerPage * pageSize;
+          queryOptions.calculateTotal = true;
+          responses = await jmapQueryAndGet(obj.objectName, accountId, queryOptions, properties);
+          if (!isCurrentRequest()) return;
+        }
 
         const queryResp = responses[0];
         const getResp = responses[1];
 
-        if (queryResp[0].includes('/error') || getResp[0].includes('/error')) {
-          const errData = queryResp[0].includes('/error') ? queryResp[1] : getResp[1];
+        const queryFailed = queryResp[0] === 'error' || queryResp[0].endsWith('/error');
+        const getFailed = getResp[0] === 'error' || getResp[0].endsWith('/error');
+        if (queryFailed || getFailed) {
+          const errData = queryFailed ? queryResp[1] : getResp[1];
           setError(String((errData as Record<string, unknown>).type ?? t('list.unknownError', 'Unknown error')));
           return;
         }
@@ -1098,8 +1127,21 @@ export function DynamicList({ viewName }: DynamicListProps) {
           setTotal(queryData.total);
         }
 
-        setItems(getData.list ?? []);
+        // JMAP /get may return objects in a different order from /query.
+        // Cursor navigation must follow the query's ordered IDs.
+        const itemsById = new Map((getData.list ?? []).map((item) => [item.id, item]));
+        const orderedItems = queryData.ids.flatMap((id) => {
+          const item = itemsById.get(id);
+          return item ? [item] : [];
+        });
+        setItems(orderedItems);
+        if (restoredServerPage !== null) setPageHistory((history) => history.slice(0, restoredServerPage));
+        setCurrentAnchor(
+          anchor === null || restoredServerPage === 0 ? null : ((orderedItems[0]?.id as string) ?? null),
+        );
         setSelectedIds(new Set());
+        setSelectAllMode(false);
+        return true;
       } catch (err) {
         if (isCurrentRequest()) setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -1243,7 +1285,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
   useEffect(() => {
     if (!resolved?.list) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAnchorStack([]);
+    setPageHistory([]);
     setCurrentAnchor(null);
     fetchData(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1312,15 +1354,19 @@ export function DynamicList({ viewName }: DynamicListProps) {
     setAppliedFilters({});
   }, []);
 
+  const currentPage = clientAllItems !== null ? clientPage : pageHistory.length;
+
   const handleRefresh = useCallback(() => {
     if (refreshOnCooldown) return;
     setRefreshOnCooldown(true);
-    fetchData(currentAnchor, 0);
+    fetchData(currentAnchor, 0, currentPage);
     refreshCooldownTimer.current = setTimeout(() => setRefreshOnCooldown(false), REFRESH_COOLDOWN_MS);
-  }, [refreshOnCooldown, fetchData, currentAnchor]);
+  }, [refreshOnCooldown, fetchData, currentAnchor, currentPage]);
+
+  const isFirstPage = clientAllItems !== null ? clientPage === 0 : pageHistory.length === 0;
 
   useEffect(() => {
-    if (!isLogEntries || !logAutoRefresh) return;
+    if (!isLogEntries || !logAutoRefresh || !isFirstPage || loading) return;
 
     const tick = () => {
       if (document.visibilityState === 'hidden') return;
@@ -1329,7 +1375,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
     const id = window.setInterval(tick, LOG_AUTO_REFRESH_MS);
     return () => window.clearInterval(id);
-  }, [isLogEntries, logAutoRefresh, handleRefresh]);
+  }, [isLogEntries, logAutoRefresh, isFirstPage, loading, handleRefresh]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -1349,11 +1395,13 @@ export function DynamicList({ viewName }: DynamicListProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterValues, sort, appliedFilters, problemsOnly, needsReportProperty]);
 
-  const handleNextPage = useCallback(() => {
+  const handleNextPage = useCallback(async () => {
     if (clientAllItems !== null) {
       const nextPage = clientPage + 1;
       setClientPage(nextPage);
       setItems(clientAllItems.slice(nextPage * pageSize, nextPage * pageSize + pageSize));
+      setSelectedIds(new Set());
+      setSelectAllMode(false);
       return;
     }
 
@@ -1362,38 +1410,43 @@ export function DynamicList({ viewName }: DynamicListProps) {
     const lastId = lastItem?.id as string;
     if (!lastId) return;
 
-    const firstId = (items[0]?.id as string) ?? null;
-    if (firstId) {
-      setAnchorStack((prev) => [...prev, firstId]);
+    // Keep the current page if the request fails or becomes stale.
+    if (await fetchData(lastId, 1)) {
+      setPageHistory((prev) => [...prev, items]);
     }
-    setCurrentAnchor(lastId);
-    fetchData(lastId, 1);
   }, [items, fetchData, clientAllItems, clientPage, pageSize]);
 
-  const handlePrevPage = useCallback(() => {
+  const handlePrevPage = useCallback(async () => {
     if (clientAllItems !== null) {
       const prevPage = Math.max(0, clientPage - 1);
       setClientPage(prevPage);
       setItems(clientAllItems.slice(prevPage * pageSize, prevPage * pageSize + pageSize));
+      setSelectedIds(new Set());
+      setSelectAllMode(false);
       return;
     }
 
-    if (anchorStack.length === 0) {
+    if (pageHistory.length === 0) {
       return;
     }
 
-    const newStack = [...anchorStack];
-    const prevFirstId = newStack.pop()!;
-    setAnchorStack(newStack);
-
-    if (newStack.length === 0) {
-      setCurrentAnchor(null);
-      fetchData(null);
-    } else {
-      setCurrentAnchor(prevFirstId);
-      fetchData(prevFirstId, 0);
+    if (pageHistory.length === 1) {
+      // Reload the first page so returning to logs also shows new entries.
+      if (await fetchData(null)) setPageHistory([]);
+      return;
     }
-  }, [anchorStack, fetchData, clientAllItems, clientPage, pageSize]);
+
+    const previousPages = [...pageHistory];
+    const previousItems = previousPages.pop();
+    if (!previousItems) return;
+    listFetchRequestId.current += 1;
+    setPageHistory(previousPages);
+    setItems(previousItems);
+    setCurrentAnchor((previousItems[0]?.id as string) ?? null);
+    setSelectedIds(new Set());
+    setSelectAllMode(false);
+    setError(null);
+  }, [clientAllItems, clientPage, pageSize, fetchData, pageHistory]);
 
   const toggleSelectAll = useCallback(() => {
     if (selectedIds.size === items.length) {
@@ -1524,14 +1577,31 @@ export function DynamicList({ viewName }: DynamicListProps) {
 
         setSelectedIds(new Set());
         setSelectAllMode(false);
-        fetchData(currentAnchor, 0);
+        if (selectAllMode && totalSuccess > 0) {
+          // An action on all matches may have changed every cached page.
+          setPageHistory([]);
+          await fetchData(null);
+        } else {
+          await fetchData(currentAnchor, 0, currentPage);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
     },
-    [resolved, selectedIds, selectAllMode, buildFilter, buildSort, fetchData, currentAnchor, t, clientAllItems],
+    [
+      resolved,
+      selectedIds,
+      selectAllMode,
+      buildFilter,
+      buildSort,
+      fetchData,
+      currentAnchor,
+      currentPage,
+      t,
+      clientAllItems,
+    ],
   );
 
   const executeItemAction = useCallback(
@@ -1568,7 +1638,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             if (resp?.notUpdated?.[itemId]) {
               setError(friendlySetError(resp.notUpdated[itemId]));
             } else {
-              fetchData(currentAnchor, 0);
+              await fetchData(currentAnchor, 0, currentPage);
             }
           } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
@@ -1588,7 +1658,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
             if (resp?.notDestroyed?.[itemId]) {
               setError(friendlySetError(resp.notDestroyed[itemId]));
             } else if (resp?.destroyed?.includes(itemId)) {
-              fetchData(currentAnchor, 0);
+              await fetchData(currentAnchor, 0, currentPage);
             } else {
               setError(
                 t('list.deleteNotConfirmed', 'Delete failed: item was not confirmed as destroyed by the server.'),
@@ -1605,7 +1675,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
           break;
       }
     },
-    [resolved, viewName, viewToSection, navigate, fetchData, currentAnchor, t],
+    [resolved, viewName, viewToSection, navigate, fetchData, currentAnchor, currentPage, t],
   );
 
   const itemDetailPath = useCallback(
@@ -1691,11 +1761,11 @@ export function DynamicList({ viewName }: DynamicListProps) {
   // SCHEMA-DEVIATION: bulk-quota-change-action (see SCHEMA_DEVIATIONS.md)
   const canBulkChangeQuota = hasQuotaUsageColumn && canUpdate;
 
-  const pageStart = clientAllItems !== null ? clientPage * pageSize : anchorStack.length * pageSize;
+  const pageStart = clientAllItems !== null ? clientPage * pageSize : pageHistory.length * pageSize;
   const rangeStart = pageStart + 1;
   const rangeEnd = pageStart + items.length;
   const hasNextPage = clientAllItems !== null ? rangeEnd < clientAllItems.length : total !== null && rangeEnd < total;
-  const hasPrevPage = clientAllItems !== null ? clientPage > 0 : anchorStack.length > 0;
+  const hasPrevPage = clientAllItems !== null ? clientPage > 0 : pageHistory.length > 0;
 
   function renderFilter(filterDef: FilterDef): React.ReactNode {
     const value = filterValues[filterDef.field] ?? '';
@@ -2800,7 +2870,7 @@ export function DynamicList({ viewName }: DynamicListProps) {
               onValueChange={(value) => {
                 const nextSize = Number(value);
                 if (!PAGE_SIZE_OPTIONS.includes(nextSize)) return;
-                setAnchorStack([]);
+                setPageHistory([]);
                 setCurrentAnchor(null);
                 setClientPage(0);
                 setSelectedIds(new Set());
