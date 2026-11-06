@@ -12,6 +12,7 @@ import { useBlobText } from '@/data/objects';
 import { errorMessage } from '@/lib/jmapErrors';
 import { BufferedTextarea } from '@/components/forms/widgets/BufferedInputs';
 import { SievepadButton } from '@/components/forms/SievepadButton';
+import { SieveEditorField } from '@/components/forms/widgets/SieveEditorField';
 import { useFormContext } from '@/components/forms/formContext';
 import type { WidgetProps } from '@/components/forms/widgets/types';
 import type { FieldTypeBlobId } from '@/types/schema';
@@ -62,17 +63,28 @@ export function BlobWidget({ type, value, onChange, readOnly, control }: WidgetP
 
   return (
     <div className="space-y-1">
-      <BufferedTextarea
-        {...control}
-        value={text}
-        onCommit={(text) => {
-          setEdited(text);
-          onChange(text);
-        }}
-        disabled={readOnly}
-        rows={8}
-        className="font-mono text-xs"
-      />
+      {type.format === 'sieve' ? (
+        <SieveEditorField
+          value={text}
+          onCommit={(next) => {
+            setEdited(next);
+            onChange(next);
+          }}
+          readOnly={readOnly}
+        />
+      ) : (
+        <BufferedTextarea
+          {...control}
+          value={text}
+          onCommit={(text) => {
+            setEdited(text);
+            onChange(text);
+          }}
+          disabled={readOnly}
+          rows={8}
+          className="font-mono text-xs"
+        />
+      )}
       {isOwnEdit && (
         <p className="text-xs font-medium text-warning">
           {t('field.contentModified', 'Content modified (will be saved as a new blob)')}

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { SECRET_MASK } from '@/lib/jmapUtils';
 import { cn } from '@/lib/utils';
 import { BufferedInput, BufferedTextarea } from '@/components/forms/widgets/BufferedInputs';
+import { SieveEditorField } from '@/components/forms/widgets/SieveEditorField';
 import { formatPlaceholder, inputTypeFor } from '@/components/forms/widgets/placeholders';
 import type { WidgetProps } from '@/components/forms/widgets/types';
 import type { FieldTypeString } from '@/types/schema';
@@ -73,7 +74,7 @@ export function MultilineWidget(props: WidgetProps<FieldTypeString>) {
     );
   }
   if (type.format === 'sieve') {
-    return <BufferedTextarea {...common} rows={16} spellCheck={false} className="font-mono text-xs" />;
+    return <SieveEditorField value={common.value} onCommit={commit} readOnly={readOnly} />;
   }
   return <BufferedTextarea {...common} rows={4} />;
 }
