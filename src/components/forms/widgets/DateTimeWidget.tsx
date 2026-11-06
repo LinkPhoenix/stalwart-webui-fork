@@ -34,6 +34,8 @@ function parseDate(value: unknown): Date | null {
 export function DateTimeWidget({ type, value, onChange, readOnly, control }: WidgetProps<FieldTypeUtcDateTime>) {
   const { t } = useTranslation();
   const selected = parseDate(value);
+  // The current time is only the default shown while no date is picked, so an unstable value is harmless.
+  // oxlint-disable-next-line react/purity
   const localTime = (selected ?? new Date()).toTimeString().slice(0, 5);
 
   const commit = (day: Date, time: string) => {

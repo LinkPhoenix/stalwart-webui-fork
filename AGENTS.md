@@ -13,8 +13,8 @@ Community fork of [stalwartlabs/webui](https://github.com/stalwartlabs/webui), a
 - `bash scripts/dev-seed.sh` (or `pwsh ./scripts/dev-seed.ps1`) - Optional: seed sample Users/Groups/Mailing Lists/Roles for testing; idempotent
 - `bash scripts/dev-token.sh [duration_seconds]` (or `pwsh ./scripts/dev-token.ps1 [-DurationSeconds N]`) - Get a dev access token from that server, 3h by default
 - `npm run dev` - Dev server (proxies `/api` and `/jmap` to the test server)
-- `npm run typecheck` - `tsc --noEmit`
-- `npm run lint` - ESLint
+- `npm run typecheck` - `tsc --noEmit` (TypeScript 7, native compiler)
+- `npm run lint` - Oxlint (config in `.oxlintrc.json`; CI adds `--deny-warnings`)
 - `npm run test` - Vitest (`npm run test:watch` to watch)
 - `npm run build` - `tsc -b && vite build`
 

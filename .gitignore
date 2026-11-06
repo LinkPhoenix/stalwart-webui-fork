@@ -21,6 +21,8 @@ scripts/*
 !scripts/dev-seed.ps1
 !scripts/dev-seed.sh
 !scripts/dev-seed-reports.ps1
+!scripts/validate-release-tag.mjs
+!scripts/validate-release-tag.test.mjs
 *.md
 !README.md
 !CHANGELOG.md
@@ -45,6 +47,7 @@ release_body.md
 .*
 !.gitignore
 !.prettierrc
+!.oxlintrc.json
 !.env.development
 !.github/
 !.vscode/
