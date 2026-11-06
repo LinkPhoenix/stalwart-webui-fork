@@ -217,3 +217,59 @@ NOT done yet (list-level deviations, still need re-implementation on `useDynamic
 `account-client-sort`, `mailbox-client-hierarchy-sort`, `report-problems-only-filter`, `log-client-filters` (rendering/filtering),
 `webapp-enabled-column-fallback`, `sieve-script-active-column-fallback`, `bulk-quota-change-action`, `byte-size-number-format` (likely obsolete).
 Their schema column injections still run, but the new list renders those synthetic columns as plain scalars. Also pending: square-corner sidebar styling, the `data-density` list density, e2e suite, manual smoke list, `SCHEMA_DEVIATIONS.md` path updates.
+
+## 9. Audit: fork features lost in the 2.0.5 merge (2026-11-06)
+
+Method: compared the fork's CHANGELOG (1.0.x to 1.3.2) with the merged tree, searched for orphaned
+modules (files nothing imports any more) and checked the Accounts list in the running app.
+Orphaned fork modules: `SieveEditor`, `ChangeQuotaDialog` (+ `PromptSetPropertyDialog`), `ReportSummaryCell`,
+`SizeDisplay`, `byteSizeFormat`, `csvExport`, `fetchAllGuardrails`, `listColumnPreferences`, `logFilterPresets`,
+`queueOpsLinks`, `useCurrentAccount`, `ui/scroll-area`.
+
+### A. Lists (all lived in the old `DynamicList.tsx`; upstream's list has none of them)
+
+| Feature | Value | Notes |
+|---------|-------|-------|
+| CSV export (same columns as the table) | High | `csvExport.ts` orphaned |
+| Column visibility and order preferences, saved per list | High | `listColumnPreferences.ts` orphaned |
+| Page size 25/50/100, remembered | High | upstream is fixed at 25 (`LIST_PAGE_SIZE`) |
+| Active filter chips + count; "Exact match only" hint | Medium | |
+| Empty state: icon + Create CTA, "no matches" with Reset | Medium | |
+| Synthetic columns: Accounts Role / Usage-Quota bar / Aliases; Groups, Mailing lists, Domains alias counts; Roles permission counts | High | injected by `lib/*Columns.ts` but rendered as "-" (confirmed on Accounts) |
+| Client-side sort on those columns (`clientSortable`) | High | backend rejects server sort |
+| Report summary columns + coloured badges + "Problems only" | High | `ReportSummaryCell` orphaned |
+| Mailbox hierarchy (indented tree) | Medium | |
+| Bulk "Change quota..." + generic prompted mass action | Medium | `ChangeQuotaDialog` orphaned |
+| Sieve script Active column; Web Applications Enabled column and "Active WebUI" card with update action | Medium | |
+| Log Entries: Level/Event filters, named presets, 10 s auto-refresh, rate-limited Refresh | High | `logFilterPresets` orphaned; the client filters need a post-fetch step |
+| Fetch-all guardrails (warn >2 000, refuse >10 000) | High | required by every fetch-all feature above |
+| Queued messages guidance + links (`queueOpsLinks`) | Low | |
+| Sticky headers, narrow-screen cards, a11y (`aria-sort`, keyboard rows), middle-click/new-tab on rows | Medium | upstream rebuilt the table: re-test each |
+| List density (Comfortable/Compact) | Medium | setting still exists but no list consumes `data-list-density` any more |
+| Negative disk usage in red + recalculation tooltip, `SizeDisplay` | Low | |
+
+### B. Forms and detail pages
+
+| Feature | Value | Notes |
+|---------|-------|-------|
+| Syntax-highlighted, foldable Sieve editor (CodeMirror) | High | `SieveEditor` orphaned; upstream 2.0 adds `format: 'sieve'` fields, check how its widget renders |
+| Expand-to-fit control on long textareas | Low | was in `FieldWidget` |
+| Switches green when on / red when off | Low | check `ui/switch` |
+| Detail page: "show N empty fields" toggle; related objects link to their detail page | Medium | was in `DynamicView`; upstream `DynamicView` is different |
+| Object-list cache invalidation after create/update (replaced by TanStack Query) | None | covered upstream |
+
+### C. Shell and misc
+
+| Feature | Value | Notes |
+|---------|-------|-------|
+| Username and email in the TopBar user menu | Medium | `useCurrentAccount` orphaned |
+| Square-corner sidebar styling (full-bleed rows) | Low | Appearance "square" still flips radius tokens |
+| Dashboard "last refreshed" timestamps | Low | upstream rewrote dashboards, verify |
+| Shared styled `ScrollArea` | None | upstream layout scrolls natively |
+| Per-section last visited page, page titles, command palette entries, logo version tooltip | None | present (upstream or re-attached) |
+
+Kept and working after the merge: Overview, Getting Started (with icons), Appearance (defaults changed to dark / default / rounded / comfortable), Changelog, sidebar accordion, backend icons in variant selects,
+dev token bypass, OAuth proxy and dev client, `forkSchema` patches, tests.
+
+Suggested order: (1) list core (synthetic columns, client sort, fetch-all guardrails, page size, column prefs, CSV export),
+(2) Log Entries and report features, (3) Sieve editor and detail-page extras, (4) bulk quota, density, polish.
