@@ -29,6 +29,7 @@ import { Pagination } from './Pagination';
 import { RowActions } from './RowActions';
 import { SelectionBanner } from './SelectionBanner';
 import { itemActionHref, resolveItemActions, resolveMassActions, type ResolvedItemAction } from './listActions';
+import { isClientSortableColumn } from '@/lib/schemaDeviationTypes';
 import { getListFields, itemId, itemLabel } from './listQuery';
 import { useDynamicList } from './useDynamicList';
 import { useListActions } from './useListActions';
@@ -106,6 +107,12 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
     (f) => f.type !== 'objectId' || canAccessView(schema, f.objectName, 'Get', checkers),
   );
 
+  // SCHEMA-DEVIATION: account-client-sort — client-sortable columns can be sorted too.
+  const sortableColumns = new Set([
+    ...(list.sort ?? []),
+    ...list.columns.filter(isClientSortableColumn).map((c) => c.name),
+  ]);
+
   const busy = listState.isFetching || actions.pending;
   const selectedCount = selection.allMatching ? (total ?? selection.selectedIds.length) : selection.selectedIds.length;
   const nameFor = (count: number) => (count === 1 ? list.singularName : list.pluralName);
@@ -115,9 +122,10 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
     const name = nameFor(count);
     const allMatching = selection.allMatching;
     const run = async () => {
+      // In client mode the matching set is only known locally, so send its ids.
       const ok = await actions.runMassAction(action, {
-        ids: selection.selectedIds,
-        allMatching,
+        ids: allMatching && listState.allIds ? listState.allIds : selection.selectedIds,
+        allMatching: allMatching && !listState.clientMode,
         filter: listState.jmapFilter,
         sort: listState.jmapSort,
       });
@@ -246,7 +254,7 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
           schema={schema}
           objectName={objectName}
           sort={state.sort}
-          sortable={new Set(list.sort ?? [])}
+          sortable={sortableColumns}
           onSort={listState.toggleSort}
           selection={massActions.length > 0 ? selection : null}
           rowHref={(id) => (section ? `/${section}/${viewName}/${id}` : null)}
@@ -265,6 +273,7 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
                 )
               : null
           }
+          depths={listState.depths}
           loading={listState.isLoading}
           busy={busy}
         />

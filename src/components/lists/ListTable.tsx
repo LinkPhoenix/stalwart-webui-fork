@@ -33,6 +33,8 @@ interface ListTableProps {
   rowHref: (id: string) => string | null;
   rowLabel: (item: ListItem) => string;
   renderRowActions: ((item: ListItem, id: string, label: string) => ReactNode) | null;
+  /** Nesting depth per row id (mailbox tree); indents the first column. */
+  depths?: ReadonlyMap<string, number> | null;
   loading: boolean;
   busy: boolean;
 }
@@ -56,6 +58,7 @@ export function ListTable({
   rowHref,
   rowLabel,
   renderRowActions,
+  depths,
   loading,
   busy,
 }: ListTableProps) {
@@ -138,7 +141,12 @@ export function ListTable({
                     );
                     if (index === 0) {
                       return (
-                        <th key={col.name} scope="row" className={cn(BODY_CELL, 'text-left font-normal')}>
+                        <th
+                          key={col.name}
+                          scope="row"
+                          className={cn(BODY_CELL, 'text-left font-normal')}
+                          style={depths?.get(id) ? { paddingLeft: `${1.25 + depths.get(id)! * 1.25}rem` } : undefined}
+                        >
                           {href ? (
                             <Link
                               to={href}
