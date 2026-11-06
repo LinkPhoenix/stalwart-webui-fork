@@ -26,6 +26,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { ColumnsMenu } from './ColumnsMenu';
 import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
+import { LogListTools } from './LogListTools';
 import { ListTable } from './ListTable';
 import { ListError, ListMessage, ListSpinner } from './ListStates';
 import { MassActionBar, type RunnableMassAction } from './MassActionBar';
@@ -122,6 +123,15 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
   // Fork list tools, shown on the filter row (or on their own row without filters).
   const tools = (
     <>
+      {objectName === 'x:Log' && (
+        <LogListTools
+          filters={state.filters}
+          isFirstPage={state.anchors.length === 0}
+          isFetching={listState.isFetching}
+          onRefresh={listState.refetch}
+          onApplyFilters={listState.applyFilters}
+        />
+      )}
       <ColumnsMenu columns={columns} />
       <ExportCsvButton
         schema={schema}
