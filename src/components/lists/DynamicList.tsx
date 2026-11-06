@@ -27,6 +27,8 @@ import { ColumnsMenu } from './ColumnsMenu';
 import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
 import { LogListTools } from './LogListTools';
+import { ProblemsOnlyToggle } from './ProblemsOnlyToggle';
+import { listNeedsReportProperty } from '@/lib/reportSummaries';
 import { ListTable } from './ListTable';
 import { ListError, ListMessage, ListSpinner } from './ListStates';
 import { MassActionBar, type RunnableMassAction } from './MassActionBar';
@@ -131,6 +133,9 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
           onRefresh={listState.refetch}
           onApplyFilters={listState.applyFilters}
         />
+      )}
+      {listNeedsReportProperty(list.columns) && (
+        <ProblemsOnlyToggle filters={state.filters} onApplyFilters={listState.applyFilters} />
       )}
       <ColumnsMenu columns={columns} />
       <ExportCsvButton
