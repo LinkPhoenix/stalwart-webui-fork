@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ * SPDX-License-Identifier: LicenseRef-SEL
  */
 
 export type Dashboard = {
@@ -9,6 +9,41 @@ export type Dashboard = {
   label: string;
   cards?: Card[];
   charts?: Chart[];
+  items?: DashboardItem[];
+};
+
+export type Tone = 'flat' | 'accent' | 'ink';
+
+export type Placement = {
+  span?: number;
+  rows?: number;
+  tone?: Tone;
+};
+
+export type DashboardItem = Placement &
+  (
+    | ({ type: 'stat' } & Card)
+    | ({ type: 'chart' } & Chart)
+    | ({ type: 'headline' } & Headline)
+    | ({ type: 'ranking' } & Ranking)
+  );
+
+export type Headline = {
+  title: string;
+  icon?: string;
+  numerator: string[];
+  denominator: string[];
+  aggregate?: Aggregate;
+  scope?: MetricScope;
+  description?: string;
+};
+
+export type Ranking = {
+  title: string;
+  icon?: string;
+  series: Series[];
+  valueFormat?: MetricFormat;
+  description?: string;
 };
 
 export type Card = {
@@ -17,10 +52,12 @@ export type Card = {
   source: CardSource;
   metrics: string[];
   aggregate?: Aggregate;
+  scope?: MetricScope;
   format: MetricFormat;
   description?: string;
   sparkline?: boolean;
   delta?: boolean;
+  polarity?: Polarity;
 };
 
 export type Chart = {
@@ -36,9 +73,12 @@ export type Series = {
   label: string;
   metrics: string[];
   aggregate?: Aggregate;
+  scope?: MetricScope;
 };
 
-export type Aggregate = 'sum' | 'avg';
+export type Aggregate = 'sum' | 'avg' | 'last';
+export type Polarity = 'higherIsBetter' | 'lowerIsBetter' | 'neutral';
+export type MetricScope = 'node' | 'cluster';
 export type ChartKind = 'line' | 'area' | 'bar';
 export type CardSource = 'live' | 'history';
 export type MetricFormat = 'number' | 'bytes' | 'duration' | 'percent';

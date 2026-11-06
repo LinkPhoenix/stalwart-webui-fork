@@ -4,9 +4,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useAuthStore } from './authStore';
-import { useCacheStore } from './cacheStore';
+import { QueryClient } from '@tanstack/react-query';
+import { bindQueryClientToAuth } from '@/data/queryClient';
+import { jmapKeys } from '@/data/keys';
 
 const initialState = {
   accessToken: null,
@@ -22,7 +24,6 @@ const initialState = {
 describe('authStore', () => {
   beforeEach(() => {
     useAuthStore.setState(initialState);
-    useCacheStore.setState({ displayNames: {}, objectLists: {} });
     vi.restoreAllMocks();
   });
 
@@ -172,31 +173,46 @@ describe('authStore', () => {
       expect(useAuthStore.getState().activeAccountId).toBe('a1');
     });
 
-    it('clears the cache store when switching to a different account', () => {
-      useAuthStore.setState({
-        accounts: {
-          a1: { name: 'A1', isPersonal: true },
-          a2: { name: 'A2', isPersonal: false },
-        },
-        activeAccountId: 'a1',
+    describe('query cache binding', () => {
+      let client: QueryClient;
+      let unbind: () => void;
+      const personalKey = [...jmapKeys.lists('Mailbox'), 'fixture'];
+      const managementKey = [...jmapKeys.lists('x:Domain'), 'fixture'];
+
+      beforeEach(() => {
+        client = new QueryClient();
+        client.setQueryData(personalKey, ['mailbox']);
+        client.setQueryData(managementKey, ['domain']);
+        unbind = bindQueryClientToAuth(client);
       });
-      useCacheStore.getState().setDisplayNames('x:Domain', { d1: 'example.org' });
 
-      useAuthStore.getState().switchAccount('a2');
+      afterEach(() => unbind());
 
-      expect(useCacheStore.getState().displayNames).toEqual({});
-    });
+      it('resets account-scoped queries when switching to a different account', () => {
+        useAuthStore.setState({
+          accounts: {
+            a1: { name: 'A1', isPersonal: true },
+            a2: { name: 'A2', isPersonal: false },
+          },
+          activeAccountId: 'a1',
+        });
 
-    it('does not clear the cache store when "switching" to the already-active account', () => {
-      useAuthStore.setState({
-        accounts: { a1: { name: 'A1', isPersonal: true } },
-        activeAccountId: 'a1',
+        useAuthStore.getState().switchAccount('a2');
+
+        expect(client.getQueryData(personalKey)).toBeUndefined();
+        expect(client.getQueryData(managementKey)).toEqual(['domain']);
       });
-      useCacheStore.getState().setDisplayNames('x:Domain', { d1: 'example.org' });
 
-      useAuthStore.getState().switchAccount('a1');
+      it('keeps cached queries when "switching" to the already-active account', () => {
+        useAuthStore.setState({
+          accounts: { a1: { name: 'A1', isPersonal: true } },
+          activeAccountId: 'a1',
+        });
 
-      expect(useCacheStore.getState().displayNames).toEqual({ 'x:Domain': { d1: 'example.org' } });
+        useAuthStore.getState().switchAccount('a1');
+
+        expect(client.getQueryData(personalKey)).toEqual(['mailbox']);
+      });
     });
   });
 

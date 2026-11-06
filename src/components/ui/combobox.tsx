@@ -33,6 +33,10 @@ interface ComboboxProps {
   nullLabel?: string;
   onFirstOpen?: () => void;
   className?: string;
+  id?: string;
+  'aria-invalid'?: boolean;
+  'aria-describedby'?: string;
+  'aria-labelledby'?: string;
 }
 
 export function Combobox({
@@ -48,6 +52,7 @@ export function Combobox({
   nullLabel = 'None',
   onFirstOpen,
   className,
+  ...ariaProps
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -74,13 +79,14 @@ export function Combobox({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
+          {...ariaProps}
           ref={triggerRef}
           type="button"
-          variant="outline"
+          variant="field"
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground', className)}
+          className={cn('w-full justify-between px-3', !selected && 'text-dim', className)}
         >
           <span className="flex items-center gap-2 truncate">
             {selected?.marker}

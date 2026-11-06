@@ -10,7 +10,8 @@ import { findPreferredDefaultLinkInLayout } from '@/lib/layout';
 
 function schemaWithLinks(): Schema {
   return {
-    objects: {},
+    // The Dashboard link is only visible when its backing object exists in the schema.
+    objects: { 'x:Metric': { type: 'object', description: 'Metric', permissionPrefix: 'Metric' } },
     schemas: {},
     fields: {},
     forms: {},

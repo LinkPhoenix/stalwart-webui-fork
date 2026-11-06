@@ -12,16 +12,6 @@ const SIEVEPAD_MAIN_SCRIPT = 'main';
 const BASE64_CHUNK_SIZE = 0x8000;
 const WARNING_DISMISSED_KEY = 'stalwart-sievepad-warning-dismissed';
 
-const SIEVE_SCRIPT_FIELDS: Record<string, string> = {
-  'x:SieveSystemScript': 'contents',
-  'x:SieveUserScript': 'contents',
-  SieveScript: 'blobId',
-};
-
-export function isSieveScriptField(objectName: string, fieldName: string): boolean {
-  return SIEVE_SCRIPT_FIELDS[objectName] === fieldName;
-}
-
 function toBase64Url(bytes: Uint8Array): string {
   let binary = '';
   for (let i = 0; i < bytes.length; i += BASE64_CHUNK_SIZE) {

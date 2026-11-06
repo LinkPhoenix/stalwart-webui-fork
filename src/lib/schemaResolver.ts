@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import type { Schema, ObjectTypeObject, ObjectTypeSingleton, Fields, Form, List } from '@/types/schema';
+import type { Schema, ObjectTypeObject, ObjectTypeSingleton, Fields, Form, List, EnumVariant } from '@/types/schema';
 
 export interface ResolvedObject {
   viewName: string;
@@ -76,6 +76,23 @@ export function resolveSchema(schema: Schema, objectName: string): ResolvedSchem
       fields: v.schemaName ? (schema.fields[v.schemaName] ?? null) : null,
     })),
   };
+}
+
+export const TENANT_PROPERTY = 'memberTenantId';
+
+function hasTenantProperty(schema: Schema, schemaName: string | undefined): boolean {
+  if (schemaName === undefined) return false;
+  const fields = schema.fields[schemaName];
+  return fields !== undefined && Object.hasOwn(fields.properties, TENANT_PROPERTY);
+}
+
+export function isTenantScoped(schema: Schema, viewOrObjectName: string): boolean {
+  const entry = schema.objects[viewOrObjectName];
+  const objectName = entry?.type === 'view' ? entry.objectName : viewOrObjectName;
+  const schemaEntry = schema.schemas[objectName];
+  if (!schemaEntry) return false;
+  if (schemaEntry.type === 'single') return hasTenantProperty(schema, schemaEntry.schemaName);
+  return schemaEntry.variants.some((v) => hasTenantProperty(schema, v.schemaName));
 }
 
 export function resolveList(schema: Schema, viewName: string, objectName: string): List | null {
@@ -316,9 +333,85 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export function getDisplayProperty(schema: Schema, objectName: string): string {
-  const list = schema.lists[objectName];
-  if (list?.labelProperty) return list.labelProperty;
-  if (list?.columns?.[0]) return list.columns[0].name;
+const EMPTY_ENUM: readonly EnumVariant[] = Object.freeze([]);
+
+export function getEnum(schema: Schema | null | undefined, enumName: string): readonly EnumVariant[] {
+  return schema?.enums[enumName] ?? EMPTY_ENUM;
+}
+
+export function getEnumVariant(
+  schema: Schema | null | undefined,
+  enumName: string,
+  name: string,
+): EnumVariant | undefined {
+  return schema?.enums[enumName]?.find((v) => v.name === name);
+}
+
+export interface ResolvedView {
+  object: ResolvedObject;
+  resolvedSchema: ResolvedSchema;
+  list: List | null;
+}
+
+const resolvedViewCache = new WeakMap<Schema, Map<string, ResolvedView | null>>();
+
+export function resolveView(schema: Schema, viewName: string): ResolvedView | null {
+  let perSchema = resolvedViewCache.get(schema);
+  if (!perSchema) {
+    perSchema = new Map();
+    resolvedViewCache.set(schema, perSchema);
+  }
+  const cached = perSchema.get(viewName);
+  if (cached !== undefined) return cached;
+
+  let view: ResolvedView | null = null;
+  const object = resolveObject(schema, viewName);
+  if (object) {
+    const resolvedSchema = resolveSchema(schema, object.objectName);
+    if (resolvedSchema) {
+      view = { object, resolvedSchema, list: resolveList(schema, viewName, object.objectName) };
+    }
+  }
+  perSchema.set(viewName, view);
+  return view;
+}
+
+function listLabelProperty(list: List | undefined): string | undefined {
+  return list?.labelProperty || list?.columns?.[0]?.name || undefined;
+}
+
+const displayPropertyCache = new WeakMap<Schema, Map<string, string>>();
+
+function computeDisplayProperty(schema: Schema, objectName: string): string {
+  const own = listLabelProperty(schema.lists[objectName]);
+  if (own) return own;
+
+  const entry = schema.objects[objectName];
+  const parentName = entry?.type === 'view' ? entry.objectName : objectName;
+  if (parentName !== objectName) {
+    const parent = listLabelProperty(schema.lists[parentName]);
+    if (parent) return parent;
+  }
+
+  for (const [name, obj] of Object.entries(schema.objects)) {
+    if (obj.type !== 'view' || obj.objectName !== parentName || name === objectName) continue;
+    const viaView = listLabelProperty(schema.lists[name]);
+    if (viaView) return viaView;
+  }
+
   return 'name';
+}
+
+export function getDisplayProperty(schema: Schema, objectName: string): string {
+  let perSchema = displayPropertyCache.get(schema);
+  if (!perSchema) {
+    perSchema = new Map();
+    displayPropertyCache.set(schema, perSchema);
+  }
+  let property = perSchema.get(objectName);
+  if (property === undefined) {
+    property = computeDisplayProperty(schema, objectName);
+    perSchema.set(objectName, property);
+  }
+  return property;
 }

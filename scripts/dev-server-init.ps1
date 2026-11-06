@@ -30,6 +30,9 @@ $DefaultTokenExpiryMs = 10800000 # 3 hours
 $recoveryCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("$($RecoveryAccount):$($RecoverySecret)"))
 $authHeader = @{ Authorization = "Basic $recoveryCreds" }
 
+$DevOAuthClientId = "stalwart-webui-dev"
+$DevOAuthRedirectUri = "http://localhost:5173/oauth/callback"
+
 function Invoke-Jmap($body) {
   Invoke-RestMethod -Uri "$ApiBaseUrl/jmap/" -Method Post -ContentType "application/json" -Headers $authHeader -Body ($body | ConvertTo-Json -Depth 10 -Compress) -TimeoutSec 15
 }
@@ -52,10 +55,30 @@ $queryResult = Invoke-Jmap @{
   using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
   methodCalls = @(, @("x:Domain/query", @{ accountId = $accountId }, "0"))
 }
+# The container cannot fetch the WebUI's CIMD document from the host (localhost
+# resolves to the container itself), so register a fixed OAuth client that
+# vite.config.ts injects as the oauth-client-id meta tag in development.
+function Register-DevOAuthClient {
+  $existing = Invoke-Jmap @{
+    using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
+    methodCalls = @(, @("x:OAuthClient/query", @{ accountId = $accountId; filter = @{ clientId = $DevOAuthClientId } }, "0"))
+  }
+  if ($existing.methodResponses[0][1].ids.Count -gt 0) { return }
+  Write-Host "Registering the dev OAuth client ($DevOAuthClientId)..."
+  Invoke-Jmap @{
+    using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
+    methodCalls = @(, @("x:OAuthClient/set", @{
+          accountId = $accountId
+          create    = @{ c1 = @{ clientId = $DevOAuthClientId; description = "WebUI dev (Vite)"; redirectUris = @{ $DevOAuthRedirectUri = $true }; scopes = @{ full = $true } } }
+        }, "0"))
+  } | Out-Null
+}
+
 $alreadyBootstrapped = -not ($queryResult.methodResponses[0][1].type -eq "forbidden")
 
 if ($alreadyBootstrapped) {
   Write-Host "Server already bootstrapped, skipping setup. (Use 'docker compose down -v; npm run dev:server' to start fresh.)"
+  Register-DevOAuthClient
   return
 }
 
@@ -64,7 +87,7 @@ Invoke-Jmap @{
   using       = @("urn:ietf:params:jmap:core", "urn:stalwart:jmap")
   methodCalls = @(, @("x:Bootstrap/set", @{
         accountId = $accountId
-        update    = @{ singleton = @{ defaultDomain = $DevDomain; serverHostname = $DevHostname; requestTlsCertificate = $false } }
+        update    = @{ singleton = @{ defaultDomain = $DevDomain; defaultHostname = $DevHostname; requestTlsCertificate = $false } }
       }, "0"))
 } | Out-Null
 
@@ -143,5 +166,7 @@ try {
     } | Out-Null
   }
 } catch {}
+
+Register-DevOAuthClient
 
 Write-Host "Done. $DevAdminName@$DevDomain / $DevAdminSecret is ready - run scripts/dev-token.ps1 to get a token."

@@ -29,21 +29,14 @@ export function evaluateFetchAllTotal(total: number): FetchAllProbe {
  */
 export async function probeQueryTotal(
   objectType: string,
-  accountId: string,
   queryOptions: { filter?: Record<string, unknown>; sort?: Record<string, unknown>[] } = {},
 ): Promise<number> {
-  const responses = await jmapQuery(objectType, accountId, {
+  const data = await jmapQuery(objectType, {
     filter: queryOptions.filter,
     sort: queryOptions.sort,
     limit: 1,
     position: 0,
     calculateTotal: true,
   });
-  const result = responses[0];
-  if (result[0].includes('/error') || result[0] === 'error') {
-    const err = result[1] as Record<string, unknown>;
-    throw new Error(String(err.type ?? 'query failed'));
-  }
-  const data = result[1] as { total?: number };
   return data.total ?? 0;
 }

@@ -62,10 +62,7 @@ function Calendar({
           'flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-medium',
           defaultClassNames.dropdowns,
         ),
-        dropdown_root: cn(
-          'relative rounded-md border border-input shadow-xs has-focus:border-ring has-focus:ring-[3px] has-focus:ring-ring/50',
-          defaultClassNames.dropdown_root,
-        ),
+        dropdown_root: cn('field-surface relative rounded-lg', defaultClassNames.dropdown_root),
         dropdown: cn('absolute inset-0 bg-popover opacity-0', defaultClassNames.dropdown),
         caption_label: cn(
           'font-medium select-none',

@@ -8,7 +8,7 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
-import { formatSize } from '@/lib/durationFormat';
+import { formatSize } from '@/lib/format';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SizeDisplayProps {

@@ -8,6 +8,13 @@ The release workflow builds the GitHub release body from `CHANGELOG.md`. It must
 
 v1.1.4 shipped with only `## [Unreleased]` in the GitHub release because CI used `awk '/^## \[/{c++} c==1'`, which always takes the **first** `## [` heading — and that heading is always `[Unreleased]` (often empty after a cut). That was a CI bug; agents must still verify the published notes.
 
+## Version numbers
+
+- The fork's version follows the official WebUI it contains: after merging upstream `X.Y.Z`, release the fork as `X.Y.Z` (tag `vX.Y.Z`). 2.0.5 here is the official 2.0.5 plus the fork's additions.
+- A fork-only release between two upstream versions takes the next free patch number, and the CHANGELOG entry names the upstream version it is based on.
+- Upstream tags share these names. Fetch upstream with `git fetch upstream --no-tags`, and delete a local `vX.Y.Z` tag that points at an upstream commit before creating the fork's annotated tag. Never push tags with `--tags`.
+- `stalwart.minServerVersion` in `package.json` is the oldest Stalwart server the build supports. Keep it equal to upstream's.
+
 ## Cutting a release (checklist)
 
 1. Move every bullet under `## [Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD` section. Leave `## [Unreleased]` empty (heading only).

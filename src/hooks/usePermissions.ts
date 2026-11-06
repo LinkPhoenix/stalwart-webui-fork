@@ -4,64 +4,25 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useAccountStore } from '@/stores/accountStore';
+import { useAccountStore, selectIsCommunity } from '@/stores/accountStore';
 import { useSchemaStore } from '@/stores/schemaStore';
-import { resolveObject } from '@/lib/schemaResolver';
+import { canAccessView, createPermissionCheckers, type ObjectAction, type PermissionCheckers } from '@/lib/permissions';
 
-export function usePermissions() {
-  const { permissions, edition, hasPermission, hasObjectPermission } = useAccountStore();
+export function usePermissionCheckers(): PermissionCheckers {
+  const permissions = useAccountStore((s) => s.permissions);
+  return createPermissionCheckers(permissions);
+}
+
+export function useHasObjectPermission(permissionPrefix: string | null | undefined, action: ObjectAction): boolean {
+  return useAccountStore((s) => !!permissionPrefix && s.permissions.includes(`${permissionPrefix}${action}`));
+}
+
+export function useCanAccess(viewName: string | null | undefined, action: ObjectAction = 'Get'): boolean {
   const schema = useSchemaStore((s) => s.schema);
+  const checkers = usePermissionCheckers();
+  return !!viewName && canAccessView(schema, viewName, action, checkers);
+}
 
-  function canViewObject(viewName: string): boolean {
-    if (!schema) return false;
-    const resolved = resolveObject(schema, viewName);
-    if (!resolved) return false;
-    return hasObjectPermission(resolved.permissionPrefix, 'Get');
-  }
-
-  function canCreateObject(viewName: string): boolean {
-    if (!schema) return false;
-    const resolved = resolveObject(schema, viewName);
-    if (!resolved) return false;
-    if (resolved.objectType.type === 'singleton') return false;
-    return hasObjectPermission(resolved.permissionPrefix, 'Create');
-  }
-
-  function canUpdateObject(viewName: string): boolean {
-    if (!schema) return false;
-    const resolved = resolveObject(schema, viewName);
-    if (!resolved) return false;
-    return hasObjectPermission(resolved.permissionPrefix, 'Update');
-  }
-
-  function canDestroyObject(viewName: string): boolean {
-    if (!schema) return false;
-    const resolved = resolveObject(schema, viewName);
-    if (!resolved) return false;
-    if (resolved.objectType.type === 'singleton') return false;
-    return hasObjectPermission(resolved.permissionPrefix, 'Destroy');
-  }
-
-  function isEnterpriseHidden(enterprise?: boolean): boolean {
-    if (!enterprise) return false;
-    return edition === 'oss';
-  }
-
-  function isEnterpriseDisabled(enterprise?: boolean): boolean {
-    if (!enterprise) return false;
-    return edition === 'community';
-  }
-
-  return {
-    permissions,
-    edition,
-    hasPermission,
-    hasObjectPermission,
-    canViewObject,
-    canCreateObject,
-    canUpdateObject,
-    canDestroyObject,
-    isEnterpriseHidden,
-    isEnterpriseDisabled,
-  };
+export function useIsCommunity(): boolean {
+  return useAccountStore(selectIsCommunity);
 }

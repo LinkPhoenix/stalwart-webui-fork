@@ -10,11 +10,11 @@ import type { TooltipPayload } from 'recharts/types/state/tooltipSlice';
 import { cn } from '@/lib/utils';
 
 export const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ] as const;
 
 export function getChartColor(index: number): string {
@@ -39,7 +39,7 @@ export function ChartTooltipContent({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-lg border bg-background p-2 shadow-md">
+    <div className="popover-surface p-2.5">
       {label && <p className="mb-1 text-xs text-muted-foreground">{label}</p>}
       {payload.map((entry, i) => (
         <div key={i} className="flex items-center gap-2 text-sm">

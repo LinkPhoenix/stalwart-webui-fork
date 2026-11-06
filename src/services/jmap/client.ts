@@ -5,9 +5,18 @@
  */
 
 import { useAuthStore } from '@/stores/authStore';
-import { apiFetch } from '@/services/api';
+import type { Edition } from '@/stores/accountStore';
+import { apiFetchJson } from '@/services/api';
+import { JmapMethodError, JmapProtocolError } from '@/services/errors';
 import { logJmapExchange } from '@/lib/debug';
-import type { JmapMethodCall, JmapMethodResponse, JmapQueryResponse, JmapResponse } from '@/types/jmap';
+import type {
+  JmapGetResponse,
+  JmapMethodCall,
+  JmapMethodResponse,
+  JmapQueryResponse,
+  JmapResponse,
+  JmapSetResponse,
+} from '@/types/jmap';
 import type { Schema } from '@/types/schema';
 
 const JMAP_USING = [
@@ -22,6 +31,36 @@ const JMAP_USING = [
   'urn:ietf:params:jmap:vacationresponse',
 ];
 
+const MAX_QUERY_PAGES = 1000;
+
+export type JmapObject = Record<string, unknown>;
+
+export interface JmapCallOptions {
+  accountId?: string;
+  signal?: AbortSignal;
+}
+
+export interface JmapQueryOptions {
+  filter?: Record<string, unknown>;
+  sort?: Record<string, unknown>[];
+  limit?: number;
+  position?: number;
+  anchor?: string;
+  anchorOffset?: number;
+  calculateTotal?: boolean;
+}
+
+export interface JmapSetOptions {
+  create?: Record<string, JmapObject>;
+  update?: Record<string, JmapObject>;
+  destroy?: string[];
+}
+
+export interface BlobUpload {
+  data: string;
+  type?: string;
+}
+
 export function getAccountId(objectType: string): string {
   const { primaryAccountId, activeAccountId } = useAuthStore.getState();
   if (objectType.startsWith('x:')) {
@@ -32,29 +71,39 @@ export function getAccountId(objectType: string): string {
   return activeAccountId;
 }
 
-export async function jmapRequest(methodCalls: JmapMethodCall[], signal?: AbortSignal): Promise<JmapMethodResponse[]> {
-  const { apiUrl } = useAuthStore.getState();
-  let path = apiUrl || '/jmap';
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    try {
-      path = new URL(path).pathname;
-    } catch {
-      path = '/jmap';
-    }
+export function jmapApiPath(apiUrl: string | null): string {
+  const path = apiUrl || '/jmap';
+  if (!path.startsWith('http://') && !path.startsWith('https://')) return path;
+  try {
+    return new URL(path).pathname;
+  } catch {
+    return '/jmap';
   }
+}
 
+export function methodResult<T = JmapObject>(responses: JmapMethodResponse[], callId: string, methodName: string): T {
+  const entry = responses.find((r) => r[2] === callId);
+  if (!entry) {
+    throw new JmapProtocolError(`JMAP response for ${methodName} (call ${callId}) is missing`);
+  }
+  if (entry[0] === 'error') {
+    throw new JmapMethodError(methodName, callId, entry[1]);
+  }
+  return entry[1] as T;
+}
+
+export async function jmapRequest(methodCalls: JmapMethodCall[], signal?: AbortSignal): Promise<JmapMethodResponse[]> {
   const startedAt = performance.now();
-  const response = await apiFetch(path, {
+  const data = await apiFetchJson<JmapResponse>(jmapApiPath(useAuthStore.getState().apiUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      using: JMAP_USING,
-      methodCalls,
-    }),
+    body: JSON.stringify({ using: JMAP_USING, methodCalls }),
     signal,
   });
 
-  const data = (await response.json()) as JmapResponse;
+  if (!data || !Array.isArray(data.methodResponses)) {
+    throw new JmapProtocolError('Malformed JMAP response: missing methodResponses');
+  }
 
   logJmapExchange(methodCalls, data.methodResponses, performance.now() - startedAt);
 
@@ -69,111 +118,137 @@ export async function jmapRequest(methodCalls: JmapMethodCall[], signal?: AbortS
   return data.methodResponses;
 }
 
-export async function jmapGet(
+export async function jmapCall<T = JmapObject>(
+  methodName: string,
+  args: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const responses = await jmapRequest([[methodName, args, '0']], signal);
+  return methodResult<T>(responses, '0', methodName);
+}
+
+export function jmapGet(
   objectType: string,
-  accountId: string,
   ids: string[] | null,
   properties?: string[],
-  signal?: AbortSignal,
-): Promise<JmapMethodResponse[]> {
-  const args: Record<string, unknown> = { accountId, ids };
-  if (properties) {
-    args.properties = properties;
-  }
-  return jmapRequest([[`${objectType}/get`, args, '0']], signal);
+  options: JmapCallOptions = {},
+): Promise<JmapGetResponse> {
+  const args: Record<string, unknown> = { accountId: options.accountId ?? getAccountId(objectType), ids };
+  if (properties) args.properties = properties;
+  return jmapCall<JmapGetResponse>(`${objectType}/get`, args, options.signal);
 }
 
-interface JmapQueryOptions {
-  filter?: Record<string, unknown>;
-  sort?: Record<string, unknown>[];
-  limit?: number;
-  position?: number;
-  anchor?: string;
-  anchorOffset?: number;
-  calculateTotal?: boolean;
-}
-
-export async function jmapQuery(
+export async function jmapGetOne(
   objectType: string,
-  accountId: string,
-  options: JmapQueryOptions = {},
-): Promise<JmapMethodResponse[]> {
-  const args: Record<string, unknown> = { accountId, ...options };
-  return jmapRequest([[`${objectType}/query`, args, '0']]);
+  id: string,
+  properties?: string[],
+  options: JmapCallOptions = {},
+): Promise<JmapObject | null> {
+  const result = await jmapGet(objectType, [id], properties, options);
+  const match = result.list?.find((item) => item.id === id);
+  if (match) return match;
+  return id === 'singleton' ? (result.list?.[0] ?? null) : null;
 }
 
-interface JmapSetOptions {
-  create?: Record<string, Record<string, unknown>>;
-  update?: Record<string, Record<string, unknown>>;
-  destroy?: string[];
+export function jmapQuery(
+  objectType: string,
+  query: JmapQueryOptions = {},
+  options: JmapCallOptions = {},
+): Promise<JmapQueryResponse> {
+  const args = { accountId: options.accountId ?? getAccountId(objectType), ...query };
+  return jmapCall<JmapQueryResponse>(`${objectType}/query`, args, options.signal);
+}
+
+export function jmapSetArgs(objectType: string, set: JmapSetOptions, accountId?: string): Record<string, unknown> {
+  const args: Record<string, unknown> = { accountId: accountId ?? getAccountId(objectType) };
+  if (set.create && Object.keys(set.create).length > 0) args.create = set.create;
+  if (set.update && Object.keys(set.update).length > 0) args.update = set.update;
+  if (set.destroy && set.destroy.length > 0) args.destroy = set.destroy;
+  return args;
+}
+
+export function blobUploadCalls(blobs: Record<string, BlobUpload>, accountId: string): JmapMethodCall[] {
+  const tags = Object.keys(blobs);
+  if (tags.length === 0) return [];
+  const create: Record<string, unknown> = {};
+  for (const tag of tags) {
+    create[tag] = {
+      data: [{ 'data:asText': blobs[tag].data }],
+      type: blobs[tag].type ?? 'application/octet-stream',
+    };
+  }
+  return [['Blob/upload', { accountId, create }, 'blob']];
 }
 
 export async function jmapSet(
   objectType: string,
-  accountId: string,
-  options: JmapSetOptions = {},
-): Promise<JmapMethodResponse[]> {
-  const args: Record<string, unknown> = { accountId, ...options };
-  return jmapRequest([[`${objectType}/set`, args, '0']]);
+  set: JmapSetOptions,
+  options: JmapCallOptions & { blobs?: Record<string, BlobUpload> } = {},
+): Promise<JmapSetResponse> {
+  const accountId = options.accountId ?? getAccountId(objectType);
+  const methodName = `${objectType}/set`;
+  const blobCalls = blobUploadCalls(options.blobs ?? {}, accountId);
+  const responses = await jmapRequest(
+    [...blobCalls, [methodName, jmapSetArgs(objectType, set, accountId), 'set']],
+    options.signal,
+  );
+  if (blobCalls.length > 0) {
+    const upload = methodResult<{ notCreated?: Record<string, { type: string; description?: string }> | null }>(
+      responses,
+      'blob',
+      'Blob/upload',
+    );
+    const failed = upload.notCreated ? Object.values(upload.notCreated)[0] : undefined;
+    if (failed) throw new JmapMethodError('Blob/upload', 'blob', failed);
+  }
+  return methodResult<JmapSetResponse>(responses, 'set', methodName);
 }
 
 export async function jmapQueryAndGet(
   objectType: string,
-  accountId: string,
-  queryOptions: JmapQueryOptions = {},
+  query: JmapQueryOptions = {},
   properties?: string[],
-): Promise<JmapMethodResponse[]> {
-  const queryArgs: Record<string, unknown> = {
-    accountId,
-    ...queryOptions,
-  };
-
+  options: JmapCallOptions = {},
+): Promise<{ query: JmapQueryResponse; list: JmapObject[] }> {
+  const accountId = options.accountId ?? getAccountId(objectType);
   const getArgs: Record<string, unknown> = {
     accountId,
-    '#ids': {
-      resultOf: '0',
-      name: `${objectType}/query`,
-      path: '/ids',
-    },
+    '#ids': { resultOf: 'q', name: `${objectType}/query`, path: '/ids' },
   };
-  if (properties) {
-    getArgs.properties = properties;
-  }
+  if (properties) getArgs.properties = properties;
 
-  return jmapRequest([
-    [`${objectType}/query`, queryArgs, '0'],
-    [`${objectType}/get`, getArgs, '1'],
-  ]);
+  const responses = await jmapRequest(
+    [
+      [`${objectType}/query`, { accountId, ...query }, 'q'],
+      [`${objectType}/get`, getArgs, 'g'],
+    ],
+    options.signal,
+  );
+  const queryResult = methodResult<JmapQueryResponse>(responses, 'q', `${objectType}/query`);
+  const getResult = methodResult<JmapGetResponse>(responses, 'g', `${objectType}/get`);
+  return { query: queryResult, list: getResult.list ?? [] };
 }
 
 export async function jmapGetBatched(
   objectType: string,
-  accountId: string,
   ids: string[],
   properties?: string[],
-  signal?: AbortSignal,
-): Promise<Record<string, unknown>[]> {
+  options: JmapCallOptions = {},
+): Promise<JmapObject[]> {
   if (ids.length === 0) return [];
-
-  const batchSize = useAuthStore.getState().maxObjectsInGet;
-  const allItems: Record<string, unknown>[] = [];
-
+  const accountId = options.accountId ?? getAccountId(objectType);
+  const batchSize = Math.max(1, useAuthStore.getState().maxObjectsInGet);
+  const items: JmapObject[] = [];
   for (let offset = 0; offset < ids.length; offset += batchSize) {
-    if (signal?.aborted) break;
-    const batchIds = ids.slice(offset, offset + batchSize);
-    const args: Record<string, unknown> = { accountId, ids: batchIds };
-    if (properties) args.properties = properties;
-    const responses = await jmapRequest([[`${objectType}/get`, args, '0']], signal);
-    const result = responses[0];
-    if (result[0] === 'error') {
-      throw new Error(`JMAP ${objectType}/get error: ${(result[1] as Record<string, unknown>).type ?? 'unknown'}`);
-    }
-    const list = (result[1] as { list?: Record<string, unknown>[] }).list ?? [];
-    allItems.push(...list);
+    options.signal?.throwIfAborted();
+    const result = await jmapGet(objectType, ids.slice(offset, offset + batchSize), properties, {
+      accountId,
+      signal: options.signal,
+    });
+    items.push(...(result.list ?? []));
   }
-
   // /get does not guarantee request order, including within each batch.
-  const itemsById = new Map(allItems.map((item) => [item.id, item]));
+  const itemsById = new Map(items.map((item) => [item.id, item]));
   return ids.flatMap((id) => {
     const item = itemsById.get(id);
     return item ? [item] : [];
@@ -182,73 +257,74 @@ export async function jmapGetBatched(
 
 export async function jmapQueryAll(
   objectType: string,
-  accountId: string,
-  queryOptions: JmapQueryOptions = {},
-  signal?: AbortSignal,
+  query: JmapQueryOptions = {},
+  options: JmapCallOptions = {},
 ): Promise<string[]> {
+  const accountId = options.accountId ?? getAccountId(objectType);
   const allIds: string[] = [];
   let anchor: string | undefined;
-  const MAX_PAGES = 1000;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    if (signal?.aborted) break;
-
-    const args: Record<string, unknown> = { accountId, ...queryOptions };
+  for (let page = 0; page < MAX_QUERY_PAGES; page++) {
+    options.signal?.throwIfAborted();
+    const args: JmapQueryOptions = { ...query };
     if (anchor) {
       delete args.position;
       args.anchor = anchor;
       args.anchorOffset = 1;
     }
-
-    const responses = await jmapRequest([[`${objectType}/query`, args, '0']], signal);
-    const result = responses[0];
-    if (result[0] === 'error') {
-      throw new Error(`JMAP ${objectType}/query error: ${(result[1] as Record<string, unknown>).type ?? 'unknown'}`);
-    }
-
-    const data = result[1] as unknown as JmapQueryResponse;
+    const data = await jmapQuery(objectType, args, { accountId, signal: options.signal });
     const pageIds = data.ids ?? [];
     if (pageIds.length === 0) break;
-
     allIds.push(...pageIds);
-
     if (data.limit === undefined || data.limit === null) break;
-
     anchor = pageIds[pageIds.length - 1];
   }
-
   return allIds;
 }
 
 export async function jmapQueryAllAndGet(
   objectType: string,
-  accountId: string,
-  queryOptions: JmapQueryOptions = {},
+  query: JmapQueryOptions = {},
   properties?: string[],
-  signal?: AbortSignal,
-): Promise<{ ids: string[]; list: Record<string, unknown>[] }> {
-  const ids = await jmapQueryAll(objectType, accountId, queryOptions, signal);
+  options: JmapCallOptions = {},
+): Promise<{ ids: string[]; list: JmapObject[] }> {
+  const accountId = options.accountId ?? getAccountId(objectType);
+  const ids = await jmapQueryAll(objectType, query, { accountId, signal: options.signal });
   if (ids.length === 0) return { ids, list: [] };
-  const list = await jmapGetBatched(objectType, accountId, ids, properties, signal);
+  const list = await jmapGetBatched(objectType, ids, properties, { accountId, signal: options.signal });
   return { ids, list };
 }
 
-export async function fetchSession(): Promise<Record<string, unknown>> {
-  const response = await apiFetch('/jmap/session');
-  return response.json() as Promise<Record<string, unknown>>;
+export async function fetchBlobText(blobId: string, options: JmapCallOptions = {}): Promise<string | null> {
+  const item = await jmapGetOne('Blob', blobId, ['data:asText'], {
+    accountId: options.accountId ?? getAccountId('x:Blob'),
+    signal: options.signal,
+  });
+  if (!item) return null;
+  const data = item['data:asText'];
+  return typeof data === 'string' ? data : null;
 }
 
-export async function fetchSchema(): Promise<Schema> {
-  const response = await apiFetch('/api/schema');
-  return response.json() as Promise<Schema>;
+export interface JmapSession {
+  accounts: Record<string, { name: string; isPersonal: boolean }>;
+  primaryAccounts: Record<string, string>;
+  apiUrl?: string;
+  capabilities?: Record<string, Record<string, unknown>>;
 }
 
-interface AccountInfoResponse {
+export function fetchSession(signal?: AbortSignal): Promise<JmapSession> {
+  return apiFetchJson<JmapSession>('/jmap/session', { signal });
+}
+
+export function fetchSchema(signal?: AbortSignal): Promise<Schema> {
+  return apiFetchJson<Schema>('/api/schema', { signal });
+}
+
+export interface AccountInfoResponse {
   permissions: string[];
-  edition: 'enterprise' | 'community' | 'oss';
+  edition: Edition;
   locale: string;
 }
 
-export async function fetchAccountInfo(): Promise<AccountInfoResponse> {
-  const response = await apiFetch('/api/account');
-  return response.json() as Promise<AccountInfoResponse>;
+export function fetchAccountInfo(signal?: AbortSignal): Promise<AccountInfoResponse> {
+  return apiFetchJson<AccountInfoResponse>('/api/account', { signal });
 }

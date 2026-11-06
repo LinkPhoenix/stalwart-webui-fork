@@ -41,7 +41,7 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 
 ### `log-client-filters` 🟡
 
-- **Where**: [`src/lib/logFilters.ts`](src/lib/logFilters.ts), type augmentation in [`src/lib/schemaDeviationTypes.ts`](src/lib/schemaDeviationTypes.ts)
+- **Where**: [`src/lib/logFilters.ts`](src/lib/logFilters.ts) (schema patch), type augmentation in [`src/lib/schemaDeviationTypes.ts`](src/lib/schemaDeviationTypes.ts); applied by the fetch-all mode in [`src/components/lists/clientList.ts`](src/components/lists/clientList.ts) / [`src/components/lists/useDynamicList.ts`](src/components/lists/useDynamicList.ts) (`planClientMode`, `processClientRows`) and excluded from the server filter in [`src/components/lists/listQuery.ts`](src/components/lists/listQuery.ts); Log tools in [`src/components/lists/LogListTools.tsx`](src/components/lists/LogListTools.tsx)
 - **What**: injects `level` and `event` as filterable columns on the `x:Log` list, applied entirely client-side (`clientOnly` flag consumed by `DynamicList`). The `clientOnly` flag is declared as `ClientOnlyFilterEnum` (an intersection type), not on the official `FilterEnum` in `schema.ts`.
 - **Why**: Stalwart's JMAP `x:Log/query` returns `unsupportedFilter` for both properties today, even though they're returned per row.
 - **Ideal fix**: `stalwartlabs/stalwart` accepts `level`/`event` as real query filters; the schema then advertises them normally and `logFilters.ts` + the `ClientOnlyFilterEnum` augmentation are deleted.
@@ -62,106 +62,106 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 
 ### `account-quota-usage-column` 🟡
 
-- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts)
-- **What**: adds a synthetic `quotaUsage` column to the `x:Account/User` and `x:Account/Group` lists — not a real schema property, `DynamicList` resolves it from the `usedDiskQuota` + `quotas.maxDiskQuota` pair and formats it specially. Also re-adds `roles` on the Users list only (a real property, just not in the list's default columns).
+- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts) (schema patch); resolved by [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts) and rendered by [`src/components/lists/SyntheticCell.tsx`](src/components/lists/SyntheticCell.tsx)
+- **What**: adds a synthetic `quotaUsage` column to the `x:Account/User` and `x:Account/Group` lists — not a real schema property, the list resolves it from the `usedDiskQuota` + `quotas.maxDiskQuota` pair and formats it specially. Also re-adds `roles` on the Users list only (a real property, just not in the list's default columns).
 - **Why**: neither the Accounts nor the Groups list schema exposes usage/role as list columns, only as detail-view fields, even though both object types have real `usedDiskQuota`/`quotas` fields.
 - **Ideal fix**: the server's `x:Account/User` and `x:Account/Group` list schemas include `roles` (Users) and a computed usage/quota column natively; this file is deleted.
 
 ### `mailbox-client-hierarchy-sort` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `sortMailboxesByHierarchy` and the `isMailboxList` branch
+- **Where**: [`src/components/lists/clientList.ts`](src/components/lists/clientList.ts) — `sortMailboxesByHierarchy` (fetch-all mode for the `Mailbox` list); depth indentation in [`src/components/lists/ListTable.tsx`](src/components/lists/ListTable.tsx)
 - **What**: for the `Mailbox` list, fetches the *entire* result set (bypassing normal server pagination) and sorts it client-side so each parent mailbox is immediately followed by its children, with indentation depth tracked in React state.
 - **Why**: the server returns mailboxes in whatever order the query produces, not grouped by parent/child, and a mailbox's parent can land on a different page than the mailbox itself, so hierarchy can't be reconstructed one page at a time.
 - **Ideal fix**: the server offers a native tree/hierarchical ordering (or a `sort` that groups by ancestry) for `Mailbox/query`; the client-side full-fetch-and-sort is deleted in favor of normal paginated queries.
 
 ### `webapp-enabled-column-fallback` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `displayColumns` in the `isWebApplications` branch
+- **Where**: [`src/lib/displayColumns.ts`](src/lib/displayColumns.ts) (`withDisplayColumnFallbacks`, applied by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts))
 - **What**: reordering the `x:Application` list's real schema columns (Description first, Enabled second) is not a deviation, but if the schema's `list.columns` doesn't include an `enabled` column at all, a fallback column definition with a hardcoded label is fabricated client-side so the toggle still renders.
 - **Why**: the `x:Application` list schema is not guaranteed to expose `enabled` as a list column, even though it's a real object property (fetched separately via `properties.push('enabled')`).
 - **Ideal fix**: the server's `x:Application` list schema always includes `enabled` as a real column; the fallback branch is deleted (only the reordering logic remains, which is not a deviation).
 
 ### `byte-size-number-format` 🟡
 
-- **Where**: [`src/lib/byteSizeFormat.ts`](src/lib/byteSizeFormat.ts); applied in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) (`renderCellValue`) and [`src/components/views/DynamicView.tsx`](src/components/views/DynamicView.tsx) (`ViewValue`)
+- **Where**: [`src/lib/byteSizeFormat.ts`](src/lib/byteSizeFormat.ts); applied in [`src/components/lists/ListCell.tsx`](src/components/lists/ListCell.tsx) and the CSV export ([`src/lib/csvCellText.ts`](src/lib/csvCellText.ts))
 - **What**: when a number property is named like a byte quantity (`size`, `maxSize`, `usedDiskQuota`, `maxDiskQuota`) but the schema still advertises `integer` / `unsignedInteger`, display it with the shared dynamic size formatter (B → KB → MB → GB → TB) instead of a bare locale number such as `1,254`.
 - **Why**: most Stalwart byte fields correctly use `format: "size"`, but at least `x:QueuedMessage.size` is still `unsignedInteger` in the live schema, so queue/list Size columns showed unitless counts.
 - **Ideal fix**: the server's field schemas mark every byte quantity as `format: "size"` (including queued-message `size`); `byteSizeFormat.ts` and its call sites are deleted.
 
 ### `bulk-quota-change-action` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `canBulkChangeQuota` and the "Change quota…" `DropdownMenuItem`; [`src/components/lists/PromptSetPropertyDialog.tsx`](src/components/lists/PromptSetPropertyDialog.tsx) (generic client prompt); [`src/components/lists/ChangeQuotaDialog.tsx`](src/components/lists/ChangeQuotaDialog.tsx) (thin quota wrapper)
+- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `canBulkChangeQuota` and the "Change quota…" extra action of [`src/components/lists/MassActionBar.tsx`](src/components/lists/MassActionBar.tsx); [`src/components/lists/PromptSetPropertyDialog.tsx`](src/components/lists/PromptSetPropertyDialog.tsx) (generic client prompt); [`src/components/lists/ChangeQuotaDialog.tsx`](src/components/lists/ChangeQuotaDialog.tsx) (thin quota wrapper); [`src/components/lists/promptSetProperty.ts`](src/components/lists/promptSetProperty.ts)
 - **What**: adds a "Change quota…" bulk action to the Accounts and Groups lists (wherever the `quotaUsage` column already appears) that prompts for a new value, then applies it as a `quotas/maxDiskQuota` patch to every selected (or all-filter-matching) row via the same batched `executeMassAction` mechanism as any other bulk action. The prompt UI is shared (`PromptSetPropertyDialog`, `format: 'size'` today) so further prompted bulk actions can reuse it without new one-off dialogs.
 - **Why**: `list.massActions` in the schema only supports fixed-value actions (`properties` is a static object) — there's no way for the server to declare a mass action that needs a value prompted from the admin, so a bulk "set everyone's quota to X" action can't be expressed there today, even though `quotas/maxDiskQuota` itself is a perfectly real, mutable property.
 - **Ideal fix**: the schema grows a mass-action variant that names a target property (and its type/format) to prompt for, e.g. `{"type": "promptSetProperty", "property": "quotas/maxDiskQuota", "format": "size"}`; once that exists, this fork dialog and the `canBulkChangeQuota` branch are deleted in favor of the schema-driven prompted-mass-action UI.
 
 ### `sieve-script-active-column-fallback` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `displayColumns` and the property-fetch injection in `fetchData`, both gated on `isSieveScriptList`
+- **Where**: [`src/lib/displayColumns.ts`](src/lib/displayColumns.ts) (`withDisplayColumnFallbacks`; only when the object still has an `isActive` property)
 - **What**: adds an `isActive` column (label "Active") to the `x:SieveSystemScript` and `x:SieveUserScript` lists, inserted right after the identifier column — not a synthetic value, `isActive` is a real boolean property on both objects, just not declared in either list's `list.columns`.
 - **Why**: the per-account `SieveScript` list's schema already declares `isActive` as a column, but the System/User Sieve script lists under Settings don't, even though the property exists on both objects — so today you have to open each script to see whether it's active.
 - **Ideal fix**: the server's `x:SieveSystemScript`/`x:SieveUserScript` list schemas include `isActive` as a real column like `SieveScript` already does; the fallback branch is deleted.
 
 ### `listener-tls-enabled-column` 🟡
 
-- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:NetworkListener` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:NetworkListener` by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts) when the schema is loaded ([`src/data/session.ts`](src/data/session.ts))
 - **What**: adds the real `useTls` property as a `TLS Enabled` column after Protocol. The existing `tlsImplicit` column identifies implicit TLS, but does not show listeners that enable TLS without implicit TLS.
 - **Why**: admins need to distinguish listeners with no TLS from listeners that enable TLS without opening each listener.
 - **Ideal fix**: the server's `x:NetworkListener` list schema includes `useTls`; the fork column overlay is removed.
 
 ### `dns-provider-description-column` 🟡
 
-- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:DnsServer` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:DnsServer` by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts) when the schema is loaded ([`src/data/session.ts`](src/data/session.ts))
 - **What**: adds the real `description` property after the provider type. The list already identifies `description` as its label property, but does not include it among the visible columns.
 - **Why**: providers sharing the same provider type are otherwise difficult to tell apart without opening each configuration.
 - **Ideal fix**: the server's `x:DnsServer` list schema includes `description`; the fork column overlay is removed.
 
 ### `directory-description-column` 🟡
 
-- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:Directory` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:Directory` by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts) when the schema is loaded ([`src/data/session.ts`](src/data/session.ts))
 - **What**: adds the real `description` property after directory type. The current list exposes only `@type`, even though all LDAP, SQL, and OIDC directory variants share a description field and the list declares it as its label property.
 - **Why**: admins can distinguish and recognize configured directories without opening them individually.
 - **Ideal fix**: the server's `x:Directory` list schema includes `description`; the fork column overlay is removed.
 
 ### `webhook-configuration-columns` 🟡
 
-- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:WebHook` during schema initialization in [`src/pages/AdminPanel.tsx`](src/pages/AdminPanel.tsx)
+- **Where**: [`src/lib/operationsListColumns.ts`](src/lib/operationsListColumns.ts), applied to `x:WebHook` by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts) when the schema is loaded ([`src/data/session.ts`](src/data/session.ts))
 - **What**: adds the real `enable`, `eventsPolicy`, and `events` properties to the Webhooks list.
 - **Why**: the current list shows only the endpoint URL, so admins cannot see whether a webhook is enabled or which events it includes/excludes without opening each configuration.
 - **Ideal fix**: the server's `x:WebHook` list schema includes these real properties; the fork column overlay is removed.
 
 ### `account-alias-count-column` 🟡
 
-- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
-- **What**: adds a synthetic `aliasCount` column to the `x:Account/User`, `x:Account/Group`, `x:MailingList`, and `x:Domain` lists — not a real schema property; `DynamicList` resolves it from the real `aliases` property (an objectList on Accounts/Groups/Mailing Lists, a `set` of domain names on Domains — same id-keyed wire format either way) and renders its entry count.
+- **Where**: [`src/lib/accountColumns.ts`](src/lib/accountColumns.ts), [`src/lib/mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`src/lib/domainColumns.ts`](src/lib/domainColumns.ts), resolved generically via `COUNT_COLUMN_SOURCES` in [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts) and rendered by [`src/components/lists/SyntheticCell.tsx`](src/components/lists/SyntheticCell.tsx)
+- **What**: adds a synthetic `aliasCount` column to the `x:Account/User`, `x:Account/Group`, `x:MailingList`, and `x:Domain` lists — not a real schema property; the list resolves it from the real `aliases` property (an objectList on Accounts/Groups/Mailing Lists, a `set` of domain names on Domains — same id-keyed wire format either way) and renders its entry count.
 - **Why**: none of these lists' schemas expose alias count as a column, only the full `aliases` list on the detail view.
 - **Ideal fix**: the server's list schemas include a computed alias-count column natively; these column definitions are deleted.
 
 ### `account-client-sort` 🟡
 
-- **Where**: table-level mechanism in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) (`clientSortableColumns`, `getClientSortValue`, the `fetchData` branch triggered by `clientSortField`) reading a `clientSortable` flag set per-column via the shared `clientSortable()` helper in [`src/lib/schemaDeviationTypes.ts`](src/lib/schemaDeviationTypes.ts) (type: `ClientSortableColumn`), used by [`accountColumns.ts`](src/lib/accountColumns.ts), [`mailingListColumns.ts`](src/lib/mailingListColumns.ts), [`roleColumns.ts`](src/lib/roleColumns.ts), and [`domainColumns.ts`](src/lib/domainColumns.ts)
+- **Where**: mechanism in [`src/components/lists/clientList.ts`](src/components/lists/clientList.ts) (`planClientMode`, `processClientRows`), [`src/components/lists/useDynamicList.ts`](src/components/lists/useDynamicList.ts) (fetch-all query [`src/data/listAll.ts`](src/data/listAll.ts)) and [`src/components/lists/listQuery.ts`](src/components/lists/listQuery.ts) (`effectiveSort` / `serverSort`), sort values from [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts), reading a `clientSortable` flag set per column via the shared `clientSortable()` helper in [`src/lib/schemaDeviationTypes.ts`](src/lib/schemaDeviationTypes.ts)
 - **What**: any column tagged `clientSortable` in the schema gets fetch-all-then-sort-in-memory on click (bypassing server pagination, same mechanism as `mailbox-client-hierarchy-sort`), instead of sending a JMAP `sort` to the server. The mechanism itself is generic and not tied to any specific list. Currently tagged: Email Address/Full Name/Usage/Aliases on `x:Account/User` and `x:Account/Group`; Email Address/Description/Aliases on `x:MailingList`; Description/Enabled Permissions/Disabled Permissions on `x:Role`; Domain Name/Enabled/Aliases on `x:Domain`.
 - **Why**: none of these lists' schemas declare any sortable property at all (`list.sort` is absent on all four) — confirmed against a live server by trying `sort` on every displayed real column: all return `unsupportedSort`, **except** `x:Domain/query` with `sort: [{"property":"name",...}]`, which the server actually accepts despite the schema not declaring it. Rather than add a second "trust an undeclared sort" pathway for that one case, Domain Name is routed through the same client-sort mechanism as everything else, for consistency; it's marginally less efficient (fetch-all instead of a paginated server sort) but domain lists are typically small.
 - **Ideal fix**: the server's query methods accept `sort` on these properties and the schema declares them in each list's `list.sort`; each `with*Columns` helper stops tagging its columns `clientSortable` and they fall through to the normal server-paginated `sortableFields` path already used elsewhere. The generic mechanism itself only goes away once nothing tags any column `clientSortable` anymore.
 
 ### `role-permission-count-columns` 🟡
 
-- **Where**: [`src/lib/roleColumns.ts`](src/lib/roleColumns.ts); resolved generically by the same `COUNT_COLUMN_SOURCES` table in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) used by `account-alias-count-column`
+- **Where**: [`src/lib/roleColumns.ts`](src/lib/roleColumns.ts); resolved by the same `COUNT_COLUMN_SOURCES` table in [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts) used by `account-alias-count-column`
 - **What**: adds synthetic `enabledPermissionCount`/`disabledPermissionCount` columns to the `x:Role` list — not real schema properties; resolved from the real `enabledPermissions`/`disabledPermissions` set properties and rendered as entry counts.
 - **Why**: the Roles list schema only exposes Description as a column; seeing how broad or restrictive a role is requires opening it and counting permissions by hand.
 - **Ideal fix**: the server's `x:Role` list schema includes computed enabled/disabled permission count columns natively; this column definition is deleted.
 
 ### `report-problems-only-filter` 🟡
 
-- **Where**: [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx) — `problemsOnly` toggle; predicate in [`src/lib/reportSummaries.ts`](src/lib/reportSummaries.ts) (`reportHasProblems`)
+- **Where**: [`src/components/lists/ProblemsOnlyToggle.tsx`](src/components/lists/ProblemsOnlyToggle.tsx) (state in the list URL as `f.problemsOnly=1`), filtered in [`src/components/lists/clientList.ts`](src/components/lists/clientList.ts); predicate in [`src/lib/reportSummaries.ts`](src/lib/reportSummaries.ts) (`reportHasProblems`)
 - **What**: on DMARC/TLS/ARF lists (those that already carry report-summary columns), a "Problems only" switch fetches the full result set (same client-filter path as logs) and keeps rows with quarantine/reject, failed TLS sessions, or ARF incidents > 0. Synced via `?problemsOnly=1`.
 - **Why**: nested `report` fields are not queryable as JMAP filters, so "show me reports that need attention" cannot be expressed server-side today.
 - **Ideal fix**: the server accepts filters on nested disposition/session/incident counts; the client toggle is deleted.
 
 ### `report-summary-columns` 🟡
 
-- **Where**: [`src/lib/reportColumns.ts`](src/lib/reportColumns.ts), [`src/lib/reportSummaries.ts`](src/lib/reportSummaries.ts), resolved in [`src/components/lists/DynamicList.tsx`](src/components/lists/DynamicList.tsx)
-- **What**: adds synthetic summary columns to inbound/outbound DMARC and TLS report lists, and to ARF reports — Pass/Quarantine/Reject (DMARC, summing nested `report.records` by `evaluatedDisposition`, with Pass including `pass`+`none`), Successful/Failed Sessions (TLS, summing nested `report.policies`), Incidents + Feedback Type (ARF, from nested `report`). DynamicList fetches the real `report` property once and derives the cell values (and client-sort keys) from it.
+- **Where**: [`src/lib/reportColumns.ts`](src/lib/reportColumns.ts), [`src/lib/reportSummaries.ts`](src/lib/reportSummaries.ts), resolved by [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts) and rendered by [`src/components/lists/ReportSummaryCell.tsx`](src/components/lists/ReportSummaryCell.tsx)
+- **What**: adds synthetic summary columns to inbound/outbound DMARC and TLS report lists, and to ARF reports — Pass/Quarantine/Reject (DMARC, summing nested `report.records` by `evaluatedDisposition`, with Pass including `pass`+`none`), Successful/Failed Sessions (TLS, summing nested `report.policies`), Incidents + Feedback Type (ARF, from nested `report`). the list fetches the real `report` property once and derives the cell values (and client-sort keys) from it.
 - **Why**: those lists' schemas only show envelope metadata (From/Subject/Received or Domain/dates), so admins must open each report to spot failures — tracked upstream as [stalwartlabs/webui#13](https://github.com/stalwartlabs/webui/issues/13).
 - **Ideal fix**: the server's list schemas expose computed summary columns (or denormalized count properties) natively; `reportColumns.ts` / `reportSummaries.ts` and the DynamicList branch are deleted.
 
@@ -169,7 +169,7 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in
 `DynamicList.tsx`, `MainContent.tsx`, `Sidebar.tsx`, `layout.ts`, and
-`FieldWidget.tsx` (e.g. `x:OtpAuth`, `x:Expression`, `x:Rate`, `x:Action`,
+`forms/widgets/*` (e.g. `x:OtpAuth`, `x:Expression`, `x:Rate`, `x:Action`,
 `x:Trace`, `CustomComponent/Dashboard` and other `CustomComponent/*`
 pages, the `x:Application` column reordering itself, the active-WebApp
 info card). These are **not** tracked here: they render real schema data

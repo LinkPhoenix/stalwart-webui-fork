@@ -9,14 +9,17 @@ import { Outlet } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
 import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export default function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<LoadingFallback fullScreen />}>
-        <Outlet />
-      </Suspense>
-      <Toaster />
+      <TooltipProvider>
+        <Suspense fallback={<LoadingFallback fullScreen />}>
+          <Outlet />
+        </Suspense>
+        <Toaster />
+      </TooltipProvider>
     </ErrorBoundary>
   );
 }

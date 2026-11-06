@@ -6,18 +6,60 @@
 
 import { getApiBaseUrl } from '@/services/api';
 import { getBasePath } from '@/lib/basePath';
-import { getOAuthClientId } from '@/lib/oauthClientId';
+import { resolveOAuthClientId } from '@/lib/oauthClientId';
+import { useAuthStore } from '@/stores/authStore';
 import i18n from '@/i18n';
 
-const SCOPES = import.meta.env.VITE_OAUTH_SCOPES as string | undefined;
+const SCOPES_OVERRIDE = import.meta.env.VITE_OAUTH_SCOPES as string | undefined;
 
 const SESSION_PREFIX = 'stalwart-oauth-';
 
-interface DiscoveryResponse {
+export interface DiscoveryResponse {
   authorization_endpoint: string;
   token_endpoint: string;
   end_session_endpoint?: string;
   scopes_supported?: string[];
+  client_id_metadata_document_supported?: boolean;
+  stalwart_required_scopes?: string[];
+  protected_resources?: string[];
+}
+
+export function getMetaScopes(): string[] {
+  const content = document.querySelector('meta[name="oauth-scopes"]')?.getAttribute('content') ?? '';
+  return content.split(/\s+/).filter((scope) => scope.length > 0);
+}
+
+export function selectScopes(
+  discovery: Pick<DiscoveryResponse, 'scopes_supported' | 'stalwart_required_scopes'>,
+  override: string | undefined = SCOPES_OVERRIDE,
+  extra: string[] = getMetaScopes(),
+): string {
+  const trimmed = override?.trim();
+  if (trimmed) return trimmed;
+  const required = discovery.stalwart_required_scopes;
+  const scopes = Array.isArray(required)
+    ? required.filter((scope) => typeof scope === 'string' && scope.length > 0)
+    : discovery.scopes_supported?.includes('openid')
+      ? ['openid']
+      : [];
+  return [...new Set([...scopes, ...extra])].join(' ');
+}
+
+export function selectResource(
+  apiBaseUrl: string,
+  discovery: Pick<DiscoveryResponse, 'protected_resources'>,
+): string | null {
+  let origin: string;
+  try {
+    const url = new URL(apiBaseUrl);
+    if (url.protocol !== 'https:') return null;
+    origin = url.origin;
+  } catch {
+    return null;
+  }
+  const listed = discovery.protected_resources;
+  if (Array.isArray(listed) && !listed.includes(origin)) return null;
+  return origin;
 }
 
 export async function discover(username: string): Promise<DiscoveryResponse> {
@@ -56,17 +98,17 @@ export function generateCodeVerifier(length: number = 64): string {
   return out.join('');
 }
 
-export async function generateCodeChallenge(
-  verifier: string,
-): Promise<{ challenge: string; method: 'S256' | 'plain' }> {
-  if (typeof crypto === 'undefined' || typeof crypto.subtle === 'undefined') {
-    return { challenge: verifier, method: 'plain' };
+async function sha256(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
+  if (typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined') {
+    return new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   }
+  const { sha256: fallback } = await import('@noble/hashes/sha2.js');
+  return fallback(data);
+}
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return { challenge: base64UrlEncode(new Uint8Array(digest)), method: 'S256' };
+export async function generateCodeChallenge(verifier: string): Promise<{ challenge: string; method: 'S256' }> {
+  const digest = await sha256(new TextEncoder().encode(verifier));
+  return { challenge: base64UrlEncode(digest), method: 'S256' };
 }
 
 function generateState(): string {
@@ -82,8 +124,8 @@ function base64UrlEncode(bytes: Uint8Array): string {
 
 interface TokenResponse {
   access_token: string;
-  refresh_token: string;
-  expires_in: number;
+  refresh_token?: string;
+  expires_in?: number;
   token_type: string;
 }
 
@@ -92,14 +134,19 @@ export async function exchangeCode(
   codeVerifier: string,
   tokenEndpoint: string,
   redirectUri: string,
+  clientId: string,
+  resource: string | null,
 ): Promise<TokenResponse> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
     code_verifier: codeVerifier,
-    client_id: getOAuthClientId(),
+    client_id: clientId,
     redirect_uri: redirectUri,
   });
+  if (resource) {
+    body.set('resource', resource);
+  }
 
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
@@ -125,7 +172,18 @@ function getRedirectUri(): string {
 }
 
 export async function startAuthFlow(username: string, returnUrl?: string | null): Promise<void> {
-  const { authorization_endpoint, token_endpoint, end_session_endpoint, scopes_supported } = await discover(username);
+  const discovery = await discover(username);
+  const { authorization_endpoint, token_endpoint, end_session_endpoint } = discovery;
+
+  const clientId = resolveOAuthClientId(discovery.client_id_metadata_document_supported === true);
+  if (!clientId) {
+    throw new Error(
+      i18n.t(
+        'oauth.clientIdUnavailable',
+        'Sign-in is not configured: the identity provider does not support client metadata documents and no OAuth client id is configured for this application.',
+      ),
+    );
+  }
 
   const codeVerifier = generateCodeVerifier();
   const { challenge: codeChallenge, method: codeChallengeMethod } = await generateCodeChallenge(codeVerifier);
@@ -145,6 +203,13 @@ export async function startAuthFlow(username: string, returnUrl?: string | null)
   sessionStorage.setItem(`${SESSION_PREFIX}token_endpoint`, token_endpoint);
   sessionStorage.setItem(`${SESSION_PREFIX}state`, state);
   sessionStorage.setItem(`${SESSION_PREFIX}return_url`, safeReturnUrl);
+  sessionStorage.setItem(`${SESSION_PREFIX}client_id`, clientId);
+  const resource = selectResource(getApiBaseUrl(), discovery);
+  if (resource) {
+    sessionStorage.setItem(`${SESSION_PREFIX}resource`, resource);
+  } else {
+    sessionStorage.removeItem(`${SESSION_PREFIX}resource`);
+  }
   if (end_session_endpoint) {
     sessionStorage.setItem(`${SESSION_PREFIX}end_session_endpoint`, end_session_endpoint);
   } else {
@@ -153,7 +218,7 @@ export async function startAuthFlow(username: string, returnUrl?: string | null)
 
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: getOAuthClientId(),
+    client_id: clientId,
     redirect_uri: getRedirectUri(),
     code_challenge: codeChallenge,
     code_challenge_method: codeChallengeMethod,
@@ -162,16 +227,12 @@ export async function startAuthFlow(username: string, returnUrl?: string | null)
     prompt: 'login',
   });
 
-  let scope: string;
-  if (SCOPES && SCOPES.length > 0) {
-    scope = SCOPES;
-  } else if (scopes_supported?.includes('openid')) {
-    scope = ['openid', 'email', 'profile', 'offline_access'].filter((s) => scopes_supported.includes(s)).join(' ');
-  } else {
-    scope = '';
-  }
+  const scope = selectScopes(discovery);
   if (scope) {
     params.set('scope', scope);
+  }
+  if (resource) {
+    params.set('resource', resource);
   }
 
   window.location.href = `${authorization_endpoint}?${params.toString()}`;
@@ -184,6 +245,8 @@ export function getStoredOAuthData() {
     state: sessionStorage.getItem(`${SESSION_PREFIX}state`),
     returnUrl: sessionStorage.getItem(`${SESSION_PREFIX}return_url`),
     endSessionEndpoint: sessionStorage.getItem(`${SESSION_PREFIX}end_session_endpoint`),
+    clientId: sessionStorage.getItem(`${SESSION_PREFIX}client_id`),
+    resource: sessionStorage.getItem(`${SESSION_PREFIX}resource`),
   };
 }
 
@@ -193,6 +256,8 @@ export function clearStoredOAuthData(): void {
   sessionStorage.removeItem(`${SESSION_PREFIX}state`);
   sessionStorage.removeItem(`${SESSION_PREFIX}return_url`);
   sessionStorage.removeItem(`${SESSION_PREFIX}end_session_endpoint`);
+  sessionStorage.removeItem(`${SESSION_PREFIX}client_id`);
+  sessionStorage.removeItem(`${SESSION_PREFIX}resource`);
 }
 
 export function getOAuthRedirectUri(): string {
@@ -204,9 +269,11 @@ export function getPostLogoutRedirectUri(): string {
   return `${window.location.origin}${basePath}/login`;
 }
 
-export function buildEndSessionUrl(endSessionEndpoint: string, postLogoutRedirectUri: string): string {
+export function buildEndSessionUrl(endSessionEndpoint: string, postLogoutRedirectUri: string): string | null {
+  const { clientId } = useAuthStore.getState();
+  if (!clientId) return null;
   const params = new URLSearchParams({
-    client_id: getOAuthClientId(),
+    client_id: clientId,
     post_logout_redirect_uri: postLogoutRedirectUri,
   });
   const sep = endSessionEndpoint.includes('?') ? '&' : '?';

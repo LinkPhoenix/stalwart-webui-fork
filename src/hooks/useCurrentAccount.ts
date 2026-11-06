@@ -18,7 +18,7 @@ export interface CurrentAccountDetails {
 // Fetches the current user's x:Account record to expose the login name,
 // email address and full name independently from the JMAP session account name.
 export function useCurrentAccountDetails(): CurrentAccountDetails {
-  const { primaryAccountId } = useAuthStore();
+  const primaryAccountId = useAuthStore((s) => s.primaryAccountId);
   const [details, setDetails] = useState<CurrentAccountDetails>({
     username: null,
     email: null,
@@ -34,7 +34,6 @@ export function useCurrentAccountDetails(): CurrentAccountDetails {
       try {
         const list = await jmapGetBatched(
           'x:Account',
-          primaryAccountId,
           [primaryAccountId],
           ['id', 'name', 'emailAddress', 'description'],
         );

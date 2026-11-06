@@ -4,530 +4,243 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, Lock } from 'lucide-react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ChevronRight, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SchemaIcon } from '@/components/common/SchemaIcon';
 import { Button } from '@/components/ui/button';
+import { DynamicIcon } from '@/components/common/DynamicIcon';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUIStore } from '@/stores/uiStore';
-import { useAccountStore } from '@/stores/accountStore';
-import { useSchemaStore } from '@/stores/schemaStore';
-import {
-  visibleLayouts,
-  findFirstVisibleLinkInLayout,
-  findFirstAccessibleLinkInLayout,
-  isLinkEnterprise,
-  isLinkVisible,
-} from '@/lib/layout';
-import { findLastVisitedLinkInLayout, setLastVisitedSection } from '@/lib/lastVisited';
-import { OVERVIEW_VIEW_NAME } from '@/features/overview/constants';
-import type { Layout, LayoutItem, LayoutSubItem } from '@/types/schema';
+import type { Layout } from '@/types/schema';
+import { activeViewName, layoutNavNodes, navNodeKey, someLink, viewPath, type NavNode } from './navTree';
+import { SIDEBAR_ID, SidebarNavContext, useSidebarNav } from './sidebarContext';
+import { useLayoutNavigation } from './useLayoutNavigation';
 
-function LucideIcon({ name, className }: { name: string; className?: string }) {
-  return <SchemaIcon name={name} className={className} />;
+const itemClass =
+  'flex w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left font-medium text-muted-foreground outline-none transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring';
+
+// Fork behavior (kept from before the 2.0 redesign): sibling groups form an
+// accordion, so opening one closes the others at the same level, and picking a
+// plain link collapses any group left open next to it.
+interface AccordionLevelValue {
+  openKey: string | null;
+  setOpenKey: (key: string | null) => void;
 }
 
-function resolveViewPath(sectionName: string, viewName: string): string {
-  return `/${sectionName}/${viewName}`;
+const AccordionLevelContext = createContext<AccordionLevelValue | null>(null);
+
+function useAccordionLevel(): AccordionLevelValue {
+  const level = useContext(AccordionLevelContext);
+  if (!level) throw new Error('Sidebar items must be rendered inside an accordion level');
+  return level;
 }
 
-function pathMatchesView(currentPath: string, sectionName: string, viewName: string): boolean {
-  const base = `/${sectionName}/${viewName}`;
-  if (currentPath === base || currentPath.startsWith(`${base}/`)) return true;
-  if (viewName === 'CustomComponent/Dashboard') {
-    const dashBase = `/${sectionName}/Dashboard/`;
-    return currentPath.startsWith(dashBase);
+function itemSize(depth: number) {
+  return depth > 0 ? 'h-8 text-[13px]' : 'h-9 text-sm';
+}
+
+function NavLink({ node, depth }: { node: Extract<NavNode, { kind: 'link' }>; depth: number }) {
+  const { t } = useTranslation();
+  const nav = useSidebarNav();
+  const level = useAccordionLevel();
+  const ref = useRef<HTMLAnchorElement>(null);
+  const isActive = node.viewName === nav.activeViewName;
+
+  useEffect(() => {
+    if (isActive) ref.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [isActive]);
+
+  if (!nav.isVisible(node.viewName)) return null;
+
+  const label = node.name || t('sidebar.overview', 'Overview');
+  const content = (
+    <>
+      {node.icon && <DynamicIcon name={node.icon} className="h-4 w-4 shrink-0" />}
+      <span className="truncate">{label}</span>
+    </>
+  );
+  const className = cn(itemClass, itemSize(depth));
+
+  if (nav.isLocked(node.viewName)) {
+    return (
+      <button type="button" className={className} onClick={nav.openUpsell} aria-describedby={nav.lockedHintId}>
+        {content}
+        <Lock aria-hidden="true" className="ml-auto h-3 w-3 text-muted-foreground" />
+      </button>
+    );
   }
-  return false;
-}
-
-function layoutViewNames(layout: Layout): string[] {
-  const names: string[] = [];
-
-  function collectSubItems(items: LayoutSubItem[]) {
-    for (const item of items) {
-      if (item.type === 'link') names.push(item.viewName);
-      else collectSubItems(item.items);
-    }
-  }
-
-  for (const item of layout.items) {
-    if ('link' in item) names.push(item.link.viewName);
-    else collectSubItems(item.container.items);
-  }
-  return names;
-}
-
-function activeViewForPath(layout: Layout, currentPath: string): string | null {
-  const sectionPrefix = `/${layout.name}/`;
-  if (!currentPath.startsWith(sectionPrefix)) return null;
 
   return (
-    layoutViewNames(layout)
-      .filter((viewName) => pathMatchesView(currentPath, layout.name, viewName))
-      .sort((a, b) => b.length - a.length)[0] ?? null
+    <Link
+      ref={ref}
+      to={viewPath(nav.sectionName, node.viewName)}
+      onClick={() => level.setOpenKey(null)}
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        className,
+        isActive &&
+          'bg-highlight font-semibold text-highlight-foreground hover:bg-highlight hover:text-highlight-foreground',
+      )}
+    >
+      {content}
+    </Link>
   );
 }
 
-function subtreeContainsActive(items: LayoutSubItem[], activeViewName: string | null): boolean {
-  for (const item of items) {
-    if (item.type === 'link') {
-      if (item.viewName === activeViewName) return true;
-    } else if (item.type === 'container') {
-      if (subtreeContainsActive(item.items, activeViewName)) return true;
-    }
-  }
-  return false;
-}
-
-function subtreeHasVisibleLink(items: LayoutSubItem[], edition: string): boolean {
-  for (const item of items) {
-    if (item.type === 'link') {
-      if (!checkLinkVisible(item.viewName)) continue;
-      const enterprise = checkIsEnterprise(item.viewName);
-      if (enterprise && edition === 'oss') continue;
-      return true;
-    } else if (item.type === 'container') {
-      if (subtreeHasVisibleLink(item.items, edition)) return true;
-    }
-  }
-  return false;
-}
-
-interface AccordionLevelContextValue {
-  openId: string | null;
-  setOpenId: (id: string | null) => void;
-}
-
-const AccordionLevelContext = createContext<AccordionLevelContextValue | null>(null);
-
-// Sibling collapsibles share a single open id, so expanding one collapses the
-// others at the same level (accordion behavior).
-function AccordionLevel({ children }: { children: React.ReactNode }) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const value = useMemo(() => ({ openId, setOpenId }), [openId]);
-  return <AccordionLevelContext.Provider value={value}>{children}</AccordionLevelContext.Provider>;
-}
-
-// A collapsible wired to its accordion level. It opens itself whenever the
-// active page lands inside it, while still allowing manual toggling.
-function AccordionCollapsible({
-  id,
-  containsActive,
-  children,
-}: {
-  id: string;
-  containsActive: boolean;
-  children: React.ReactNode;
-}) {
-  const level = useContext(AccordionLevelContext);
-  if (!level) throw new Error('AccordionCollapsible must be used within AccordionLevel');
-  const { openId, setOpenId } = level;
-  // Layout effect so the branch containing the active page is already open on
-  // the first paint after a navigation.
+function NavContainer({ node, depth }: { node: Extract<NavNode, { kind: 'container' }>; depth: number }) {
+  const nav = useSidebarNav();
+  const level = useAccordionLevel();
+  const key = navNodeKey(node);
+  const containsActive = someLink(node.children, (viewName) => viewName === nav.activeViewName);
+  const open = level.openKey === key;
+  const { setOpenKey } = level;
+  // Layout effect so the branch holding the active page is already open on first paint.
   useLayoutEffect(() => {
-    if (containsActive) setOpenId(id);
-  }, [containsActive, id, setOpenId]);
+    if (containsActive) setOpenKey(key);
+  }, [containsActive, key, setOpenKey]);
+
+  if (!someLink(node.children, nav.isVisible)) return null;
+
   return (
-    <Collapsible open={openId === id} onOpenChange={(open) => setOpenId(open ? id : null)}>
-      {children}
+    <Collapsible open={open} onOpenChange={(next) => setOpenKey(next ? key : null)}>
+      <CollapsibleTrigger asChild>
+        <button type="button" className={cn(itemClass, itemSize(depth))}>
+          {node.icon && <DynamicIcon name={node.icon} className="h-4 w-4 shrink-0" />}
+          <span className="truncate">{node.name}</span>
+          <ChevronRight
+            aria-hidden="true"
+            className="ml-auto h-3.5 w-3.5 shrink-0 opacity-60 transition-transform duration-200 [[data-state=open]>&]:rotate-90"
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="my-0.5 ml-[18px] flex flex-col gap-0.5 border-l border-input pl-2">
+          <NavNodes nodes={node.children} depth={depth + 1} />
+        </div>
+      </CollapsibleContent>
     </Collapsible>
   );
 }
 
-// Softer than the default ghost hover, closer to documentation sidebars:
-// muted text that brightens with a faint background instead of a strong fill.
-const sidebarItemClass =
-  'w-full justify-start gap-2 font-normal text-muted-foreground hover:bg-accent/50 hover:text-foreground';
-
-// In square mode the sidebar follows documentation conventions (better-auth):
-// full-bleed rows with a barely-there hover wash instead of inset pills.
-const sidebarItemSquareClass =
-  "[[data-radius='square']_&]:hover:bg-foreground/[0.03] [[data-radius='square']_&]:hover:text-foreground/90";
-
-function checkLinkVisible(viewName: string): boolean {
-  const schema = useSchemaStore.getState().schema;
-  if (!schema) return true;
-
-  const accountStore = useAccountStore.getState();
-  return isLinkVisible(
-    schema,
-    viewName,
-    accountStore.edition,
-    (prefix: string) => accountStore.hasObjectPermission(prefix, 'Get'),
-    (perm: string) => accountStore.hasPermission(perm),
+function NavNodes({ nodes, depth }: { nodes: NavNode[]; depth: number }) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const value = useMemo(() => ({ openKey, setOpenKey }), [openKey]);
+  return (
+    <AccordionLevelContext.Provider value={value}>
+      {nodes.map((node) =>
+        node.kind === 'link' ? (
+          <NavLink key={navNodeKey(node)} node={node} depth={depth} />
+        ) : (
+          <NavContainer key={navNodeKey(node)} node={node} depth={depth} />
+        ),
+      )}
+    </AccordionLevelContext.Provider>
   );
 }
 
-function checkIsEnterprise(viewName: string): boolean {
-  const schema = useSchemaStore.getState().schema;
-  if (!schema) return false;
-  const edition = useAccountStore.getState().edition;
-  return isLinkEnterprise(schema, viewName, edition);
-}
+function SectionSwitcher({ layouts, activeSection }: { layouts: Layout[]; activeSection: string }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const setActiveSection = useUIStore((s) => s.setActiveSection);
+  const { landingPath } = useLayoutNavigation();
 
-interface SidebarSubItemProps {
-  item: LayoutSubItem;
-  depth: number;
-  sectionName: string;
-  activeViewName: string | null;
-  edition: string;
-  onUpsell: () => void;
-}
-
-function SidebarSubItem({ item, depth, sectionName, activeViewName, edition, onUpsell }: SidebarSubItemProps) {
-  // Picking a plain link closes any sibling group left open at this same
-  // accordion level — it's not part of a collapsible, so nothing should
-  // stay expanded on its account once it's the one that's active.
-  const level = useContext(AccordionLevelContext);
-
-  if (item.type === 'link') {
-    if (!checkLinkVisible(item.viewName)) return null;
-
-    const path = resolveViewPath(sectionName, item.viewName);
-    const isActive = item.viewName === activeViewName;
-    const enterprise = checkIsEnterprise(item.viewName);
-    const isLocked = enterprise && edition === 'community';
-    const isHidden = enterprise && edition === 'oss';
-
-    if (isHidden) return null;
-
-    const className = cn(
-      sidebarItemClass,
-      sidebarItemSquareClass,
-      isActive && 'bg-accent text-accent-foreground hover:bg-accent',
-      depth > 0 && 'text-sm',
-    );
-    const style = { paddingLeft: `${(depth + 1) * 12 + 8}px` };
-
-    if (isLocked) {
-      return (
-        <Button
-          variant="ghost"
-          data-sidebar-active={isActive || undefined}
-          className={className}
-          style={style}
-          onClick={onUpsell}
-        >
-          <span className="truncate">{item.name || 'Overview'}</span>
-          <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
-        </Button>
-      );
-    }
-
-    return (
-      <Button variant="ghost" data-sidebar-active={isActive || undefined} className={className} style={style} asChild>
-        <Link
-          to={path}
-          onClick={() => {
-            level?.setOpenId(null);
-            setLastVisitedSection(sectionName, item.viewName);
-          }}
-        >
-          <span className="truncate">{item.name || 'Overview'}</span>
-        </Link>
-      </Button>
-    );
-  }
-
-  if (item.type === 'container') {
-    if (!subtreeHasVisibleLink(item.items, edition)) return null;
-
-    const containsActive = subtreeContainsActive(item.items, activeViewName);
-    return (
-      <AccordionCollapsible id={item.name} containsActive={containsActive}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className={cn(sidebarItemClass, sidebarItemSquareClass, 'text-sm')}
-            style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
-          >
-            <ChevronDown className="h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
-            <span className="truncate">{item.name}</span>
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <AccordionLevel>
-            {item.items.map((sub) => (
-              <SidebarSubItem
-                key={sub.type === 'link' ? sub.viewName : sub.name}
-                item={sub}
-                depth={depth + 1}
-                sectionName={sectionName}
-                activeViewName={activeViewName}
-                edition={edition}
-                onUpsell={onUpsell}
-              />
-            ))}
-          </AccordionLevel>
-        </CollapsibleContent>
-      </AccordionCollapsible>
-    );
-  }
-
-  return null;
-}
-
-interface SidebarTopItemProps {
-  item: LayoutItem;
-  sectionName: string;
-  activeViewName: string | null;
-  edition: string;
-  onUpsell: () => void;
-}
-
-function SidebarTopItem({ item, sectionName, activeViewName, edition, onUpsell }: SidebarTopItemProps) {
-  // Picking a plain link closes any sibling group left open at this same
-  // accordion level — it's not part of a collapsible, so nothing should
-  // stay expanded on its account once it's the one that's active.
-  const level = useContext(AccordionLevelContext);
-
-  if ('link' in item) {
-    const { name, icon, viewName } = item.link;
-
-    if (!checkLinkVisible(viewName)) return null;
-
-    const path = resolveViewPath(sectionName, viewName);
-    const isActive = viewName === activeViewName;
-    const enterprise = checkIsEnterprise(viewName);
-    const isLocked = enterprise && edition === 'community';
-    const isHidden = enterprise && edition === 'oss';
-
-    if (isHidden) return null;
-
-    const className = cn(
-      sidebarItemClass,
-      sidebarItemSquareClass,
-      isActive && 'bg-accent text-accent-foreground hover:bg-accent',
-    );
-
-    if (isLocked) {
-      return (
-        <Button
-          variant="ghost"
-          data-sidebar-active={isActive || undefined}
-          className={className}
-          onClick={onUpsell}
-        >
-          <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
-          <span className="truncate">{name}</span>
-          <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
-        </Button>
-      );
-    }
-
-    return (
-      <Button variant="ghost" data-sidebar-active={isActive || undefined} className={className} asChild>
-        <Link
-          to={path}
-          onClick={() => {
-            level?.setOpenId(null);
-            setLastVisitedSection(sectionName, viewName);
-          }}
-        >
-          <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
-          <span className="truncate">{name}</span>
-        </Link>
-      </Button>
-    );
-  }
-
-  if ('container' in item) {
-    const { name, icon, items } = item.container;
-    if (!subtreeHasVisibleLink(items, edition)) return null;
-
-    const containsActive = subtreeContainsActive(items, activeViewName);
-
-    return (
-      <AccordionCollapsible id={name} containsActive={containsActive}>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className={cn(sidebarItemClass, sidebarItemSquareClass)}>
-            <LucideIcon name={icon} className="h-4 w-4 shrink-0" />
-            <span className="truncate">{name}</span>
-            <ChevronDown className="ml-auto h-3 w-3 shrink-0 transition-transform duration-200 [[data-state=closed]>&]:rotate-[-90deg]" />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <AccordionLevel>
-            {items.map((sub) => (
-              <SidebarSubItem
-                key={sub.type === 'link' ? sub.viewName : sub.name}
-                item={sub}
-                depth={1}
-                sectionName={sectionName}
-                activeViewName={activeViewName}
-                edition={edition}
-                onUpsell={onUpsell}
-              />
-            ))}
-          </AccordionLevel>
-        </CollapsibleContent>
-      </AccordionCollapsible>
-    );
-  }
-
-  return null;
+  return (
+    <div
+      role="group"
+      aria-label={t('sections', 'Sections')}
+      className="m-2.5 mt-0 flex items-center gap-0.5 rounded-full bg-muted p-1"
+    >
+      {layouts.map((target) => {
+        const isActive = target.name === activeSection;
+        return (
+          <Tooltip key={target.name}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={target.name}
+                aria-pressed={isActive}
+                onClick={() => {
+                  setActiveSection(target.name);
+                  const path = landingPath(target);
+                  if (path) navigate(path);
+                }}
+                className={cn(
+                  'h-8 flex-1 rounded-full',
+                  isActive && 'bg-card text-foreground shadow-tile hover:bg-card hover:text-foreground',
+                )}
+              >
+                <DynamicIcon name={target.icon} className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{target.name}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
 }
 
 export function Sidebar() {
-  const location = useLocation();
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
   const activeSection = useUIStore((s) => s.activeSection);
-  const setActiveSection = useUIStore((s) => s.setActiveSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
-  const schema = useSchemaStore((s) => s.schema);
-  const viewToSection = useSchemaStore((s) => s.viewToSection);
-  const edition = useAccountStore((s) => s.edition);
-  const permissions = useAccountStore((s) => s.permissions);
-  const hasPermission = useAccountStore((s) => s.hasPermission);
+  const { layouts, isVisible, isLocked } = useLayoutNavigation();
   const [upsellOpen, setUpsellOpen] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
-  // Set by handleSectionClick right before navigating: switching sections
-  // from the footer should keep the sidebar open so the new section's pages
-  // are still browsable, instead of closing right back up like a leaf-page
-  // navigation would.
-  const skipCloseOnNavigateRef = useRef(false);
-
-  // Build the permission checks from the permissions array itself: the store
-  // accessors are stable refs, so depending on them alone would keep a stale
-  // layout list after access data finishes loading.
-  const layouts = useMemo(() => {
-    if (!schema) return [];
-    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
-    return visibleLayouts(schema, edition, canGet, hasPermission);
-  }, [schema, edition, permissions, hasPermission]);
+  const lockedHintId = useId();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (skipCloseOnNavigateRef.current) {
-      skipCloseOnNavigateRef.current = false;
-      return;
-    }
-    if (window.matchMedia('(max-width: 767px)').matches) {
-      setSidebarOpen(false);
-    }
-  }, [location.pathname, setSidebarOpen]);
+    if (window.matchMedia('(max-width: 767px)').matches) setSidebarOpen(false);
+  }, [pathname, setSidebarOpen]);
 
-  // Keep the active page visible in the sidebar after any navigation
-  // (e.g. from the command palette or an external link).
-  useEffect(() => {
-    const active = navRef.current?.querySelector('[data-sidebar-active="true"]');
-    active?.scrollIntoView({ block: 'nearest' });
-  }, [location.pathname, activeSection]);
-
-  if (!sidebarOpen || !schema) return null;
-
-  const layout: Layout | undefined = layouts.find((l) => l.name === activeSection);
+  if (!sidebarOpen) return null;
+  const layout = layouts.find((l) => l.name === activeSection);
   if (!layout) return null;
-  const activeViewName = activeViewForPath(layout, location.pathname);
 
-  const handleSectionActivate = (target: Layout) => {
-    setActiveSection(target.name);
-    skipCloseOnNavigateRef.current = true;
-  };
-
-  const sectionPath = (target: Layout): string | null => {
-    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
-    const last = findLastVisitedLinkInLayout(schema, target, edition, canGet, hasPermission);
-    const first =
-      last ??
-      findFirstAccessibleLinkInLayout(schema, target, edition, canGet, hasPermission) ??
-      findFirstVisibleLinkInLayout(schema, target, edition, canGet, hasPermission);
-    return first ? `/${target.name}/${first}` : null;
+  const nodes = layoutNavNodes(layout);
+  const nav = {
+    sectionName: layout.name,
+    pathname,
+    activeViewName: activeViewName(nodes, pathname, layout.name),
+    isVisible,
+    isLocked,
+    openUpsell: () => setUpsellOpen(true),
+    lockedHintId,
   };
 
   return (
     <>
       <div
         aria-hidden="true"
-        className="fixed inset-0 top-14 z-20 bg-black/40 md:hidden"
+        className="fixed inset-0 top-16 z-20 bg-overlay md:hidden"
         onClick={() => setSidebarOpen(false)}
       />
-      <aside className="fixed top-14 left-0 bottom-0 z-30 flex w-64 flex-col border-r bg-background">
-        <ScrollArea className="flex-1">
-          <nav
-            ref={navRef}
-            className="flex flex-col gap-0.5 px-2 py-2 [[data-radius='square']_&]:gap-0 [[data-radius='square']_&]:px-0"
-          >
-            <AccordionLevel>
-              {layout.items.map((item) => (
-                <SidebarTopItem
-                  key={'link' in item ? item.link.viewName : item.container.name}
-                  item={item}
-                  sectionName={layout.name}
-                  activeViewName={activeViewName}
-                  edition={edition}
-                  onUpsell={() => setUpsellOpen(true)}
-                />
-              ))}
-            </AccordionLevel>
+      <aside
+        id={SIDEBAR_ID}
+        aria-label={t('sidebar.label', 'Sidebar')}
+        className="fixed bottom-3 left-3 top-16 z-30 flex w-60 flex-col tile overflow-hidden"
+      >
+        <span id={lockedHintId} className="sr-only">
+          {t('enterprise.featureHint', 'Enterprise feature')}
+        </span>
+        <div className="flex-1 overflow-y-auto py-2.5 [scrollbar-width:thin]">
+          <nav aria-label={layout.name} className="flex flex-col gap-0.5 px-2.5">
+            <SidebarNavContext value={nav}>
+              <NavNodes nodes={nodes} depth={0} />
+            </SidebarNavContext>
           </nav>
-        </ScrollArea>
+        </div>
 
-        {layouts.length > 1 && (
-          <TooltipProvider>
-            <div className="flex items-center justify-around border-t bg-background px-2 py-2 [[data-radius='square']_&]:px-0 [[data-radius='square']_&]:py-0">
-              {layouts.map((target) => {
-                const isActive = target.name === activeSection;
-                const to = sectionPath(target);
-                const buttonClass = cn(
-                  'h-9 w-9',
-                  "[[data-radius='square']_&]:h-12 [[data-radius='square']_&]:flex-1 [[data-radius='square']_&]:border-r [[data-radius='square']_&]:border-border [[data-radius='square']_&]:last:border-r-0 [[data-radius='square']_&]:hover:bg-foreground/[0.03]",
-                  isActive && 'bg-accent text-accent-foreground',
-                );
-                return (
-                  <Tooltip key={target.name}>
-                    <TooltipTrigger asChild>
-                      {to ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={target.name}
-                          aria-current={isActive ? 'page' : undefined}
-                          className={buttonClass}
-                          asChild
-                        >
-                          <Link to={to} onClick={() => handleSectionActivate(target)}>
-                            <SchemaIcon name={target.icon} className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={target.name}
-                          aria-current={isActive ? 'page' : undefined}
-                          className={buttonClass}
-                          onClick={() => setActiveSection(target.name)}
-                        >
-                          <SchemaIcon name={target.icon} className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TooltipTrigger>
-                    <TooltipContent side="top">{target.name}</TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </TooltipProvider>
-        )}
+        {layouts.length > 1 && <SectionSwitcher layouts={layouts} activeSection={activeSection} />}
 
-        <EnterpriseUpsell
-          open={upsellOpen}
-          onClose={() => setUpsellOpen(false)}
-          overviewHref={
-            viewToSection[OVERVIEW_VIEW_NAME]
-              ? `/${viewToSection[OVERVIEW_VIEW_NAME]}/${OVERVIEW_VIEW_NAME}`
-              : null
-          }
-        />
+        <EnterpriseUpsell open={upsellOpen} onClose={() => setUpsellOpen(false)} />
       </aside>
     </>
   );

@@ -1,15 +1,20 @@
 /*
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ * SPDX-License-Identifier: LicenseRef-SEL
  */
 
 export type MetricId = string;
 
 export type Metric =
-  | { '@type': 'Counter'; metric: MetricId; count: number; timestamp?: string }
-  | { '@type': 'Gauge'; metric: MetricId; count: number; timestamp?: string }
-  | { '@type': 'Histogram'; metric: MetricId; count: number; sum: number; timestamp?: string };
+  | { '@type': 'Counter'; metric: MetricId; count: number; nodeId?: number; timestamp?: string }
+  | { '@type': 'Gauge'; metric: MetricId; count: number; nodeId?: number; timestamp?: string }
+  | { '@type': 'Histogram'; metric: MetricId; count: number; sum: number; nodeId?: number; timestamp?: string };
+
+export interface ClusterNodeInfo {
+  nodeId: number;
+  hostname?: string;
+}
 
 export type Period = { kind: 'preset'; preset: PresetKey } | { kind: 'custom'; from: Date; to: Date };
 

@@ -19,7 +19,6 @@ export function bytesToHuman(bytes: number): { value: number; unit: string } {
 
   const sign = bytes < 0 ? -1 : 1;
   const abs = Math.abs(bytes);
-
   for (let i = SIZE_UNITS.length - 1; i >= 0; i--) {
     const unit = SIZE_UNITS[i];
     const factor = SIZE_FACTORS[unit];
@@ -37,17 +36,6 @@ export function humanToBytes(value: number, unit: string): number {
   const factor = SIZE_FACTORS[unit];
   if (factor === undefined) return value;
   return Math.round(value * factor);
-}
-
-export function formatSize(bytes: number): string {
-  const { value, unit } = bytesToHuman(bytes);
-  const sign = value < 0 ? '-' : '';
-  const abs = Math.abs(value);
-  // Locale-aware digits; unit ladder stays data-driven via SIZE_UNITS / bytesToHuman.
-  const formatted = Number.isInteger(abs)
-    ? abs.toLocaleString(undefined, { maximumFractionDigits: 0 })
-    : abs.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return `${sign}${formatted} ${unit}`;
 }
 
 export const DURATION_UNITS = ['ms', 's', 'min', 'h', 'd'] as const;
@@ -80,26 +68,4 @@ export function humanToMs(value: number, unit: string): number {
   const factor = DURATION_FACTORS[unit];
   if (factor === undefined) return value;
   return Math.round(value * factor);
-}
-
-export function formatDuration(ms: number): string {
-  if (ms === 0) return '0ms';
-
-  const d = Math.floor(ms / 86_400_000);
-  ms %= 86_400_000;
-  const h = Math.floor(ms / 3_600_000);
-  ms %= 3_600_000;
-  const m = Math.floor(ms / 60_000);
-  ms %= 60_000;
-  const s = Math.floor(ms / 1_000);
-  ms %= 1_000;
-
-  const parts: string[] = [];
-  if (d > 0) parts.push(`${d}d`);
-  if (h > 0) parts.push(`${h}h`);
-  if (m > 0) parts.push(`${m}m`);
-  if (s > 0) parts.push(`${s}s`);
-  if (ms > 0) parts.push(`${ms}ms`);
-
-  return parts.join(' ');
 }

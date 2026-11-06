@@ -12,7 +12,8 @@ export function calculateJmapPatch(
 
   const allKeys = new Set([...Object.keys(original), ...Object.keys(modified)]);
 
-  const variantChanged = '@type' in original && '@type' in modified && original['@type'] !== modified['@type'];
+  const variantChanged =
+    Object.hasOwn(original, '@type') && Object.hasOwn(modified, '@type') && original['@type'] !== modified['@type'];
 
   for (const key of allKeys) {
     if (key === 'id') {
@@ -22,12 +23,12 @@ export function calculateJmapPatch(
     const origVal = original[key];
     const modVal = modified[key];
 
-    if (!(key in original)) {
-      patch[key] = modVal;
+    if (!Object.hasOwn(original, key)) {
+      if (modVal !== undefined) patch[key] = modVal;
       continue;
     }
 
-    if (!(key in modified)) {
+    if (!Object.hasOwn(modified, key)) {
       if (variantChanged) continue;
       patch[key] = null;
       continue;
@@ -63,12 +64,12 @@ function diffValues(prefix: string, origVal: unknown, modVal: unknown, patch: Re
       const origSub = origVal[subKey];
       const modSub = modVal[subKey];
 
-      if (!(subKey in origVal)) {
-        patch[path] = modSub;
+      if (!Object.hasOwn(origVal, subKey)) {
+        if (modSub !== undefined) patch[path] = modSub;
         continue;
       }
 
-      if (!(subKey in modVal)) {
+      if (!Object.hasOwn(modVal, subKey)) {
         patch[path] = null;
         continue;
       }
@@ -86,6 +87,6 @@ function diffValues(prefix: string, origVal: unknown, modVal: unknown, patch: Re
   }
 
   if (origVal !== modVal) {
-    patch[prefix] = modVal;
+    patch[prefix] = modVal === undefined ? null : modVal;
   }
 }

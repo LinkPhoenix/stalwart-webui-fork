@@ -1,0 +1,133 @@
+/*
+ * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ */
+
+import { buildJmapFilter } from '@/lib/listFilter';
+import type { ListPageParams } from '@/data/keys';
+import type { ResolvedSchema } from '@/lib/schemaResolver';
+import { isClientOnlyFilterEnum, isClientSortableColumn } from '@/lib/schemaDeviationTypes';
+import { expandListProperties } from '@/lib/syntheticColumns';
+import type { Field, List } from '@/types/schema';
+import type { ListSort, ListUrlState } from './listUrlState';
+
+export const LIST_PAGE_SIZE = 25;
+
+/** Rows-per-page choices; the chosen size is remembered between visits (uiStore). */
+export const PAGE_SIZE_OPTIONS = [25, 50, 100];
+
+export type ListItem = Record<string, unknown>;
+
+export function getListFields(resolvedSchema: ResolvedSchema): Record<string, Field> {
+  if (resolvedSchema.type === 'single') return resolvedSchema.fields.properties;
+  const merged: Record<string, Field> = {};
+  for (const variant of resolvedSchema.variants) {
+    if (variant.fields) Object.assign(merged, variant.fields.properties);
+  }
+  return merged;
+}
+
+export function buildListFilter(
+  filters: Record<string, string>,
+  list: Pick<List, 'filters' | 'filtersStatic'>,
+  objectName: string,
+): Record<string, unknown> | undefined {
+  const filter = buildJmapFilter({
+    appliedFilters: filters,
+    // SCHEMA-DEVIATION: log-client-filters — client-only filters never reach the server.
+    filters: list.filters?.filter((f) => !isClientOnlyFilterEnum(f)),
+    filtersStatic: list.filtersStatic,
+    isXPrefixed: objectName.startsWith('x:'),
+  });
+  return Object.keys(filter).length > 0 ? filter : undefined;
+}
+
+export function effectiveSort(sort: ListSort | null, list: Pick<List, 'sort' | 'columns'>): ListSort | null {
+  if (!sort) return null;
+  // SCHEMA-DEVIATION: account-client-sort — client-sortable columns are accepted too.
+  const clientSortable = list.columns.some((c) => c.name === sort.field && isClientSortableColumn(c));
+  return list.sort?.includes(sort.field) || clientSortable ? sort : null;
+}
+
+/** The sort to send to the server: client-sortable columns are sorted in the browser instead. */
+export function serverSort(sort: ListSort | null, list: Pick<List, 'sort' | 'columns'>): ListSort | null {
+  const effective = effectiveSort(sort, list);
+  if (!effective || list.sort?.includes(effective.field)) return effective;
+  return null;
+}
+
+export function buildListSort(sort: ListSort | null): Record<string, unknown>[] | undefined {
+  return sort ? [{ property: sort.field, isAscending: sort.ascending }] : undefined;
+}
+
+export function buildListPageParams(
+  state: ListUrlState,
+  list: Pick<List, 'filters' | 'filtersStatic' | 'columns' | 'sort'>,
+  objectName: string,
+  pageSize = LIST_PAGE_SIZE,
+  labelProperty?: string,
+): ListPageParams {
+  // SCHEMA-DEVIATION: account-quota-usage-column — synthetic columns resolve to the real properties they need.
+  const properties = expandListProperties(list.columns, objectName);
+  if (labelProperty && !properties.includes(labelProperty)) properties.push(labelProperty);
+  const params: ListPageParams = {
+    filter: buildListFilter(state.filters, list, objectName),
+    sort: buildListSort(serverSort(state.sort, list)),
+    limit: pageSize,
+    calculateTotal: true,
+    properties,
+  };
+  const anchor = state.anchors[state.anchors.length - 1];
+  if (anchor === undefined) {
+    params.position = 0;
+  } else {
+    params.anchor = anchor;
+    params.anchorOffset = 1;
+  }
+  return params;
+}
+
+export function isStrandedPage(anchors: number, count: number, settled: boolean): boolean {
+  return settled && count === 0 && anchors > 0;
+}
+
+export function scalarText(value: unknown): string | null {
+  if (typeof value === 'string') return value || null;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  return null;
+}
+
+export function itemId(item: ListItem): string | null {
+  return typeof item.id === 'string' && item.id ? item.id : null;
+}
+
+export function itemLabel(item: ListItem, labelProperty: string): string {
+  const value = item[labelProperty];
+  if (typeof value === 'string' && value) return value;
+  if (typeof value === 'number') return String(value);
+  return itemId(item) ?? '';
+}
+
+export interface PageRange {
+  from: number;
+  to: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+}
+
+export function pageRange(
+  position: number,
+  count: number,
+  total: number | null,
+  anchors: number,
+  pageSize = LIST_PAGE_SIZE,
+): PageRange {
+  const start = position > 0 || anchors === 0 ? position : anchors * pageSize;
+  return {
+    from: count > 0 ? start + 1 : 0,
+    to: start + count,
+    hasPrev: anchors > 0,
+    hasNext: total !== null ? start + count < total : count >= pageSize,
+  };
+}

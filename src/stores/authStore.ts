@@ -6,7 +6,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useCacheStore } from '@/stores/cacheStore';
 
 interface AccountInfo {
   name: string;
@@ -17,21 +16,27 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   tokenExpiresAt: number | null;
+  tokenLifetime: number | null;
   tokenEndpoint: string | null;
   endSessionEndpoint: string | null;
+  clientId: string | null;
+  resource: string | null;
   accounts: Record<string, AccountInfo>;
   primaryAccountId: string | null;
   activeAccountId: string | null;
   apiUrl: string | null;
   maxObjectsInGet: number;
   maxObjectsInSet: number;
+  sessionExpired: boolean;
 
   setTokens: (
     access: string,
-    refresh: string,
+    refresh: string | null,
     expiresIn: number,
     tokenEndpoint: string,
     endSessionEndpoint?: string | null,
+    clientId?: string | null,
+    resource?: string | null,
   ) => void;
   setSession: (
     accounts: Record<string, AccountInfo>,
@@ -42,9 +47,12 @@ interface AuthState {
   ) => void;
   switchAccount: (accountId: string) => void;
   logout: () => void;
+  expireSession: () => void;
   isAuthenticated: () => boolean;
   isTokenExpiringSoon: () => boolean;
 }
+
+const REFRESH_MARGIN_MS = 60_000;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -52,22 +60,31 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       tokenExpiresAt: null,
+      tokenLifetime: null,
       tokenEndpoint: null,
       endSessionEndpoint: null,
+      clientId: null,
+      resource: null,
       accounts: {},
       primaryAccountId: null,
       activeAccountId: null,
       apiUrl: null,
       maxObjectsInGet: 500,
       maxObjectsInSet: 500,
+      sessionExpired: false,
 
-      setTokens: (access, refresh, expiresIn, tokenEndpoint, endSessionEndpoint) => {
+      setTokens: (access, refresh, expiresIn, tokenEndpoint, endSessionEndpoint, clientId, resource) => {
+        const lifetime = Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn * 1000 : null;
         set({
           accessToken: access,
           refreshToken: refresh,
-          tokenExpiresAt: Date.now() + expiresIn * 1000,
+          tokenExpiresAt: lifetime === null ? null : Date.now() + lifetime,
+          tokenLifetime: lifetime,
           tokenEndpoint,
-          endSessionEndpoint: endSessionEndpoint ?? null,
+          endSessionEndpoint: endSessionEndpoint === undefined ? get().endSessionEndpoint : endSessionEndpoint,
+          clientId: clientId === undefined ? get().clientId : clientId,
+          resource: resource === undefined ? get().resource : resource,
+          sessionExpired: false,
         });
       },
 
@@ -91,9 +108,6 @@ export const useAuthStore = create<AuthState>()(
         const { accounts, activeAccountId } = get();
         if (accounts[accountId] && accountId !== activeAccountId) {
           set({ activeAccountId: accountId });
-          // Cached objectId display names/lists were resolved against the
-          // previous account and would otherwise show stale labels.
-          useCacheStore.getState().clearAll();
         }
       },
 
@@ -102,24 +116,37 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           tokenExpiresAt: null,
+          tokenLifetime: null,
           tokenEndpoint: null,
           endSessionEndpoint: null,
+          clientId: null,
+          resource: null,
           accounts: {},
           primaryAccountId: null,
           activeAccountId: null,
           apiUrl: null,
+          sessionExpired: false,
         });
       },
 
+      expireSession: () => {
+        if (get().accessToken === null) return;
+        get().logout();
+        set({ sessionExpired: true });
+      },
+
       isAuthenticated: () => {
-        const { accessToken, tokenExpiresAt } = get();
-        return accessToken !== null && tokenExpiresAt !== null && Date.now() < tokenExpiresAt;
+        const { accessToken, refreshToken, tokenExpiresAt } = get();
+        if (accessToken === null) return false;
+        if (refreshToken) return true;
+        return tokenExpiresAt === null || Date.now() < tokenExpiresAt;
       },
 
       isTokenExpiringSoon: () => {
-        const { tokenExpiresAt } = get();
+        const { tokenExpiresAt, tokenLifetime } = get();
         if (tokenExpiresAt === null) return false;
-        return tokenExpiresAt - Date.now() < 60_000;
+        const margin = tokenLifetime === null ? REFRESH_MARGIN_MS : Math.min(REFRESH_MARGIN_MS, tokenLifetime / 2);
+        return tokenExpiresAt - Date.now() < margin;
       },
     }),
     {
@@ -141,10 +168,22 @@ export const useAuthStore = create<AuthState>()(
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
           tokenExpiresAt: state.tokenExpiresAt,
+          tokenLifetime: state.tokenLifetime,
           tokenEndpoint: state.tokenEndpoint,
           endSessionEndpoint: state.endSessionEndpoint,
+          clientId: state.clientId,
+          resource: state.resource,
           activeAccountId: state.activeAccountId,
         }) as AuthState,
     },
   ),
 );
+
+export function applyAccessTokenOverride(): void {
+  const token = import.meta.env.VITE_ACCESS_TOKEN as string | undefined;
+  if (!token) return;
+  const { accessToken } = useAuthStore.getState();
+  if (!accessToken || accessToken === token) {
+    useAuthStore.getState().setTokens(token, '', 86400, '');
+  }
+}

@@ -6,13 +6,21 @@
 
 import type { Filter } from '@/types/schema';
 
-const OP_SUFFIX: Record<string, string> = {
-  eq: '',
-  gt: 'IsGreaterThan',
-  gte: 'IsGreaterThanOrEqual',
-  lt: 'IsLessThan',
-  lte: 'IsLessThanOrEqual',
-};
+const OP_SUFFIX = new Map<string, string>([
+  ['eq', ''],
+  ['gt', 'IsGreaterThan'],
+  ['gte', 'IsGreaterThanOrEqual'],
+  ['lt', 'IsLessThan'],
+  ['lte', 'IsLessThanOrEqual'],
+]);
+
+export function isFilterOp(op: string): boolean {
+  return OP_SUFFIX.has(op);
+}
+
+function opSuffix(op: string | undefined): string {
+  return op ? (OP_SUFFIX.get(op) ?? '') : '';
+}
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -37,7 +45,7 @@ function applyDateFilter(
   isXPrefixed: boolean,
 ): void {
   if (!DATE_ONLY.test(value)) {
-    const suffix = isXPrefixed && op ? (OP_SUFFIX[op] ?? '') : '';
+    const suffix = isXPrefixed ? opSuffix(op) : '';
     filter[`${field}${suffix}`] = value;
     return;
   }
@@ -54,8 +62,7 @@ function applyDateFilter(
     return;
   }
 
-  const suffix = OP_SUFFIX[effectiveOp] ?? '';
-  filter[`${field}${suffix}`] = utcDayStart(value);
+  filter[`${field}${opSuffix(effectiveOp)}`] = utcDayStart(value);
 }
 
 export interface BuildJmapFilterArgs {
@@ -72,25 +79,26 @@ export function buildJmapFilter({
   isXPrefixed,
 }: BuildJmapFilterArgs): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
-  if (filtersStatic) {
-    Object.assign(filter, filtersStatic);
-  }
-
-  const dateFields = new Set((filters ?? []).filter((f) => f.type === 'date').map((f) => f.field));
+  const declared = new Map((filters ?? []).map((f) => [f.field, f]));
 
   for (const [key, val] of Object.entries(appliedFilters)) {
     if (val === '' || val == null) continue;
-    if (key.endsWith('Op')) continue;
+    const definition = declared.get(key);
+    if (!definition) continue;
 
-    const op = appliedFilters[`${key}Op`];
+    const opKey = `${key}Op`;
+    const op = Object.hasOwn(appliedFilters, opKey) ? appliedFilters[opKey] : undefined;
 
-    if (dateFields.has(key)) {
+    if (definition.type === 'date') {
       applyDateFilter(filter, key, val, op, isXPrefixed);
       continue;
     }
 
-    const suffix = op ? (OP_SUFFIX[op] ?? '') : '';
-    filter[`${key}${suffix}`] = val;
+    filter[`${key}${opSuffix(op)}`] = val;
+  }
+
+  if (filtersStatic) {
+    Object.assign(filter, filtersStatic);
   }
 
   return filter;

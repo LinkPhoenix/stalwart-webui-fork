@@ -1,10 +1,11 @@
 import { defineConfig, type Plugin } from 'vitest/config';
 import { loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { version } from './package.json' with { type: 'json' };
+import pkg from './package.json' with { type: 'json' };
 import { assertNoDevelopmentTokenInBuild } from './src/lib/devAccessToken.ts';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,47 @@ function restartOnEnvDevelopmentLocal(): Plugin {
   };
 }
 
+/** Client id of the OAuth client that scripts/dev-server-init registers on the dev server. */
+const DEV_OAUTH_CLIENT_ID = 'stalwart-webui-dev';
+/** Extra scope so the dev token carries the account's full admin permissions. */
+const DEV_OAUTH_SCOPES = 'urn:stalwart:oauth:scope:full';
+
+/**
+ * Dev only: the Stalwart container cannot fetch the CIMD document from the
+ * host's Vite server (`localhost` resolves to the container itself), so use
+ * the pre-registered client instead. Production builds keep CIMD.
+ */
+function devOAuthClientId(): Plugin {
+  return {
+    name: 'dev-oauth-client-id',
+    apply: 'serve',
+    transformIndexHtml(html) {
+      return html
+        .replace(/(<meta\s+name="oauth-client-id"\s+content=")[^"]*(")/, `$1${DEV_OAUTH_CLIENT_ID}$2`)
+        .replace(/(<meta\s+name="oauth-scopes"\s+content=")[^"]*(")/, `$1${DEV_OAUTH_SCOPES}$2`);
+    },
+  };
+}
+
+/** Emits the app manifest the server reads to check the minimum server version. */
+function emitAppManifest(): Plugin {
+  return {
+    name: 'emit-app-manifest',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'stalwart-app.json',
+        source: JSON.stringify({
+          id: 'webui',
+          version: pkg.version,
+          minServerVersion: pkg.stalwart.minServerVersion,
+        }),
+      });
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const environment = loadEnv(mode, projectRoot, 'VITE_');
   assertNoDevelopmentTokenInBuild(command, environment.VITE_ACCESS_TOKEN);
@@ -34,9 +76,32 @@ export default defineConfig(({ command, mode }) => {
   return {
     base: './',
     define: {
-      __APP_VERSION__: JSON.stringify(version),
+      __APP_VERSION__: JSON.stringify(pkg.version),
     },
-    plugins: [react(), tailwindcss(), restartOnEnvDevelopmentLocal()],
+    plugins: [
+      react(),
+      babel({ presets: [reactCompilerPreset()] }),
+      tailwindcss(),
+      emitAppManifest(),
+      devOAuthClientId(),
+      restartOnEnvDevelopmentLocal(),
+    ],
+    build: {
+      assetsInlineLimit: (file: string) => (file.endsWith('.woff2') ? false : undefined),
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'icons',
+                test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+                includeDependenciesRecursively: false,
+              },
+            ],
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(projectRoot, './src'),
@@ -58,6 +123,10 @@ export default defineConfig(({ command, mode }) => {
         '/jmap': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
         '/auth': { target: 'http://localhost:8080', changeOrigin: true },
         '/logo': { target: 'http://localhost:8080', changeOrigin: true },
+        // Stalwart's server-rendered sign-in page loads its own hashed
+        // /ui-<hash>.css and .js from the site root; without these the form
+        // falls back to a native GET submit and the OAuth flow never completes.
+        '^/ui-[A-Za-z0-9]+\\.(css|js)$': { target: 'http://localhost:8080', changeOrigin: true },
         '/login': {
           target: 'http://localhost:8080',
           changeOrigin: true,

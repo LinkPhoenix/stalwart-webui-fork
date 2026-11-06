@@ -6,6 +6,8 @@
 
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function NotFound() {
@@ -14,13 +16,16 @@ export default function NotFound() {
   useDocumentTitle(t('errors.notFound', 'The requested resource was not found.'));
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">404</h1>
-        <p className="mt-2 text-muted-foreground">{t('errors.notFound')}</p>
-        <Link to="/" className="mt-4 inline-block text-primary underline hover:no-underline">
-          {t('common.back')}
-        </Link>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="tile w-full max-w-sm px-8 py-10 text-center">
+        <span className="eyebrow mx-auto">404</span>
+        <h1 className="page-title mt-4">{t('errors.notFound')}</h1>
+        <Button asChild className="mt-6">
+          <Link to="/">
+            <ArrowLeft aria-hidden="true" />
+            {t('common.back')}
+          </Link>
+        </Button>
       </div>
     </div>
   );

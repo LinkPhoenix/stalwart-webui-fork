@@ -41,7 +41,7 @@ async function openList(page: Page, queryString = '', objectName = 'x:Log') {
     level: 'info',
     event: 'received',
   }));
-  const fixture = { queries: [] as Record<string, unknown>[], failNextQuery: false };
+  const fixture = { queries: [] as Record<string, unknown>[], failNextQuery: false, rows };
   await page.addInitScript(() => {
     sessionStorage.setItem(
       'stalwart-auth',
@@ -122,8 +122,8 @@ async function openList(page: Page, queryString = '', objectName = 'x:Log') {
       await route.fulfill({
         json: {
           methodResponses: [
-            ['error', { type: 'anchorNotFound' }, '0'],
-            ['error', { type: 'invalidResultReference' }, '1'],
+            ['error', { type: 'anchorNotFound' }, query[2]],
+            ['error', { type: 'invalidResultReference' }, 'g'],
           ],
         },
       });
@@ -134,8 +134,8 @@ async function openList(page: Page, queryString = '', objectName = 'x:Log') {
       await route.fulfill({
         json: {
           methodResponses: [
-            ['error', { type: 'serverFail' }, '0'],
-            ['error', { type: 'serverFail' }, '1'],
+            ['error', { type: 'serverFail' }, query[2]],
+            ['error', { type: 'invalidResultReference' }, 'g'],
           ],
         },
       });
@@ -153,7 +153,7 @@ async function openList(page: Page, queryString = '', objectName = 'x:Log') {
         methodResponses: [
           [`${objectName}/query`, { ids: pageRows.map((row) => row.id), total: filtered.length, position }, query[2]],
           // /get ordering is deliberately different from /query (RFC 8620 §5.1).
-          [`${objectName}/get`, { list: [...pageRows].reverse() }, '1'],
+          [`${objectName}/get`, { list: [...pageRows].reverse() }, 'g'],
         ],
       },
     });
@@ -164,9 +164,14 @@ async function openList(page: Page, queryString = '', objectName = 'x:Log') {
 }
 
 async function expectPage(page: Page, start: number, size = 25) {
-  await expect(page.getByRole('cell', { name: /^Entry / })).toHaveText(
+  await expect(page.getByRole('rowheader', { name: /^Entry / })).toHaveText(
     Array.from({ length: size }, (_, index) => `Entry ${String(start + index).padStart(3, '0')}`),
   );
+}
+
+/** Confirms the open confirmation dialog (its primary action is the last button). */
+async function confirmAction(page: Page) {
+  await page.getByRole('alertdialog').getByRole('button').last().click();
 }
 
 test('returns one page at a time and preserves the page when refreshed or updated', async ({ page }) => {
@@ -179,25 +184,28 @@ test('returns one page at a time and preserves the page when refreshed or update
       const count = fixture.queries.length;
       await page.getByRole('button', { name: 'Refresh', exact: true }).click();
       await expect.poll(() => fixture.queries.length).toBe(count + 1);
-      expect(fixture.queries.at(-1)).toMatchObject({ anchor: 'row-26', anchorOffset: 0 });
+      // The page is identified by the last row of the previous page, kept in the URL.
+      expect(fixture.queries.at(-1)).toMatchObject({ anchor: 'row-25', anchorOffset: 1 });
       await expectPage(page, 26);
     }
   }
-  const queryCount = fixture.queries.length;
   for (const start of [51, 26]) {
     await page.getByRole('button', { name: 'Previous', exact: true }).click();
     await expectPage(page, start);
   }
-  expect(fixture.queries).toHaveLength(queryCount);
   await page.clock.fastForward(5_100);
+  const queryCount = fixture.queries.length;
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await expect.poll(() => fixture.queries.length).toBe(queryCount + 1);
-  expect(fixture.queries.at(-1)).toMatchObject({ anchor: 'row-26', anchorOffset: 0 });
+  expect(fixture.queries.at(-1)).toMatchObject({ anchor: 'row-25', anchorOffset: 1 });
   await expectPage(page, 26);
-  await page.getByRole('button', { name: 'Actions for this item' }).first().click();
+  await page
+    .getByRole('button', { name: /^Actions for Entry / })
+    .first()
+    .click();
   await page.getByRole('menuitem', { name: 'Mark entry' }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expect.poll(() => fixture.queries.length).toBe(queryCount + 2);
+  await confirmAction(page);
+  await expect.poll(() => fixture.queries.length).toBeGreaterThan(queryCount + 1);
   await expectPage(page, 26);
   await page.getByRole('button', { name: 'Previous', exact: true }).click();
   await expectPage(page, 1);
@@ -206,19 +214,14 @@ test('returns one page at a time and preserves the page when refreshed or update
   await expectPage(page, 26);
 });
 
-test('failed requests keep the current page and page-size changes clear history', async ({ page }) => {
+test('failed requests show a retryable error and page-size changes restart at the first page', async ({ page }) => {
   const fixture = await openList(page);
   fixture.failNextQuery = true;
   await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(page.getByText('serverFail', { exact: true })).toBeVisible();
-  await expectPage(page, 1);
-  await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await expectPage(page, 26);
-  fixture.failNextQuery = true;
-  await page.getByRole('button', { name: 'Previous', exact: true }).click();
-  await expect(page.getByText('serverFail', { exact: true })).toBeVisible();
-  await expectPage(page, 26);
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Rows per page' }).click();
   await page.getByRole('option', { name: '50', exact: true }).click();
   await expectPage(page, 1, 50);
@@ -227,8 +230,6 @@ test('failed requests keep the current page and page-size changes clear history'
   await expectPage(page, 51, 50);
   await page.getByRole('button', { name: 'Previous', exact: true }).click();
   await expectPage(page, 1, 50);
-  await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await expectPage(page, 51, 50);
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Entry 003');
   await page.getByLabel('Name', { exact: true }).press('Enter');
@@ -236,21 +237,17 @@ test('failed requests keep the current page and page-size changes clear history'
   await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled();
 });
 
-test('deleting the refresh anchor reloads the current page without an anchor error', async ({ page }) => {
+test('a vanished page anchor restarts at the first page without an anchor error', async ({ page }) => {
   const fixture = await openList(page);
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expectPage(page, 26);
-  await page.getByRole('button', { name: 'Actions for this item' }).first().click();
-  await page.getByRole('menuitem', { name: 'Delete entry' }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expectPage(page, 27);
-  expect(fixture.queries.at(-1)).toMatchObject({ position: 25 });
-  expect(fixture.queries.at(-1)).not.toHaveProperty('anchor');
+  fixture.rows.splice(24, 1); // row-25, the anchor of page two, is deleted elsewhere
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByRole('rowheader', { name: 'Entry 001', exact: true })).toBeVisible();
   await expect(page.getByText('anchorNotFound', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await expectPage(page, 52);
-  await page.getByRole('button', { name: 'Previous', exact: true }).click();
-  await expectPage(page, 27);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(fixture.queries.at(-1)).toMatchObject({ position: 0 });
+  await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled();
 });
 
 test('client-filtered lists retain order and the current page after refresh', async ({ page }) => {
@@ -295,9 +292,12 @@ test('ordinary schema-driven lists share the navigation and action fixes', async
   }
   await page.getByRole('button', { name: 'Previous', exact: true }).click();
   await expectPage(page, 26);
-  await page.getByRole('button', { name: 'Actions for this item' }).first().click();
+  await page
+    .getByRole('button', { name: /^Actions for Entry / })
+    .first()
+    .click();
   await page.getByRole('menuitem', { name: 'Mark entry' }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmAction(page);
   await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeEnabled();
   await expectPage(page, 26);
 });
@@ -308,30 +308,30 @@ test('deleting the last page reveals the previous page and clears selections', a
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expectPage(page, start, start === 126 ? 5 : 25);
   }
-  await page.getByRole('checkbox', { name: 'Select all', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Select all on this page', exact: true }).check();
   await page.getByRole('button', { name: 'Actions (5)', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Delete selected', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await confirmAction(page);
   await expectPage(page, 101);
-  expect(fixture.queries.at(-1)).toMatchObject({ position: 100 });
+  expect(fixture.queries.at(-1)).toMatchObject({ anchor: 'row-100', anchorOffset: 1 });
   await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
-  await expect(page.getByRole('checkbox', { name: 'Select all', exact: true })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Select all on this page', exact: true })).not.toBeChecked();
   await page.getByRole('button', { name: 'Previous', exact: true }).click();
   await expectPage(page, 76);
 });
 
-test('actions on all matching rows invalidate cached pages', async ({ page }) => {
+test('actions on all matching rows reload the list from the first page', async ({ page }) => {
   const fixture = await openList(page);
   for (const start of [26, 51]) {
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expectPage(page, start);
   }
-  await page.getByRole('checkbox', { name: 'Select all', exact: true }).check();
-  await page.getByRole('button', { name: 'Select all 130 items matching filters', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Select all on this page', exact: true }).check();
+  await page.getByRole('button', { name: 'Select all 130 entries matching the current filters', exact: true }).click();
   await page.getByRole('button', { name: 'Actions (130)', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Delete selected', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled();
-  await expect(page.getByRole('cell', { name: /^Entry / })).toHaveCount(0);
+  await confirmAction(page);
+  await expect(page.getByRole('rowheader', { name: /^Entry / })).toHaveCount(0);
+  await expect(page.getByText('No results found')).toBeVisible();
   expect(fixture.queries.at(-1)).toMatchObject({ position: 0 });
 });
