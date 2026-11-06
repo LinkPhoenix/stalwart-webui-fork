@@ -26,10 +26,12 @@ Fork remote: `origin` → your GitHub fork.
 
 ```bash
 git fetch origin
-git fetch upstream
+git fetch upstream --no-tags     # the fork reuses upstream's version numbers: never import its tags
 git checkout main
 git pull --ff-only origin main   # or your release branch
 ```
+
+The fork releases under the same version number as the official WebUI it contains (see `.agents/rules/releases.md`), so upstream's `vX.Y.Z` tags collide with the fork's. `--no-tags` keeps them out of this clone; delete a stray local `vX.Y.Z` tag that points at an upstream commit before tagging a fork release.
 
 ### 2. Choose merge vs rebase
 

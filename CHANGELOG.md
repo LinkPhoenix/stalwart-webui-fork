@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-11-06
+
 ### Changed
+- The fork now uses the same version number as the official WebUI it is based on, so 2.0.5 here is the official 2.0.5 plus the fork's additions. It runs on Stalwart 1.0.0 or later (`stalwart.minServerVersion`) and was tested against Stalwart 1.0.3.
+- The README describes the new design with fresh screenshots, the new Account section and the Settings pages, and the toolchain changes.
 - Dependencies were updated to their latest releases, including Vitest 5, happy-dom 21, `@rolldown/plugin-babel` 0.3, React 19.3.1, Vite 8.3.6, Tailwind CSS 4.3.5 and TanStack Query 5.107. `bun.lock` was regenerated, so `bun outdated` and `bun audit` report only `@babel/core`, which stays on 7.x for now, and no vulnerability.
 - The TypeScript compiler is now TypeScript 7 (native), and linting moved from ESLint and typescript-eslint to Oxlint, which blocked the upgrade because typescript-eslint cannot use TypeScript 7. Lint runs in about half a second instead of nine, and type checking in about 1.4 seconds instead of 7. `@babel/core` stays on 7.x until `babel-plugin-react-compiler` supports Babel 8. See `docs/UPSTREAM_SYNC.md`.
 - CI and release builds run on Node 24 (LTS) with the latest GitHub Actions, still pinned by commit: checkout 7, setup-node 7, upload-artifact 7 and download-artifact 8.
