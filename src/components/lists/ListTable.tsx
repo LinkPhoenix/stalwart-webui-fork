@@ -35,6 +35,8 @@ interface ListTableProps {
   renderRowActions: ((item: ListItem, id: string, label: string) => ReactNode) | null;
   /** Nesting depth per row id (mailbox tree); indents the first column. */
   depths?: ReadonlyMap<string, number> | null;
+  /** Content of the empty state; defaults to a plain "no results" message. */
+  empty?: ReactNode;
   loading: boolean;
   busy: boolean;
 }
@@ -59,6 +61,7 @@ export function ListTable({
   rowLabel,
   renderRowActions,
   depths,
+  empty,
   loading,
   busy,
 }: ListTableProps) {
@@ -105,7 +108,7 @@ export function ListTable({
               </td>
             </tr>
           ) : rows.length === 0 ? (
-            <ListTableMessage colSpan={colSpan}>{t('list.noResults', 'No results found')}</ListTableMessage>
+            <ListTableMessage colSpan={colSpan}>{empty ?? t('list.noResults', 'No results found')}</ListTableMessage>
           ) : (
             rows.map(({ item, id }) => {
               const label = rowLabel(item);

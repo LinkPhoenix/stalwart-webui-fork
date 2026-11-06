@@ -66,6 +66,7 @@ function TextFilter({ filter, values, onChange }: FilterFieldProps<FilterText>) 
         value={values[filter.field] ?? ''}
         onChange={(e) => onChange(filter.field, e.target.value)}
       />
+      <p className="mt-1 text-[11px] text-dim">{t('list.exactMatchOnly', 'Exact match only')}</p>
     </LabelledField>
   );
 }

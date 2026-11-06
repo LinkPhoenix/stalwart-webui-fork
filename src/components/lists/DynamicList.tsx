@@ -25,7 +25,10 @@ import { useListColumns } from '@/hooks/useListColumns';
 import { useUIStore } from '@/stores/uiStore';
 import { ChangeQuotaDialog } from './ChangeQuotaDialog';
 import { QUOTA_PROMPT_CONFIG } from './promptSetProperty';
+import { buildQueueOpsLinks } from '@/lib/queueOpsLinks';
+import { useAccountStore } from '@/stores/accountStore';
 import { ColumnsMenu } from './ColumnsMenu';
+import { ListEmptyState } from './ListEmptyState';
 import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
 import { LogListTools } from './LogListTools';
@@ -124,6 +127,21 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
     ...(list.sort ?? []),
     ...list.columns.filter(isClientSortableColumn).map((c) => c.name),
   ]);
+
+  const edition = useAccountStore((s) => s.edition);
+  const emptyState = (
+    <ListEmptyState
+      filtersActive={Object.keys(state.filters).length > 0}
+      onResetFilters={listState.resetFilters}
+      createHref={canCreate && section ? `/${section}/${viewName}/new` : null}
+      createLabel={t('list.create', 'Create {{name}}', { name: list.singularName })}
+      queueLinks={
+        objectName === 'x:QueuedMessage'
+          ? buildQueueOpsLinks(schema, viewToSection, edition, checkers.canGet, checkers.hasPermission)
+          : null
+      }
+    />
+  );
 
   // Fork list tools, shown on the filter row (or on their own row without filters).
   const tools = (
@@ -340,6 +358,7 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
               : null
           }
           depths={listState.depths}
+          empty={emptyState}
           loading={listState.isLoading}
           busy={busy}
         />
