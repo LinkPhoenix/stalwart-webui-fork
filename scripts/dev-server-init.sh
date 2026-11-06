@@ -20,6 +20,9 @@ DEVADMIN_NAME="devadmin"
 DEVADMIN_SECRET="DevAdminPass123!"
 DEFAULT_TOKEN_EXPIRY_MS=10800000 # 3 hours
 
+DEV_OAUTH_CLIENT_ID="stalwart-webui-dev"
+DEV_OAUTH_REDIRECT_URI="http://localhost:5173/oauth/callback"
+
 jmap() {
   curl -sf --compressed -u "$RECOVERY_ACCOUNT:$RECOVERY_SECRET" \
     -X POST -H "Content-Type: application/json" -d "$1" "$API_BASE_URL/jmap/"
@@ -39,7 +42,7 @@ if ! printf '%s' "$QUERY_RESULT" | grep -q '"forbidden"'; then
   echo "Server already bootstrapped, skipping setup. (Use 'docker compose down -v && npm run dev:server' to start fresh.)"
 else
   echo "Completing server bootstrap (domain: $DEV_DOMAIN, no TLS certificate request)..."
-  jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:Bootstrap/set\",{\"accountId\":\"$ACCOUNT_ID\",\"update\":{\"singleton\":{\"defaultDomain\":\"$DEV_DOMAIN\",\"serverHostname\":\"$DEV_HOSTNAME\",\"requestTlsCertificate\":false}}},\"0\"]]}" > /dev/null
+  jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:Bootstrap/set\",{\"accountId\":\"$ACCOUNT_ID\",\"update\":{\"singleton\":{\"defaultDomain\":\"$DEV_DOMAIN\",\"defaultHostname\":\"$DEV_HOSTNAME\",\"requestTlsCertificate\":false}}},\"0\"]]}" > /dev/null
 
   echo "Restarting the container to apply bootstrap config (one-time only)..."
   docker compose restart stalwart > /dev/null
@@ -73,4 +76,13 @@ else
   fi
 
   echo "Done. devadmin@$DEV_DOMAIN / $DEVADMIN_SECRET is ready — run scripts/dev-token.sh to get a token."
+fi
+
+# The container cannot fetch the WebUI's CIMD document from the host (localhost
+# resolves to the container itself), so register a fixed OAuth client that
+# vite.config.ts injects as the oauth-client-id meta tag in development.
+CLIENT_QUERY=$(jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:OAuthClient/query\",{\"accountId\":\"$ACCOUNT_ID\",\"filter\":{\"clientId\":\"$DEV_OAUTH_CLIENT_ID\"}},\"0\"]]}") || true
+if ! printf '%s' "$CLIENT_QUERY" | grep -qF '"ids":["'; then
+  echo "Registering the dev OAuth client ($DEV_OAUTH_CLIENT_ID)..."
+  jmap "{\"using\":[\"urn:ietf:params:jmap:core\",\"urn:stalwart:jmap\"],\"methodCalls\":[[\"x:OAuthClient/set\",{\"accountId\":\"$ACCOUNT_ID\",\"create\":{\"c1\":{\"clientId\":\"$DEV_OAUTH_CLIENT_ID\",\"description\":\"WebUI dev (Vite)\",\"redirectUris\":{\"$DEV_OAUTH_REDIRECT_URI\":true},\"scopes\":{\"full\":true}}}},\"0\"]]}" > /dev/null
 fi

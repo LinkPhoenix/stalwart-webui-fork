@@ -28,6 +28,28 @@ function restartOnEnvDevelopmentLocal(): Plugin {
   };
 }
 
+/** Client id of the OAuth client that scripts/dev-server-init registers on the dev server. */
+const DEV_OAUTH_CLIENT_ID = 'stalwart-webui-dev';
+/** Extra scope so the dev token carries the account's full admin permissions. */
+const DEV_OAUTH_SCOPES = 'urn:stalwart:oauth:scope:full';
+
+/**
+ * Dev only: the Stalwart container cannot fetch the CIMD document from the
+ * host's Vite server (`localhost` resolves to the container itself), so use
+ * the pre-registered client instead. Production builds keep CIMD.
+ */
+function devOAuthClientId(): Plugin {
+  return {
+    name: 'dev-oauth-client-id',
+    apply: 'serve',
+    transformIndexHtml(html) {
+      return html
+        .replace(/(<meta\s+name="oauth-client-id"\s+content=")[^"]*(")/, `$1${DEV_OAUTH_CLIENT_ID}$2`)
+        .replace(/(<meta\s+name="oauth-scopes"\s+content=")[^"]*(")/, `$1${DEV_OAUTH_SCOPES}$2`);
+    },
+  };
+}
+
 /** Emits the app manifest the server reads to check the minimum server version. */
 function emitAppManifest(): Plugin {
   return {
@@ -61,6 +83,7 @@ export default defineConfig(({ command, mode }) => {
       babel({ presets: [reactCompilerPreset()] }),
       tailwindcss(),
       emitAppManifest(),
+      devOAuthClientId(),
       restartOnEnvDevelopmentLocal(),
     ],
     build: {
@@ -100,6 +123,10 @@ export default defineConfig(({ command, mode }) => {
         '/jmap': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
         '/auth': { target: 'http://localhost:8080', changeOrigin: true },
         '/logo': { target: 'http://localhost:8080', changeOrigin: true },
+        // Stalwart's server-rendered sign-in page loads its own hashed
+        // /ui-<hash>.css and .js from the site root; without these the form
+        // falls back to a native GET submit and the OAuth flow never completes.
+        '^/ui-[A-Za-z0-9]+\\.(css|js)$': { target: 'http://localhost:8080', changeOrigin: true },
         '/login': {
           target: 'http://localhost:8080',
           changeOrigin: true,
