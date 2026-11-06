@@ -29,6 +29,7 @@ import { buildQueueOpsLinks } from '@/lib/queueOpsLinks';
 import { useAccountStore } from '@/stores/accountStore';
 import { ColumnsMenu } from './ColumnsMenu';
 import { ListEmptyState } from './ListEmptyState';
+import { ActiveWebUiCard, QueueBacklogNotice } from './ListNotices';
 import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
 import { LogListTools } from './LogListTools';
@@ -129,17 +130,17 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
   ]);
 
   const edition = useAccountStore((s) => s.edition);
+  const queueLinks =
+    objectName === 'x:QueuedMessage'
+      ? buildQueueOpsLinks(schema, viewToSection, edition, checkers.canGet, checkers.hasPermission)
+      : null;
   const emptyState = (
     <ListEmptyState
       filtersActive={Object.keys(state.filters).length > 0}
       onResetFilters={listState.resetFilters}
       createHref={canCreate && section ? `/${section}/${viewName}/new` : null}
       createLabel={t('list.create', 'Create {{name}}', { name: list.singularName })}
-      queueLinks={
-        objectName === 'x:QueuedMessage'
-          ? buildQueueOpsLinks(schema, viewToSection, edition, checkers.canGet, checkers.hasPermission)
-          : null
-      }
+      queueLinks={queueLinks}
     />
   );
 
@@ -300,6 +301,11 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
 
       {listState.error && <ListError message={listState.error} onRetry={listState.refetch} />}
       {actions.error && <ListError message={actions.error} onDismiss={actions.clearError} />}
+
+      {objectName === 'x:Application' && <ActiveWebUiCard />}
+      {queueLinks && Object.keys(state.filters).length === 0 && total !== null && total > 0 && (
+        <QueueBacklogNotice total={total} links={queueLinks} />
+      )}
 
       <section className="tile relative overflow-hidden">
         {visibleFilters.length > 0 && (
