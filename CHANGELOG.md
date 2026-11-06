@@ -5,10 +5,16 @@ All notable changes to this project will be documented in this file. This projec
 ## [Unreleased]
 
 ### Changed
+- Dependencies were updated to their latest releases, including Vitest 5, happy-dom 21, `@rolldown/plugin-babel` 0.3, React 19.3.1, Vite 8.3.6, Tailwind CSS 4.3.5 and TanStack Query 5.107.
+- The TypeScript compiler is now TypeScript 7 (native), and linting moved from ESLint and typescript-eslint to Oxlint, which blocked the upgrade because typescript-eslint cannot use TypeScript 7. Lint runs in about half a second instead of nine, and type checking in about 1.4 seconds instead of 7. `@babel/core` stays on 7.x until `babel-plugin-react-compiler` supports Babel 8. See `docs/UPSTREAM_SYNC.md`.
+- CI and release builds run on Node 24 (LTS) with the latest GitHub Actions, still pinned by commit: checkout 7, setup-node 7, upload-artifact 7 and download-artifact 8.
 - Fork list features were re-implemented on the new list architecture: Role, Usage/Quota, alias and permission count columns, report summaries and Problems only, client-side sorting, mailbox tree, Log Entries filters, presets and auto-refresh, CSV export, column preferences, page sizes, bulk quota change, list density, empty states, the Active WebUI card and the queue backlog notice.
 - The Sieve code editor, backend logos in type pickers, the sidebar accordion, Getting Started and Overview icons and the signed-in username in the top bar are back.
 - Appearance defaults are now dark mode, the default color theme, rounded corners and comfortable density.
 - Merged `stalwartlabs/webui` through 2.0.5: new design and navigation, schema-defined dashboards, TanStack Query data layer, split list and form components, passkey registration, locale-aware dates and numbers, CIMD and RFC 8707 OAuth support. Upstream notes: 2.0.0 CIMD; 2.0.1 create-only objects (Actions) shown; 2.0.2 tenant-scoped object pickers; 2.0.3 OAuth `resource` parameter and logout keeps tokens; 2.0.4 new design and `oauth-scopes` meta tag; 2.0.5 passkeys and locale formatting.
+
+### Security
+- Update the development dependency `happy-dom` to 21.0.4 and the transitive dependency `zod` to 4.6.7 ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)), and drop ESLint with its vulnerable transitive packages. `npm audit` reports no vulnerabilities.
 
 ## [1.3.2] - 2026-10-07
 

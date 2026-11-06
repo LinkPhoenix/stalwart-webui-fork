@@ -56,6 +56,7 @@ git commit   # if merge created one
 | `src/components/layout/MainContent.tsx` | CustomComponent routes | Keep Overview / Onboarding / LiveDelivery / LiveTracing cases. |
 | `vite.config.ts` | Dev proxy / env restart | Keep fork proxy (`/auth`, OAuth `/login`, env watcher). |
 | `package.json` / lockfiles | Dep bumps | Prefer upstream versions unless a fork dep is required; re-run install. |
+| `eslint.config.js` / `.oxlintrc.json` / `tsconfig*.json` | Upstream lints with ESLint and typescript-eslint on TypeScript 6 | Keep the fork's Oxlint config and TypeScript 7 (see [Toolchain deviations](#toolchain-deviations)). Delete any `eslint.config.js` that comes back, and port new upstream lint rules into `.oxlintrc.json`. |
 | `CHANGELOG.md` / `README.md` | Docs diverge | Keep fork history; add an Unreleased note if the sync itself matters. |
 
 ### 4. Post-merge checklist (required)
@@ -109,6 +110,15 @@ Add a short `CHANGELOG.md` Unreleased note when the sync is user-visible or risk
 ### Changed
 - Merged `stalwartlabs/webui` through <commit-or-tag>; revalidated schema deviations.
 ```
+
+## Toolchain deviations
+
+These choices differ from upstream on purpose. Keep them when `package.json` or the config files conflict.
+
+- **Oxlint instead of ESLint.** typescript-eslint needs the TypeScript compiler API, which TypeScript 7 does not ship (a new API is expected in 7.1). Oxlint parses TypeScript itself. The config is `.oxlintrc.json`: the same rules the ESLint config enabled (recommended, typescript-eslint recommended, react-hooks with the React Compiler rules, react-refresh), 93 rules in total. Not ported: `no-undef` and `no-useless-assignment` (nursery), `react-hooks/config` and `react-hooks/gating` (compiler options are not configurable in Oxlint). Oxlint honors `.gitignore`, so tracked files that match an ignore pattern must be un-ignored there (`!scripts/validate-release-tag.mjs`) to stay linted.
+- **TypeScript 7** (native compiler). `typecheck` and the `tsc -b` step of `build` run the 7.x `tsc`. Nothing in the repository imports the `typescript` package, and `i18next` and `react-i18next` accept `^7` as a peer.
+- **`@babel/core` stays on 7.x.** Babel 8.1 compiles, but `babel-plugin-react-compiler` 1.0.0 then fails on every destructured parameter with a default value (`Expected object property value to be an LVal, got: AssignmentPattern`): 70 compile errors instead of 21, so about 30 components and hooks silently lose automatic memoization. Check it again whenever `babel-plugin-react-compiler` publishes a release: run the plugin with a `logger` over `src/` under both Babel versions and compare the `CompileSuccess` and `CompileError` counts.
+- **`bun.lock`** is upstream's lockfile and is not maintained here; `package-lock.json` is the lockfile of record (CI runs `npm ci`).
 
 ## What this fork owns (do not drop on sync)
 
