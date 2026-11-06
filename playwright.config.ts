@@ -8,7 +8,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // The dev server bundles its dependencies and compiles modules on the first page loads. With the default
+  // worker count (half of the cores) a cold dependency cache leaves several tests stuck on "Loading...".
+  workers: process.env.CI ? 1 : 2,
   reporter: 'list',
   // The dev server compiles on demand: the first page loads of a parallel run are slow.
   expect: { timeout: 15_000 },
