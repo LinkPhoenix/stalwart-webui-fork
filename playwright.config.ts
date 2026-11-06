@@ -10,6 +10,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
+  // The dev server compiles on demand: the first page loads of a parallel run are slow.
+  expect: { timeout: 15_000 },
   use: {
     baseURL,
     trace: 'retain-on-failure',
