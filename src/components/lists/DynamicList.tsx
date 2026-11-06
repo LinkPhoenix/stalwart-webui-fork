@@ -23,6 +23,8 @@ import type { ResolvedView } from '@/lib/schemaResolver';
 
 import { useListColumns } from '@/hooks/useListColumns';
 import { useUIStore } from '@/stores/uiStore';
+import { ChangeQuotaDialog } from './ChangeQuotaDialog';
+import { QUOTA_PROMPT_CONFIG } from './promptSetProperty';
 import { ColumnsMenu } from './ColumnsMenu';
 import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
@@ -37,6 +39,7 @@ import { RowActions } from './RowActions';
 import { SelectionBanner } from './SelectionBanner';
 import { itemActionHref, resolveItemActions, resolveMassActions, type ResolvedItemAction } from './listActions';
 import { isClientSortableColumn } from '@/lib/schemaDeviationTypes';
+import { QUOTA_USAGE_COLUMN } from '@/lib/syntheticColumns';
 import { getListFields, itemId, itemLabel } from './listQuery';
 import { useDynamicList } from './useDynamicList';
 import { useListActions } from './useListActions';
@@ -155,21 +158,38 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
   const selectedCount = selection.allMatching ? (total ?? selection.selectedIds.length) : selection.selectedIds.length;
   const nameFor = (count: number) => (count === 1 ? list.singularName : list.pluralName);
 
+  // In client mode the matching set is only known locally, so send its ids.
+  const massTarget = () => ({
+    ids:
+      selection.allMatching && listState.allRows
+        ? listState.allRows.flatMap((row) => itemId(row) ?? [])
+        : selection.selectedIds,
+    allMatching: selection.allMatching && !listState.clientMode,
+    filter: listState.jmapFilter,
+    sort: listState.jmapSort,
+  });
+
+  // SCHEMA-DEVIATION: bulk-quota-change-action — accounts and groups can have their disk quota set in bulk.
+  const canBulkChangeQuota =
+    list.columns.some((c) => c.name === QUOTA_USAGE_COLUMN) &&
+    isObject &&
+    checkers.hasObjectPermission(obj.permissionPrefix, 'Update');
+  const [quotaDialogOpen, setQuotaDialogOpen] = useState(false);
+  const changeQuota = async (bytes: number) => {
+    const action: RunnableMassAction = {
+      type: 'setProperty',
+      label: t('list.changeQuota', 'Change quota…'),
+      properties: { [QUOTA_PROMPT_CONFIG.property]: bytes },
+    };
+    if (await actions.runMassAction(action, massTarget())) selection.clear();
+  };
+
   const confirmMassAction = (action: RunnableMassAction) => {
     const count = selectedCount;
     const name = nameFor(count);
     const allMatching = selection.allMatching;
     const run = async () => {
-      // In client mode the matching set is only known locally, so send its ids.
-      const ok = await actions.runMassAction(action, {
-        ids:
-          allMatching && listState.allRows
-            ? listState.allRows.flatMap((row) => itemId(row) ?? [])
-            : selection.selectedIds,
-        allMatching: allMatching && !listState.clientMode,
-        filter: listState.jmapFilter,
-        sort: listState.jmapSort,
-      });
+      const ok = await actions.runMassAction(action, massTarget());
       if (ok) selection.clear();
     };
     if (action.type === 'delete') {
@@ -351,10 +371,30 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
       {massActions.length > 0 && selectedCount > 0 && (
         <MassActionBar
           actions={massActions}
+          extraActions={
+            canBulkChangeQuota
+              ? [
+                  {
+                    key: 'change-quota',
+                    label: t('list.changeQuota', 'Change quota…'),
+                    onSelect: () => setQuotaDialogOpen(true),
+                  },
+                ]
+              : undefined
+          }
           count={selectedCount}
           disabled={actions.pending}
           onSelect={confirmMassAction}
           onClear={selection.clear}
+        />
+      )}
+
+      {canBulkChangeQuota && (
+        <ChangeQuotaDialog
+          open={quotaDialogOpen}
+          onOpenChange={setQuotaDialogOpen}
+          count={selectedCount}
+          onConfirm={(bytes) => void changeQuota(bytes)}
         />
       )}
 

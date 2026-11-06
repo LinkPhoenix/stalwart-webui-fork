@@ -22,13 +22,15 @@ export type RunnableMassAction = Exclude<MassAction, { type: 'separator' }>;
 
 interface MassActionBarProps {
   actions: { key: string; action: MassAction }[];
+  /** Fork-only actions that open their own dialog (e.g. bulk quota change). */
+  extraActions?: { key: string; label: string; onSelect: () => void }[];
   count: number;
   disabled: boolean;
   onSelect: (action: RunnableMassAction) => void;
   onClear: () => void;
 }
 
-export function MassActionBar({ actions, count, disabled, onSelect, onClear }: MassActionBarProps) {
+export function MassActionBar({ actions, extraActions = [], count, disabled, onSelect, onClear }: MassActionBarProps) {
   const { t } = useTranslation();
   return (
     <FloatingActionBar>
@@ -60,6 +62,12 @@ export function MassActionBar({ actions, count, disabled, onSelect, onClear }: M
               </DropdownMenuItem>
             ),
           )}
+          {extraActions.length > 0 && <DropdownMenuSeparator />}
+          {extraActions.map((extra) => (
+            <DropdownMenuItem key={extra.key} onSelect={extra.onSelect}>
+              {extra.label}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
       <FloatingActionDivider />
