@@ -7,6 +7,7 @@
 import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BackendVariantIcon } from '@/components/common/BackendIcon';
 import { FieldLabel } from '@/components/forms/FieldRow';
 import { fieldIds, useFieldScope, useFormContext, useInPanel } from '@/components/forms/formContext';
 import { VARIANT_FIELD } from '@/components/forms/formLogic';
@@ -92,10 +93,11 @@ function SegmentedVariants({ id, labelledBy, ariaLabel, variants, value, onChang
               if (!checked) onChange(v.name);
             }}
             className={cn(
-              'inline-flex h-7 items-center rounded-full px-3 text-[13px] font-semibold text-muted-foreground outline-none transition-[color,background-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60',
+              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted-foreground outline-none transition-[color,background-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60',
               checked ? 'bg-card text-foreground shadow-tile' : 'hover:text-foreground',
             )}
           >
+            <BackendVariantIcon variant={v} className="h-3.5 w-3.5 shrink-0 object-contain" />
             {v.label}
           </button>
         );
@@ -106,15 +108,26 @@ function SegmentedVariants({ id, labelledBy, ariaLabel, variants, value, onChang
 
 function DropdownVariants({ id, labelledBy, ariaLabel, variants, value, onChange, readOnly }: VariantControlProps) {
   const { t } = useTranslation();
+  const selected = variants.find((v) => v.name === value);
   return (
     <Select value={value} onValueChange={onChange} disabled={readOnly}>
       <SelectTrigger id={id} className="w-full" aria-labelledby={labelledBy} aria-label={ariaLabel}>
-        <SelectValue placeholder={t('form.selectType', 'Select type...')} />
+        <SelectValue placeholder={t('form.selectType', 'Select type...')}>
+          {selected && (
+            <span className="flex items-center gap-2 overflow-hidden">
+              <BackendVariantIcon variant={selected} />
+              <span className="truncate">{selected.label}</span>
+            </span>
+          )}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {variants.map((v) => (
           <SelectItem key={v.name} value={v.name}>
-            {v.label}
+            <span className="flex items-center gap-2">
+              <BackendVariantIcon variant={v} />
+              {v.label}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>
