@@ -201,3 +201,19 @@ a reviewable commit on a dedicated branch (`sync/upstream-2.0.5`, cut from
   `lib/layout`, `lib/embeddedSchema`, `oauth.ts`, `vite.config.ts`, `package.json`,
   `src/types/schema.ts` diff and `CHANGELOG.md`.
 * Not done: building/running upstream 2.0.5, running the fork's test suite against it.
+
+## 8. Merge status (branch `sync/upstream-2.0.5`, 2026-11-06)
+
+Done (merge commit `ade502c`, cut from `origin/main` = 1.3.2):
+
+* All 45 conflicts resolved; `typecheck`, `lint`, `test` (152) and `build` pass.
+* Upstream side taken for UI primitives, forms, dashboards, tracing, auth, bootstrap, `lib/layout.ts`, Sidebar, TopBar, CommandPalette, `DynamicView`, `DynamicList`, `index.css`.
+* Re-attached on top: Overview / Getting Started routes and nav entries, Appearance / Changelog pages and menu links, `findPreferredDefaultLinkInLayout`, dev token bypass (`ProtectedRoute`, `initializeSession`), fork schema patches (`lib/forkSchema.ts`, applied in `data/session.ts`), global-search entries for client pages, Appearance theme CSS, JMAP call sites moved to the new client API, fork tests kept and adapted.
+* `package.json`: upstream dependencies + fork-only ones (CodeMirror, Playwright, vitest, happy-dom); fork name/version/test scripts kept.
+* `build.yml` kept as the fork's hardened workflow; upstream's rolling-major-release job was NOT adopted.
+
+NOT done yet (list-level deviations, still need re-implementation on `useDynamicList` / `listQuery` / `ListCell`):
+`account-quota-usage-column`, `account-alias-count-column`, `role-permission-count-columns`, `report-summary-columns`,
+`account-client-sort`, `mailbox-client-hierarchy-sort`, `report-problems-only-filter`, `log-client-filters` (rendering/filtering),
+`webapp-enabled-column-fallback`, `sieve-script-active-column-fallback`, `bulk-quota-change-action`, `byte-size-number-format` (likely obsolete).
+Their schema column injections still run, but the new list renders those synthetic columns as plain scalars. Also pending: square-corner sidebar styling, the `data-density` list density, e2e suite, manual smoke list, `SCHEMA_DEVIATIONS.md` path updates.
