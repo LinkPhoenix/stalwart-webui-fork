@@ -24,6 +24,7 @@ import type { ResolvedView } from '@/lib/schemaResolver';
 import { useListColumns } from '@/hooks/useListColumns';
 import { useUIStore } from '@/stores/uiStore';
 import { ColumnsMenu } from './ColumnsMenu';
+import { ExportCsvButton } from './ExportCsvButton';
 import { FilterBar } from './FilterBar';
 import { ListTable } from './ListTable';
 import { ListError, ListMessage, ListSpinner } from './ListStates';
@@ -119,7 +120,21 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
   ]);
 
   // Fork list tools, shown on the filter row (or on their own row without filters).
-  const tools = <ColumnsMenu columns={columns} />;
+  const tools = (
+    <>
+      <ColumnsMenu columns={columns} />
+      <ExportCsvButton
+        schema={schema}
+        objectName={objectName}
+        fileBase={`${list.pluralName || viewName}`}
+        columns={columns.visible}
+        fields={fields}
+        localRows={listState.allRows}
+        filter={listState.jmapFilter}
+        sort={listState.jmapSort}
+      />
+    </>
+  );
 
   const busy = listState.isFetching || actions.pending;
   const selectedCount = selection.allMatching ? (total ?? selection.selectedIds.length) : selection.selectedIds.length;
@@ -132,7 +147,10 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
     const run = async () => {
       // In client mode the matching set is only known locally, so send its ids.
       const ok = await actions.runMassAction(action, {
-        ids: allMatching && listState.allIds ? listState.allIds : selection.selectedIds,
+        ids:
+          allMatching && listState.allRows
+            ? listState.allRows.flatMap((row) => itemId(row) ?? [])
+            : selection.selectedIds,
         allMatching: allMatching && !listState.clientMode,
         filter: listState.jmapFilter,
         sort: listState.jmapSort,

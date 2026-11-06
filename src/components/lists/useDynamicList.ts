@@ -41,8 +41,8 @@ export interface DynamicListState {
   jmapSort: Record<string, unknown>[] | undefined;
   /** True when rows are fetched in full and filtered, sorted and paginated in the browser. */
   clientMode: boolean;
-  /** Every row id matching the current view; only available in client mode. */
-  allIds: string[] | null;
+  /** Every row matching the current view; only available in client mode. */
+  allRows: ListItem[] | null;
   /** Nesting depth per row id (mailbox tree); only available in client mode. */
   depths: ReadonlyMap<string, number> | null;
   isLoading: boolean;
@@ -137,7 +137,7 @@ export function useDynamicList(
     jmapFilter: buildListFilter(state.filters, effectiveList, objectName ?? ''),
     jmapSort: buildListSort(serverSort(state.sort, effectiveList)),
     clientMode: plan.client,
-    allIds: processed ? processed.items.flatMap((row) => itemId(row) ?? []) : null,
+    allRows: processed?.items ?? null,
     depths: processed?.depths ?? null,
     isLoading: active.isPending && active.fetchStatus !== 'idle',
     isFetching: active.isFetching,
