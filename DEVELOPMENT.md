@@ -6,7 +6,7 @@ This file is meant to be read by humans and AI coding agents alike — see
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 22.12+ (CI runs on Node 24)
 - Docker (with the `docker compose` CLI plugin)
 
 ## 1. Start a local test server
