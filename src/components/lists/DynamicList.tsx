@@ -21,6 +21,9 @@ import { useSchemaStore } from '@/stores/schemaStore';
 import type { List, Schema } from '@/types/schema';
 import type { ResolvedView } from '@/lib/schemaResolver';
 
+import { useListColumns } from '@/hooks/useListColumns';
+import { useUIStore } from '@/stores/uiStore';
+import { ColumnsMenu } from './ColumnsMenu';
 import { FilterBar } from './FilterBar';
 import { ListTable } from './ListTable';
 import { ListError, ListMessage, ListSpinner } from './ListStates';
@@ -82,6 +85,8 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
   const labelProperty = getDisplayProperty(schema, viewName);
   const listState = useDynamicList(objectName, list, labelProperty in fields ? labelProperty : undefined);
   const actions = useListActions(objectName);
+  const columns = useListColumns(viewName, list.columns);
+  const setListPageSize = useUIStore((s) => s.setListPageSize);
   const { items, total, state } = listState;
   const pageIds = items.flatMap((item) => {
     const id = itemId(item);
@@ -112,6 +117,9 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
     ...(list.sort ?? []),
     ...list.columns.filter(isClientSortableColumn).map((c) => c.name),
   ]);
+
+  // Fork list tools, shown on the filter row (or on their own row without filters).
+  const tools = <ColumnsMenu columns={columns} />;
 
   const busy = listState.isFetching || actions.pending;
   const selectedCount = selection.allMatching ? (total ?? selection.selectedIds.length) : selection.selectedIds.length;
@@ -232,7 +240,12 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
             disabled={listState.isFetching}
             onApply={listState.applyFilters}
             onReset={listState.resetFilters}
+            trailing={tools}
           />
+        )}
+
+        {visibleFilters.length === 0 && (
+          <div className="flex flex-wrap items-center justify-end gap-2 px-2.5 py-2">{tools}</div>
         )}
 
         {massActions.length > 0 && selection.pageState === 'all' && (
@@ -248,7 +261,7 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
 
         <ListTable
           caption={list.title}
-          columns={list.columns}
+          columns={columns.visible}
           fields={fields}
           items={items}
           schema={schema}
@@ -285,6 +298,11 @@ function DynamicListView({ viewName, schema, resolved, list }: DynamicListViewPr
             count={items.length}
             pluralName={list.pluralName}
             disabled={listState.isFetching}
+            pageSize={listState.pageSize}
+            onPageSize={(size) => {
+              setListPageSize(size);
+              listState.resetPage();
+            }}
             onPrev={listState.prevPage}
             onNext={listState.nextPage}
           />

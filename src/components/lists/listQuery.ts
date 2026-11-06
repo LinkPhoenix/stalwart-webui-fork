@@ -14,6 +14,9 @@ import type { ListSort, ListUrlState } from './listUrlState';
 
 export const LIST_PAGE_SIZE = 25;
 
+/** Rows-per-page choices; the chosen size is remembered between visits (uiStore). */
+export const PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 export type ListItem = Record<string, unknown>;
 
 export function getListFields(resolvedSchema: ResolvedSchema): Record<string, Field> {

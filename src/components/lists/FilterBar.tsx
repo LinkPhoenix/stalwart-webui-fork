@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Filter as FilterIcon, RotateCcw, Search } from 'lucide-react';
 
@@ -23,9 +23,20 @@ interface FilterBarProps {
   disabled: boolean;
   onApply: (values: Record<string, string>) => void;
   onReset: () => void;
+  /** Fork list tools (columns, export, ...) shown on the right of the filter row. */
+  trailing?: ReactNode;
 }
 
-export function FilterBar({ schema, filters, applied, isXPrefixed, disabled, onApply, onReset }: FilterBarProps) {
+export function FilterBar({
+  schema,
+  filters,
+  applied,
+  isXPrefixed,
+  disabled,
+  onApply,
+  onReset,
+  trailing,
+}: FilterBarProps) {
   const { t } = useTranslation();
   const panelId = useId();
   const appliedKey = filtersKey(applied);
@@ -84,6 +95,7 @@ export function FilterBar({ schema, filters, applied, isXPrefixed, disabled, onA
             )}
           </button>
         </CollapsibleTrigger>
+        {trailing && <div className="ml-auto flex flex-wrap items-center gap-2">{trailing}</div>}
       </div>
       <CollapsibleContent id={panelId}>
         <form
