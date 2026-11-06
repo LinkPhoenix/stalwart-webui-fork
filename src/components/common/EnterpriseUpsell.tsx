@@ -6,6 +6,7 @@
 
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Sparkles } from 'lucide-react';
 
 import {
   Dialog,
@@ -31,6 +32,12 @@ export function EnterpriseUpsell({ open, onClose, overviewHref }: EnterpriseUpse
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="gap-6">
         <DialogHeader className="space-y-4">
+          <span
+            className="grid size-11 place-items-center rounded-[13px] bg-highlight text-highlight-foreground max-sm:mx-auto"
+            aria-hidden="true"
+          >
+            <Sparkles className="h-5 w-5" />
+          </span>
           <DialogTitle>{t('enterprise.trialTitle')}</DialogTitle>
           <DialogDescription>{t('enterprise.trialDescription')}</DialogDescription>
         </DialogHeader>
@@ -44,7 +51,7 @@ export function EnterpriseUpsell({ open, onClose, overviewHref }: EnterpriseUpse
             href="https://stalw.art/compare#why-isnt-feature-x-open-source"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline sm:mr-auto sm:text-left"
+            className="text-center text-xs font-medium text-muted-foreground underline-offset-4 hover:text-brand-text hover:underline sm:mr-auto sm:text-left"
           >
             {t('enterprise.whyNotFree')}
           </a>

@@ -6,9 +6,8 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, LogOut, Menu, Palette, ScrollText, Search, Sparkles, User } from 'lucide-react';
+import { LogOut, Menu, Palette, ScrollText, Search, Sparkles, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SchemaIcon } from '@/components/common/SchemaIcon';
 import { CommandPalette } from '@/components/common/CommandPalette';
 import {
   DropdownMenu,
@@ -16,22 +15,25 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Logo from '@/components/common/Logo';
 import { ModeToggle } from '@/components/common/ModeToggle';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EnterpriseUpsell } from '@/components/common/EnterpriseUpsell';
-import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
-import { findLastVisitedLinkInLayout } from '@/lib/lastVisited';
+import { DynamicIcon } from '@/components/common/DynamicIcon';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oauth';
 import { useEffect, useState } from 'react';
-import { useAccountStore } from '@/stores/accountStore';
-import { useCurrentAccountDetails } from '@/hooks/useCurrentAccount';
-import { useSchemaStore } from '@/stores/schemaStore';
+import { useIsCommunity } from '@/hooks/usePermissions';
+import { SIDEBAR_ID } from './sidebarContext';
+import { useLayoutNavigation } from './useLayoutNavigation';
+
+const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -42,20 +44,15 @@ export function TopBar() {
   const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const switchAccount = useAuthStore((s) => s.switchAccount);
   const logout = useAuthStore((s) => s.logout);
-  const activeAccount = activeAccountId ? accounts[activeAccountId] : null;
-  const currentAccount = useCurrentAccountDetails();
-  const displayName = currentAccount.username?.trim() || activeAccount?.name?.trim() || activeAccountId?.split('@')[0] || activeAccountId;
-  const displayEmail = currentAccount.email || activeAccountId;
-  const edition = useAccountStore((s) => s.edition);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
-  const hasPermission = useAccountStore((s) => s.hasPermission);
-  const schema = useSchemaStore((s) => s.schema);
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const isCommunity = useIsCommunity();
+  const { layouts: navigableLayouts, landingPath } = useLayoutNavigation();
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     function handleGlobalKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen((open) => !open);
       }
@@ -64,69 +61,59 @@ export function TopBar() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-
-  const navigableLayouts = schema
-    ? visibleLayouts(schema, edition, (prefix) => hasObjectPermission(prefix, 'Get'), hasPermission)
-    : [];
-
-  const sectionLink = (layout: (typeof navigableLayouts)[number]): string | null => {
-    if (!schema) return null;
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
-    const lastLink = findLastVisitedLinkInLayout(schema, layout, edition, canGet, hasPermission);
-    const firstLink =
-      lastLink ??
-      findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPermission) ??
-      findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPermission);
-    return firstLink ? `/${layout.name}/${firstLink}` : null;
-  };
-
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4">
-      <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden">
-        <Menu className="h-4 w-4" />
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 bg-background/80 px-4 backdrop-blur-xl backdrop-saturate-150 sm:px-5">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleSidebar}
+        className="md:hidden"
+        aria-label={t('sidebar.toggle', 'Toggle navigation')}
+        aria-expanded={sidebarOpen}
+        aria-controls={SIDEBAR_ID}
+      >
+        <Menu aria-hidden="true" className="h-4 w-4" />
       </Button>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link to="/" className="flex shrink-0 items-center">
-              <Logo />
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {t('version.label', 'Stalwart WebUI Fork v{{version}}', { version: __APP_VERSION__ })}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link to="/" className="flex shrink-0 items-center md:w-[228px]">
+            <Logo />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {t('version.label', 'Stalwart WebUI v{{version}}', { version: __APP_VERSION__ })}
+        </TooltipContent>
+      </Tooltip>
 
-      <div className="hidden min-w-0 flex-1 items-center justify-center px-4 md:flex">
+      <div className="hidden min-w-0 flex-1 items-center md:flex">
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
-          className="flex h-9 w-full max-w-md items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent"
+          className="flex h-10 w-full max-w-md items-center gap-2.5 rounded-full bg-card pl-4 pr-2 text-sm text-dim shadow-tile transition-shadow duration-200 hover:shadow-lift"
         >
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">
-            {t('globalSearch.placeholder', 'Search pages, fields, settings...')}
-          </span>
-          <kbd className="pointer-events-none flex h-5 select-none items-center rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
-            {isMac ? '⌘K' : 'Ctrl K'}
+          <Search aria-hidden="true" className="h-4 w-4" />
+          <span className="flex-1 text-left">{t('globalSearch.placeholder', 'Search pages, fields, settings...')}</span>
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none flex h-6 select-none items-center rounded-full bg-muted px-2.5 font-mono text-[11px] font-medium text-muted-foreground"
+          >
+            {IS_MAC ? '⌘K' : 'Ctrl K'}
           </kbd>
         </button>
       </div>
 
-      <div className="ml-auto flex items-center gap-2 md:ml-0">
-        {edition !== 'enterprise' && <EnterpriseUpsell open={upsellOpen} onClose={() => setUpsellOpen(false)} />}
+      <div className="ml-auto flex items-center gap-1.5">
+        {isCommunity && <EnterpriseUpsell open={upsellOpen} onClose={() => setUpsellOpen(false)} />}
 
         <Button
           variant="ghost"
           size="icon"
           className="md:hidden"
           onClick={() => setPaletteOpen(true)}
-          aria-label={t('search', 'Search')}
+          aria-label={t('common.search', 'Search')}
         >
-          <Search className="h-4 w-4" />
+          <Search aria-hidden="true" className="h-4 w-4" />
         </Button>
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
@@ -135,38 +122,28 @@ export function TopBar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-auto gap-2 px-2" aria-label={t('userMenu', 'User menu')}>
-              <User className="h-4 w-4" />
-              <div className="hidden flex-col items-start text-left md:flex">
-                <span className="text-sm font-medium leading-none">{displayName}</span>
-                <span className="text-xs text-muted-foreground leading-none">{displayEmail}</span>
-              </div>
+            <Button variant="outline" size="icon-lg" aria-label={t('userMenu', 'User menu')}>
+              <User aria-hidden="true" className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            {schema && navigableLayouts.length > 0 && (
+            {navigableLayouts.length > 0 && (
               <>
                 <DropdownMenuLabel>{t('sections', 'Sections')}</DropdownMenuLabel>
                 <DropdownMenuGroup>
-                  {navigableLayouts.map((layout) => {
-                    const to = sectionLink(layout);
-                    if (!to) {
-                      return (
-                        <DropdownMenuItem key={layout.name} onClick={() => setActiveSection(layout.name)}>
-                          <SchemaIcon name={layout.icon} className="mr-2 h-4 w-4" />
-                          {layout.name}
-                        </DropdownMenuItem>
-                      );
-                    }
-                    return (
-                      <DropdownMenuItem key={layout.name} asChild>
-                        <Link to={to} onClick={() => setActiveSection(layout.name)}>
-                          <SchemaIcon name={layout.icon} className="mr-2 h-4 w-4" />
-                          {layout.name}
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  {navigableLayouts.map((layout) => (
+                    <DropdownMenuItem
+                      key={layout.name}
+                      onClick={() => {
+                        setActiveSection(layout.name);
+                        const path = landingPath(layout);
+                        if (path) navigate(path);
+                      }}
+                    >
+                      <DynamicIcon name={layout.icon} className="mr-2 h-4 w-4" />
+                      {layout.name}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
               </>
@@ -175,55 +152,56 @@ export function TopBar() {
             {Object.keys(accounts).length > 0 && (
               <>
                 <DropdownMenuLabel>{t('accounts', 'Accounts')}</DropdownMenuLabel>
-                <DropdownMenuGroup>
+                <DropdownMenuRadioGroup value={activeAccountId ?? ''} onValueChange={switchAccount}>
                   {Object.entries(accounts).map(([id, info]) => (
-                    <DropdownMenuItem key={id} onClick={() => switchAccount(id)}>
-                      {id === activeAccountId && <Check className="mr-2 h-4 w-4" />}
-                      <span className={id !== activeAccountId ? 'ml-6' : ''}>{info.name || id}</span>
-                    </DropdownMenuItem>
+                    <DropdownMenuRadioItem key={id} value={id}>
+                      {info.name || id}
+                    </DropdownMenuRadioItem>
                   ))}
-                </DropdownMenuGroup>
+                </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
               </>
             )}
 
-            {edition !== 'enterprise' && (
+            {isCommunity && (
               <>
                 <DropdownMenuItem onClick={() => setUpsellOpen(true)}>
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles aria-hidden="true" className="mr-2 h-4 w-4" />
                   {t('tryEnterprise', 'Try Enterprise')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
             )}
 
+            {/* Fork-only client pages (outside the server layouts). */}
             <DropdownMenuItem asChild>
               <Link to="/Appearance">
-                <Palette className="mr-2 h-4 w-4" />
+                <Palette aria-hidden="true" className="mr-2 h-4 w-4" />
                 {t('appearance.label', 'Appearance')}
               </Link>
             </DropdownMenuItem>
-
             <DropdownMenuItem asChild>
               <Link to="/Changelog">
-                <ScrollText className="mr-2 h-4 w-4" />
+                <ScrollText aria-hidden="true" className="mr-2 h-4 w-4" />
                 {t('changelog.label', 'Changelog')}
               </Link>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              variant="destructive"
               onClick={() => {
                 const endSessionEndpoint = useAuthStore.getState().endSessionEndpoint;
+                const endSessionUrl = endSessionEndpoint
+                  ? buildEndSessionUrl(endSessionEndpoint, getPostLogoutRedirectUri())
+                  : null;
                 logout();
-                if (endSessionEndpoint) {
-                  window.location.href = buildEndSessionUrl(endSessionEndpoint, getPostLogoutRedirectUri());
+                if (endSessionUrl) {
+                  window.location.href = endSessionUrl;
                 } else {
                   navigate('/login');
                 }
               }}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut aria-hidden="true" className="mr-2 h-4 w-4" />
               {t('logout', 'Logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>

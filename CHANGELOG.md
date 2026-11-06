@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- Merged `stalwartlabs/webui` through 2.0.5: new design and navigation, schema-defined dashboards, TanStack Query data layer, split list and form components, passkey registration, locale-aware dates and numbers, CIMD and RFC 8707 OAuth support. Upstream notes: 2.0.0 CIMD; 2.0.1 create-only objects (Actions) shown; 2.0.2 tenant-scoped object pickers; 2.0.3 OAuth `resource` parameter and logout keeps tokens; 2.0.4 new design and `oauth-scopes` meta tag; 2.0.5 passkeys and locale formatting.
+
 ## [1.3.2] - 2026-10-07
 
 ### Fixed

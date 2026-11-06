@@ -1,88 +1,39 @@
 /*
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ * SPDX-License-Identifier: LicenseRef-SEL
  */
 
-import { useMemo, useRef, useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { useMemo } from 'react';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
-function ChartSizedContainer({
-  height,
-  children,
-}: {
-  height: number;
-  children: (width: number, height: number) => React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        if (w > 0) setWidth(w);
-      }
-    });
-    ro.observe(el);
-    const w = el.getBoundingClientRect().width;
-    if (w > 0) setWidth(w);
-    return () => ro.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} style={{ height }}>
-      {width > 0 && children(width, height)}
-    </div>
-  );
-}
 import { Info } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getChartColor } from '@/components/ui/chart';
-import { ChartTooltipContent } from '@/components/ui/chart';
-import { Button } from '@/components/ui/button';
-import type { Chart as ChartSchema } from '../types/schema';
+import { Card } from '@/components/ui/card';
+import { HelpTooltip } from '@/components/common/HelpTooltip';
+import { ChartTooltipContent, getChartColor } from '@/components/ui/chart';
+import type { Chart as ChartSchema, Placement } from '../types/schema';
 import type { Metric, Period } from '../types/metrics';
-import {
-  bucketize,
-  bucketTimestamps,
-  getBucketCount,
-  seriesBucketValue,
-  formatTimeTick,
-  formatValue,
-} from '../helpers';
+import { bucketTimestamps, bucketValues, getBucketCount, formatTimeTick, formatValue } from '../helpers';
+import { ChartSizedContainer } from './ChartSizedContainer';
+import { toneClasses } from './tone';
+import { cn } from '@/lib/utils';
 
 interface DashboardChartProps {
-  chart: ChartSchema;
+  chart: ChartSchema & Placement;
   historySamples: Metric[];
   historyWindow: { from: Date; to: Date };
   period: Period;
+  className?: string;
 }
 
-export function DashboardChart({ chart, historySamples, historyWindow, period }: DashboardChartProps) {
-  const { t } = useTranslation();
+export function DashboardChart({ chart, historySamples, historyWindow, period, className }: DashboardChartProps) {
+  const toneClass = toneClasses(chart.tone);
   const { from, to } = historyWindow;
   const bucketCount = getBucketCount(period);
   const valueFormat = chart.valueFormat ?? 'number';
 
   const data = useMemo(() => {
-    const buckets = bucketize(historySamples, from, to, bucketCount);
+    const seriesValues = chart.series.map((series) => bucketValues(series, historySamples, from, to, bucketCount));
     const timestamps = bucketTimestamps(from, to, bucketCount);
 
     const points = timestamps.map((ts, i) => {
@@ -90,9 +41,9 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
         time: ts.getTime(),
         timeLabel: formatTimeTick(ts, period),
       };
-      for (const series of chart.series) {
-        point[series.label] = seriesBucketValue(series, buckets[i]);
-      }
+      chart.series.forEach((series, s) => {
+        point[series.label] = seriesValues[s][i];
+      });
       return point;
     });
 
@@ -122,7 +73,7 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
       data,
       width: chartWidth,
       height: chartHeight,
-      margin: { top: 5, right: 10, left: 10, bottom: 5 },
+      margin: { top: 6, right: 4, left: 0, bottom: 0 },
     };
 
     const seriesElements = chart.series.map((s, i) => {
@@ -137,8 +88,11 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
               type="monotone"
               dataKey={key}
               stroke={color}
-              strokeWidth={2}
+              strokeWidth={2.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
               dot={false}
+              activeDot={{ r: 3.5, strokeWidth: 0 }}
               isAnimationActive={false}
               connectNulls
             />
@@ -151,8 +105,9 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
               dataKey={key}
               stroke={color}
               fill={color}
-              fillOpacity={0.3}
+              fillOpacity={chart.stacked ? 0.35 : 0.14}
               strokeWidth={2}
+              activeDot={{ r: 3.5, strokeWidth: 0 }}
               stackId={chart.stacked ? '1' : undefined}
               isAnimationActive={false}
               connectNulls
@@ -164,6 +119,8 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
               key={key}
               dataKey={key}
               fill={color}
+              radius={chart.stacked ? 0 : [4, 4, 0, 0]}
+              maxBarSize={28}
               stackId={chart.stacked ? '1' : undefined}
               isAnimationActive={false}
             />
@@ -173,23 +130,24 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
 
     const axes = (
       <>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+        <CartesianGrid vertical={false} className="stroke-border" />
         <XAxis
           dataKey="timeLabel"
-          tick={{ fontSize: 11 }}
-          className="text-muted-foreground"
+          tick={{ fontSize: 10.5, fill: 'var(--dim)' }}
           tickLine={false}
           axisLine={false}
+          tickMargin={8}
+          minTickGap={16}
         />
         <YAxis
           tickFormatter={tickFormatter}
-          tick={{ fontSize: 11 }}
-          className="text-muted-foreground"
+          tick={{ fontSize: 10.5, fill: 'var(--dim)' }}
           tickLine={false}
           axisLine={false}
-          width={60}
+          width={56}
         />
         <Tooltip
+          cursor={chart.kind === 'bar' ? { fill: 'var(--muted)', opacity: 0.6 } : { stroke: 'var(--input)' }}
           content={({ active, payload, label }) => (
             <ChartTooltipContent
               active={active}
@@ -199,7 +157,6 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
             />
           )}
         />
-        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
       </>
     );
 
@@ -229,35 +186,32 @@ export function DashboardChart({ chart, historySamples, historyWindow, period }:
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-base">{chart.title}</CardTitle>
-          {chart.description && (
-            <TooltipProvider>
-              <UiTooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground/60"
-                    aria-label={t('common.showDescription', 'Show description')}
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <p className="text-xs">{chart.description}</p>
-                </TooltipContent>
-              </UiTooltip>
-            </TooltipProvider>
-          )}
+    <Card
+      role="figure"
+      aria-label={chart.title}
+      className={cn('flex flex-col gap-3 px-5 pb-3.5 pt-[18px]', toneClass.surface, className)}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="section-title truncate">{chart.title}</h2>
+          {chart.description && <HelpTooltip content={chart.description} label={chart.title} icon={Info} />}
         </div>
-      </CardHeader>
-      <CardContent>
-        <ChartSizedContainer height={288}>{(width, height) => renderChart(width, height)}</ChartSizedContainer>
-      </CardContent>
+        {chart.series.length > 0 && (
+          <ul className={cn('flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px]', toneClass.muted)}>
+            {chart.series.map((s, i) => (
+              <li key={`${s.label}-${i}`} className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: getChartColor(i) }}
+                />
+                {s.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <ChartSizedContainer fill={chart.rows === 2}>{(width, height) => renderChart(width, height)}</ChartSizedContainer>
     </Card>
   );
 }

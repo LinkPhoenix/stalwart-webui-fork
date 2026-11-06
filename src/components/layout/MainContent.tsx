@@ -4,36 +4,56 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useSchemaStore } from '@/stores/schemaStore';
-import { useAccountStore } from '@/stores/accountStore';
+import { usePermissionCheckers } from '@/hooks/usePermissions';
 import { resolveObject } from '@/lib/schemaResolver';
+import type { PermissionCheckers } from '@/lib/permissions';
+import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { DynamicList } from '@/components/lists/DynamicList';
 import { DynamicForm } from '@/components/forms/DynamicForm';
 import { DynamicViewPage } from '@/components/views/DynamicViewPage';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
+import type { Schema } from '@/types/schema';
 
-// Heavy or rarely used feature pages are code-split so the initial bundle
-// stays small (the dashboard pulls in recharts, ~150 kB gzipped on its own).
-const DashboardView = lazy(() =>
-  import('@/features/dashboard/components/DashboardView').then((m) => ({ default: m.DashboardView })),
+function lazyFeature<M, P>(load: () => Promise<M>, select: (module: M) => ComponentType<P>) {
+  return lazy(() => load().then((module) => ({ default: select(module) })));
+}
+
+const DeliveryTracePage = lazyFeature(
+  () => import('@/features/troubleshoot/DeliveryTracePage'),
+  (m) => m.DeliveryTracePage,
 );
-const DeliveryTracePage = lazy(() =>
-  import('@/features/troubleshoot/DeliveryTracePage').then((m) => ({ default: m.DeliveryTracePage })),
+// SPDX-SnippetBegin
+// SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+// SPDX-License-Identifier: LicenseRef-SEL
+const DashboardView = lazyFeature(
+  () => import('@/features/dashboard/components/DashboardView'),
+  (m) => m.DashboardView,
 );
-const LiveTracingPage = lazy(() =>
-  import('@/features/tracing/components/LiveTracingPage').then((m) => ({ default: m.LiveTracingPage })),
+const LiveTracingPage = lazyFeature(
+  () => import('@/features/tracing/components/LiveTracingPage'),
+  (m) => m.LiveTracingPage,
 );
-const TraceDetailView = lazy(() =>
-  import('@/features/tracing/components/TraceDetailView').then((m) => ({ default: m.TraceDetailView })),
+const TraceDetailView = lazyFeature(
+  () => import('@/features/tracing/components/TraceDetailView'),
+  (m) => m.TraceDetailView,
 );
-const ActionPage = lazy(() => import('@/features/actions/ActionPage').then((m) => ({ default: m.ActionPage })));
-const OnboardingChecklistPage = lazy(() =>
-  import('@/features/onboarding/OnboardingChecklistPage').then((m) => ({ default: m.OnboardingChecklistPage })),
+// SPDX-SnippetEnd
+const OnboardingChecklistPage = lazyFeature(
+  () => import('@/features/onboarding/OnboardingChecklistPage'),
+  (m) => m.OnboardingChecklistPage,
 );
-const OverviewPage = lazy(() =>
-  import('@/features/overview/OverviewPage').then((m) => ({ default: m.OverviewPage })),
+const OverviewPage = lazyFeature(
+  () => import('@/features/overview/OverviewPage'),
+  (m) => m.OverviewPage,
+);
+const ActionPage = lazyFeature(
+  () => import('@/features/actions/ActionPage'),
+  (m) => m.ActionPage,
 );
 
 interface MainContentProps {
@@ -43,46 +63,58 @@ interface MainContentProps {
 }
 
 export function MainContent({ viewName, id, section }: MainContentProps) {
+  const schema = useSchemaStore((s) => s.schema);
+  const permissions = usePermissionCheckers();
+  const location = useLocation();
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <MainContentView viewName={viewName} id={id} section={section} />
-    </Suspense>
+    <ErrorBoundary resetKey={location.pathname}>
+      <Suspense fallback={<LoadingFallback />}>{renderView(t, schema, permissions, viewName, id, section)}</Suspense>
+    </ErrorBoundary>
   );
 }
 
-function MainContentView({ viewName, id, section }: MainContentProps) {
-  const { t } = useTranslation();
-  const schema = useSchemaStore((s) => s.schema);
-
-  // Object-list combobox caches are invalidated after create/update/destroy
-  // (see DynamicForm / DynamicList) instead of wiping every list on each
-  // view change — that was forcing unrelated dropdowns to refetch.
-
+function renderView(
+  t: TFunction,
+  schema: Schema | null,
+  permissions: PermissionCheckers,
+  viewName?: string,
+  id?: string,
+  section?: string,
+): ReactNode {
   if (!viewName) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        {t('mainContent.selectView', 'Select a view from the sidebar.')}
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
+  // SPDX-SnippetBegin
+  // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+  // SPDX-License-Identifier: LicenseRef-SEL
   if (viewName.startsWith('Dashboard/')) {
     const dashboardId = viewName.slice('Dashboard/'.length);
     return <DashboardView dashboardId={dashboardId} section={section ?? ''} />;
   }
+  // SPDX-SnippetEnd
 
   if (viewName.startsWith('CustomComponent/')) {
     const componentName = viewName.slice('CustomComponent/'.length);
+    // SPDX-SnippetBegin
+    // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+    // SPDX-License-Identifier: LicenseRef-SEL
     if (componentName === 'Dashboard') {
       const firstId = schema?.dashboards?.[0]?.id ?? 'overview';
       return <DashboardView dashboardId={firstId} section={section ?? ''} />;
     }
+    // SPDX-SnippetEnd
     if (componentName === 'LiveDelivery') {
       return <DeliveryTracePage />;
     }
+    // SPDX-SnippetBegin
+    // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+    // SPDX-License-Identifier: LicenseRef-SEL
     if (componentName === 'LiveTracing') {
       return <LiveTracingPage />;
     }
+    // SPDX-SnippetEnd
     if (componentName === 'Onboarding') {
       return <OnboardingChecklistPage />;
     }
@@ -90,51 +122,50 @@ function MainContentView({ viewName, id, section }: MainContentProps) {
       return <OverviewPage />;
     }
     return (
-      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        {t('mainContent.unknownComponent', 'Unknown component: {{name}}', { name: componentName })}
+      <div className="mt-3 rounded-2xl bg-muted p-10 text-center text-muted-foreground">
+        {t('errors.unknownComponent', 'Unknown component: {{name}}', { name: componentName })}
       </div>
     );
   }
 
   if (!schema) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        {t('common.loading', 'Loading...')}
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
   const resolved = resolveObject(schema, viewName);
   if (!resolved) {
     return (
-      <div className="flex items-center justify-center p-8 text-destructive">
-        {t('mainContent.unknownView', 'Unknown view: {{name}}', { name: viewName })}
+      <div role="alert" className="mt-3 rounded-xl bg-destructive-soft p-4 text-center text-sm text-destructive">
+        {t('errors.unknownView', 'Unknown view: {{name}}', { name: viewName })}
       </div>
     );
   }
 
   if (resolved.objectName === 'x:Action') {
-    return <ActionPage viewName={viewName} />;
+    return <ActionPage key={viewName} viewName={viewName} />;
   }
 
   if (resolved.objectType.type === 'singleton') {
-    return <DynamicForm viewName={viewName} objectId="singleton" />;
+    return <DynamicForm key={`${viewName}/singleton`} viewName={viewName} objectId="singleton" />;
   }
 
   if (id === 'new') {
-    return <DynamicForm viewName={viewName} objectId={null} />;
+    return <DynamicForm key={`${viewName}/new`} viewName={viewName} objectId={null} />;
   }
 
   if (id) {
-    if (resolved.objectName === 'x:Trace' && id !== 'new') {
-      return <TraceDetailView viewName={viewName} objectId={id} />;
+    // SPDX-SnippetBegin
+    // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+    // SPDX-License-Identifier: LicenseRef-SEL
+    if (resolved.objectName === 'x:Trace') {
+      return <TraceDetailView key={`${viewName}/${id}`} viewName={viewName} objectId={id} />;
     }
-    const canUpdate = useAccountStore.getState().hasObjectPermission(resolved.permissionPrefix, 'Update');
-    if (!canUpdate) {
-      return <DynamicViewPage viewName={viewName} objectId={id} />;
+    // SPDX-SnippetEnd
+    if (!permissions.hasObjectPermission(resolved.permissionPrefix, 'Update')) {
+      return <DynamicViewPage key={`${viewName}/${id}`} viewName={viewName} objectId={id} />;
     }
-    return <DynamicForm viewName={viewName} objectId={id} />;
+    return <DynamicForm key={`${viewName}/${id}`} viewName={viewName} objectId={id} />;
   }
 
-  return <DynamicList viewName={viewName} />;
+  return <DynamicList key={viewName} viewName={viewName} />;
 }

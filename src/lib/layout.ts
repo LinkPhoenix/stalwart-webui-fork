@@ -4,31 +4,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import type { Layout, LayoutItem, LayoutSubItem, Schema } from '@/types/schema';
+import type { Layout, LayoutSubItem, Schema } from '@/types/schema';
 import { resolveObject } from '@/lib/schemaResolver';
-
-function findFirstSubLink(items: LayoutSubItem[]): string | null {
-  for (const item of items) {
-    if (item.type === 'link') return item.viewName;
-    if (item.type === 'container') {
-      const found = findFirstSubLink(item.items);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-export function findFirstLinkInLayout(items: LayoutItem[] | Layout): string | null {
-  const list = Array.isArray(items) ? items : items.items;
-  for (const item of list) {
-    if ('link' in item) return item.link.viewName;
-    if ('container' in item) {
-      const found = findFirstSubLink(item.container.items);
-      if (found) return found;
-    }
-  }
-  return null;
-}
+import { isCommunityEdition, isCreateOnly } from '@/lib/permissions';
 
 export type CanGet = (permissionPrefix: string) => boolean;
 export type HasPermission = (permission: string) => boolean;
@@ -38,106 +16,116 @@ interface SpecialLinkInfo {
   enterprise: boolean;
 }
 
-function checkSpecialLink(
-  viewName: string,
-  edition: string,
-  hasPerm?: HasPermission,
-  canGet?: CanGet,
-): SpecialLinkInfo | null {
-  if (viewName.startsWith('Dashboard/') || viewName === 'CustomComponent/Dashboard') {
-    if (edition === 'oss') return { visible: false, enterprise: true };
-    const hasLiveMetrics = hasPerm ? hasPerm('liveMetrics') : true;
-    const hasTraceGet = canGet ? canGet('sysTrace') : true;
-    return { visible: hasLiveMetrics && hasTraceGet, enterprise: true };
-  }
+interface CustomComponentRule {
+  permission: string;
+  backingObject?: string;
+  enterprise?: boolean;
+}
 
-  if (viewName === 'CustomComponent/LiveDelivery') {
-    const allowed = hasPerm ? hasPerm('liveDeliveryTest') : true;
-    return { visible: allowed, enterprise: false };
-  }
+const CUSTOM_COMPONENTS: Record<string, CustomComponentRule> = {
+  LiveDelivery: { permission: 'liveDeliveryTest' },
+  // SPDX-SnippetBegin
+  // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+  // SPDX-License-Identifier: LicenseRef-SEL
+  Dashboard: { permission: 'liveMetrics', backingObject: 'x:Metric' },
+  LiveTracing: { permission: 'liveTracing', enterprise: true },
+  // SPDX-SnippetEnd
+};
 
-  if (viewName === 'CustomComponent/LiveTracing') {
-    if (edition === 'oss') return { visible: false, enterprise: true };
-    const allowed = hasPerm ? hasPerm('liveTracing') : true;
-    return { visible: allowed, enterprise: true };
-  }
-
-  if (viewName.startsWith('CustomComponent/')) {
-    return { visible: true, enterprise: false };
-  }
-
+function customComponentName(viewName: string): string | null {
+  // SPDX-SnippetBegin
+  // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+  // SPDX-License-Identifier: LicenseRef-SEL
+  if (viewName.startsWith('Dashboard/')) return 'Dashboard';
+  // SPDX-SnippetEnd
+  if (viewName.startsWith('CustomComponent/')) return viewName.slice('CustomComponent/'.length);
   return null;
 }
 
-export function isLinkVisible(
+function checkSpecialLink(
   schema: Schema,
   viewName: string,
-  edition: string,
-  canGet: CanGet,
   hasPerm?: HasPermission,
-): boolean {
-  const special = checkSpecialLink(viewName, edition, hasPerm, canGet);
+  canGet?: CanGet,
+): SpecialLinkInfo | null {
+  const component = customComponentName(viewName);
+  if (component === null) return null;
+  const rule = CUSTOM_COMPONENTS[component];
+  if (!rule) return { visible: true, enterprise: false };
+
+  const backing = rule.backingObject ? resolveObject(schema, rule.backingObject) : null;
+  if (rule.backingObject && !backing) return { visible: false, enterprise: false };
+
+  const permitted = hasPerm ? hasPerm(rule.permission) : true;
+  const readable = backing && canGet ? canGet(backing.permissionPrefix) : true;
+  return { visible: permitted && readable, enterprise: rule.enterprise ?? backing?.enterprise ?? false };
+}
+
+export function isLinkVisible(schema: Schema, viewName: string, canGet: CanGet, hasPerm?: HasPermission): boolean {
+  const special = checkSpecialLink(schema, viewName, hasPerm, canGet);
   if (special !== null) return special.visible;
-
-  const obj = schema.objects[viewName];
-  if (!obj) return false;
   const resolved = resolveObject(schema, viewName);
-  if (!resolved) return false;
-
-  if (!canGet(resolved.permissionPrefix)) return false;
-
-  if (resolved.enterprise && edition === 'oss') return false;
-
-  return true;
+  if (resolved === null) return false;
+  if (isCreateOnly(schema, resolved.permissionPrefix)) return hasPerm?.(`${resolved.permissionPrefix}Create`) ?? false;
+  return canGet(resolved.permissionPrefix);
 }
 
-export function isLinkEnterprise(schema: Schema, viewName: string, edition: string): boolean {
-  const special = checkSpecialLink(viewName, edition);
+export function isLinkEnterprise(schema: Schema, viewName: string): boolean {
+  const special = checkSpecialLink(schema, viewName);
   if (special !== null) return special.enterprise;
-
-  const obj = schema.objects[viewName];
-  if (!obj) return false;
-  if (obj.type === 'view') {
-    const parent = schema.objects[obj.objectName];
-    return parent?.type !== 'view' && parent?.enterprise === true;
-  }
-  return obj.enterprise === true;
+  return resolveObject(schema, viewName)?.enterprise ?? false;
 }
 
-function findFirstVisibleSubLink(
-  schema: Schema,
-  items: LayoutSubItem[],
-  edition: string,
-  canGet: CanGet,
-  hasPerm?: HasPermission,
-): string | null {
+function findFirstSubLink(items: LayoutSubItem[], accept: (viewName: string) => boolean): string | null {
   for (const item of items) {
     if (item.type === 'link') {
-      if (isLinkVisible(schema, item.viewName, edition, canGet, hasPerm)) return item.viewName;
+      if (accept(item.viewName)) return item.viewName;
     } else if (item.type === 'container') {
-      const found = findFirstVisibleSubLink(schema, item.items, edition, canGet, hasPerm);
+      const found = findFirstSubLink(item.items, accept);
       if (found) return found;
     }
   }
   return null;
+}
+
+function findFirstLink(layout: Layout, accept: (viewName: string) => boolean): string | null {
+  for (const item of layout.items) {
+    if ('link' in item) {
+      if (accept(item.link.viewName)) return item.link.viewName;
+    } else if ('container' in item) {
+      const found = findFirstSubLink(item.container.items, accept);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export function layoutContainsLink(layout: Layout, viewName: string): boolean {
+  return findFirstLink(layout, (candidate) => candidate === viewName) !== null;
+}
+
+export function layoutViewFor(
+  schema: Schema,
+  viewToSection: Record<string, string>,
+  viewName: string,
+  preferred?: string,
+): string | null {
+  if (Object.hasOwn(viewToSection, viewName)) return viewName;
+  const isChild = (candidate: string) => {
+    const obj = schema.objects[candidate];
+    return obj?.type === 'view' && obj.objectName === viewName;
+  };
+  if (preferred && Object.hasOwn(viewToSection, preferred) && isChild(preferred)) return preferred;
+  return Object.keys(viewToSection).find(isChild) ?? null;
 }
 
 export function findFirstVisibleLinkInLayout(
   schema: Schema,
   layout: Layout,
-  edition: string,
   canGet: CanGet,
   hasPerm?: HasPermission,
 ): string | null {
-  for (const item of layout.items) {
-    if ('link' in item) {
-      if (isLinkVisible(schema, item.link.viewName, edition, canGet, hasPerm)) return item.link.viewName;
-    } else if ('container' in item) {
-      const found = findFirstVisibleSubLink(schema, item.container.items, edition, canGet, hasPerm);
-      if (found) return found;
-    }
-  }
-  return null;
+  return findFirstLink(layout, (viewName) => isLinkVisible(schema, viewName, canGet, hasPerm));
 }
 
 export function isLinkAccessible(
@@ -147,27 +135,9 @@ export function isLinkAccessible(
   canGet: CanGet,
   hasPerm?: HasPermission,
 ): boolean {
-  if (!isLinkVisible(schema, viewName, edition, canGet, hasPerm)) return false;
-  if (edition === 'community' && isLinkEnterprise(schema, viewName, edition)) return false;
+  if (!isLinkVisible(schema, viewName, canGet, hasPerm)) return false;
+  if (isCommunityEdition(edition) && isLinkEnterprise(schema, viewName)) return false;
   return true;
-}
-
-function findFirstAccessibleSubLink(
-  schema: Schema,
-  items: LayoutSubItem[],
-  edition: string,
-  canGet: CanGet,
-  hasPerm?: HasPermission,
-): string | null {
-  for (const item of items) {
-    if (item.type === 'link') {
-      if (isLinkAccessible(schema, item.viewName, edition, canGet, hasPerm)) return item.viewName;
-    } else if (item.type === 'container') {
-      const found = findFirstAccessibleSubLink(schema, item.items, edition, canGet, hasPerm);
-      if (found) return found;
-    }
-  }
-  return null;
 }
 
 export function findFirstAccessibleLinkInLayout(
@@ -177,36 +147,17 @@ export function findFirstAccessibleLinkInLayout(
   canGet: CanGet,
   hasPerm?: HasPermission,
 ): string | null {
-  for (const item of layout.items) {
-    if ('link' in item) {
-      if (isLinkAccessible(schema, item.link.viewName, edition, canGet, hasPerm)) return item.link.viewName;
-    } else if ('container' in item) {
-      const found = findFirstAccessibleSubLink(schema, item.container.items, edition, canGet, hasPerm);
-      if (found) return found;
-    }
-  }
-  return null;
+  return findFirstLink(layout, (viewName) => isLinkAccessible(schema, viewName, edition, canGet, hasPerm));
 }
 
-function layoutHasLink(layout: Layout, viewName: string): boolean {
-  for (const item of layout.items) {
-    if ('link' in item && item.link.viewName === viewName) return true;
-    if ('container' in item) {
-      const stack = [...item.container.items];
-      while (stack.length > 0) {
-        const sub = stack.pop()!;
-        if (sub.type === 'link' && sub.viewName === viewName) return true;
-        if (sub.type === 'container') stack.push(...sub.items);
-      }
-    }
-  }
-  return false;
+export function visibleLayouts(schema: Schema, canGet: CanGet, hasPerm?: HasPermission): Layout[] {
+  return schema.layouts.filter((layout) => findFirstVisibleLinkInLayout(schema, layout, canGet, hasPerm) !== null);
 }
 
 /**
- * Prefer Overview as the home page when the Enterprise Dashboard is not
- * accessible (Community lock / OSS hide / missing liveMetrics). Otherwise
- * returns the first accessible link in the layout.
+ * Fork helper. Prefer Overview as the home page when the Enterprise Dashboard
+ * is not accessible (Community lock / OSS hide / missing liveMetrics).
+ * Otherwise returns the first accessible link in the layout.
  */
 export function findPreferredDefaultLinkInLayout(
   schema: Schema,
@@ -216,25 +167,13 @@ export function findPreferredDefaultLinkInLayout(
   hasPerm?: HasPermission,
   overviewViewName = 'CustomComponent/Overview',
 ): string | null {
-  const dashboardAccessible = isLinkAccessible(
-    schema,
-    'CustomComponent/Dashboard',
-    edition,
-    canGet,
-    hasPerm,
-  );
+  const dashboardAccessible = isLinkAccessible(schema, 'CustomComponent/Dashboard', edition, canGet, hasPerm);
   if (
     !dashboardAccessible &&
-    layoutHasLink(layout, overviewViewName) &&
+    layoutContainsLink(layout, overviewViewName) &&
     isLinkAccessible(schema, overviewViewName, edition, canGet, hasPerm)
   ) {
     return overviewViewName;
   }
   return findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPerm);
-}
-
-export function visibleLayouts(schema: Schema, edition: string, canGet: CanGet, hasPerm?: HasPermission): Layout[] {
-  return schema.layouts.filter(
-    (layout) => findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPerm) !== null,
-  );
 }

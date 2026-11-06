@@ -4,21 +4,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { List, Plus, Settings } from 'lucide-react';
 import { useSchemaStore, type SearchIndexEntry } from '@/stores/schemaStore';
-import { useAccountStore } from '@/stores/accountStore';
+import { usePermissionCheckers } from '@/hooks/usePermissions';
+import { isCreateOnly } from '@/lib/permissions';
 import { resolveObject } from '@/lib/schemaResolver';
 import { isLinkVisible } from '@/lib/layout';
 import type { Schema } from '@/types/schema';
 
+// SCHEMA-DEVIATION: community-overview-nav-entry / onboarding-checklist-nav-entry
+// Appearance, Changelog and CustomComponent/* pages are not schema objects, so
+// resolveObject() would drop them from the palette.
 function isClientOnlySearchPage(viewName: string): boolean {
   return viewName === 'Appearance' || viewName === 'Changelog';
 }
 
 const MAX_RESULTS = 15;
-const DEBOUNCE_MS = 300;
 
 const TYPE_ORDER: Record<SearchIndexEntry['type'], number> = {
   link: 0,
@@ -39,26 +42,22 @@ export function getActionInfo(
   objectKind: ObjectKind,
   t: (key: string, fallback: string) => string,
 ): { label: string; Icon: typeof List } {
-  if (entryType === 'link') {
-    return objectKind === 'singleton'
-      ? { label: t('globalSearch.settings', 'Settings'), Icon: Settings }
-      : { label: t('globalSearch.list', 'List'), Icon: List };
+  if (objectKind === 'singleton') {
+    return { label: t('globalSearch.settings', 'Settings'), Icon: Settings };
   }
-  return objectKind === 'singleton'
-    ? { label: t('globalSearch.settings', 'Settings'), Icon: Settings }
+  return entryType === 'link'
+    ? { label: t('globalSearch.list', 'List'), Icon: List }
     : { label: t('globalSearch.create', 'Create'), Icon: Plus };
 }
 
-export function getNavigationPath(
+function getNavigationPath(
   entryType: SearchIndexEntry['type'],
   objectKind: ObjectKind,
   section: string,
   viewName: string,
 ): string {
-  if (entryType === 'link') {
-    return objectKind === 'singleton' ? `/${section}/${viewName}/singleton` : `/${section}/${viewName}`;
-  }
-  return objectKind === 'singleton' ? `/${section}/${viewName}/singleton` : `/${section}/${viewName}/new`;
+  if (objectKind === 'singleton') return `/${section}/${viewName}/singleton`;
+  return entryType === 'link' ? `/${section}/${viewName}` : `/${section}/${viewName}/new`;
 }
 
 export function friendlyName(viewName: string): string {
@@ -70,53 +69,39 @@ export function friendlyName(viewName: string): string {
 export function useGlobalSearch(onAfterSelect?: () => void) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferredQuery = useDeferredValue(query);
 
   const schema = useSchemaStore((s) => s.schema);
   const searchIndex = useSchemaStore((s) => s.searchIndex);
-  const hasObjectPermission = useAccountStore((s) => s.hasObjectPermission);
-  const hasPermission = useAccountStore((s) => s.hasPermission);
-  const edition = useAccountStore((s) => s.edition);
-
-  const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setDebouncedQuery(value), DEBOUNCE_MS);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+  const { hasObjectPermission, canGet, hasPermission } = usePermissionCheckers();
 
   const results = useMemo(() => {
-    if (!debouncedQuery.trim() || !schema) return [];
+    if (!deferredQuery.trim() || !schema) return [];
 
-    const tokens = debouncedQuery
+    const tokens = deferredQuery
       .toLowerCase()
       .split(/\s+/)
       .filter((s) => s.length > 0);
     if (tokens.length === 0) return [];
-
-    const canGet = (prefix: string) => hasObjectPermission(prefix, 'Get');
 
     const filtered = searchIndex.filter((entry) => {
       const haystack = (entry.text + ' ' + (entry.keywords?.join(' ') ?? '')).toLowerCase();
       for (const token of tokens) {
         if (!haystack.includes(token)) return false;
       }
-      // SCHEMA-DEVIATION: community-overview-nav-entry / onboarding-checklist-nav-entry
-      // CustomComponent/* and Appearance/Changelog are not schema objects — resolveObject
-      // used to drop them from the palette. Use layout visibility instead.
       if (isClientOnlySearchPage(entry.viewName)) return true;
-      return isLinkVisible(schema, entry.viewName, edition, canGet, hasPermission);
+      if (entry.viewName.startsWith('CustomComponent/')) return isLinkVisible(schema, entry.viewName, canGet, hasPermission);
+      const resolved = resolveObject(schema, entry.viewName);
+      if (!resolved) return false;
+      return hasObjectPermission(
+        resolved.permissionPrefix,
+        isCreateOnly(schema, resolved.permissionPrefix) ? 'Create' : 'Get',
+      );
     });
 
     filtered.sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type]);
     return filtered.slice(0, MAX_RESULTS);
-  }, [debouncedQuery, searchIndex, schema, hasObjectPermission, hasPermission, edition]);
+  }, [deferredQuery, searchIndex, schema, hasObjectPermission, canGet, hasPermission]);
 
   const groups = useMemo(() => {
     const map = new Map<SearchIndexEntry['type'], SearchIndexEntry[]>();
@@ -143,10 +128,7 @@ export function useGlobalSearch(onAfterSelect?: () => void) {
     [schema, navigate, onAfterSelect],
   );
 
-  const reset = useCallback(() => {
-    setQuery('');
-    setDebouncedQuery('');
-  }, []);
+  const reset = useCallback(() => setQuery(''), []);
 
-  return { query, setQuery: handleQueryChange, results, groups, selectEntry, reset, schema };
+  return { query, setQuery, deferredQuery, results, groups, selectEntry, reset, schema };
 }

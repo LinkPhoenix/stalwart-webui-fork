@@ -1,17 +1,18 @@
 /*
  * SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
  *
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
+ * SPDX-License-Identifier: LicenseRef-SEL
  */
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, RefreshCw } from 'lucide-react';
+import { Calendar, CalendarClock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { useDashboardStore } from '../stores/dashboardStore';
 import type { PresetKey } from '../types/metrics';
 import { presetLabel, PRESET_KEYS } from '../types/metrics';
@@ -40,8 +41,10 @@ export function PeriodSelector({ onRefresh, loading }: PeriodSelectorProps) {
     }
   };
 
+  const customValid = !!customFrom && !!customTo && new Date(customFrom) < new Date(customTo);
+
   const handleApplyCustom = () => {
-    if (customFrom && customTo) {
+    if (customValid) {
       setPeriod({
         kind: 'custom',
         from: new Date(customFrom),
@@ -54,9 +57,10 @@ export function PeriodSelector({ onRefresh, loading }: PeriodSelectorProps) {
   return (
     <div className="flex items-center gap-2">
       <Popover open={customOpen} onOpenChange={setCustomOpen}>
-        <div className="flex items-center gap-2">
+        <PopoverAnchor>
           <Select value={currentValue} onValueChange={handleSelectChange}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger variant="pill" aria-label={t('dashboard.period', 'Period')}>
+              <CalendarClock aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -73,15 +77,11 @@ export function PeriodSelector({ onRefresh, loading }: PeriodSelectorProps) {
               </SelectItem>
             </SelectContent>
           </Select>
-
-          <PopoverTrigger asChild>
-            <span />
-          </PopoverTrigger>
-        </div>
+        </PopoverAnchor>
 
         <PopoverContent className="w-72 p-4" align="end">
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">{t('dashboard.customRange', 'Custom range')}</h4>
+            <h4 className="section-title text-sm">{t('dashboard.customRange', 'Custom range')}</h4>
             <div className="space-y-2">
               <Label htmlFor="custom-from" className="text-xs">
                 {t('dashboard.from', 'From')}
@@ -104,15 +104,22 @@ export function PeriodSelector({ onRefresh, loading }: PeriodSelectorProps) {
                 onChange={(e) => setCustomTo(e.target.value)}
               />
             </div>
-            <Button size="sm" className="w-full" onClick={handleApplyCustom}>
+            <Button size="sm" className="w-full" onClick={handleApplyCustom} disabled={!customValid}>
               {t('common.apply', 'Apply')}
             </Button>
           </div>
         </PopoverContent>
       </Popover>
 
-      <Button variant="outline" size="icon" onClick={onRefresh} disabled={loading} className="h-9 w-9">
-        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onRefresh}
+        disabled={loading}
+        className="size-8"
+        aria-label={t('dashboard.refresh', 'Refresh')}
+      >
+        <RefreshCw aria-hidden="true" className={cn('size-4', loading && 'animate-spin')} />
       </Button>
     </div>
   );

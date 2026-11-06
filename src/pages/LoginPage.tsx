@@ -10,12 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { ModeToggle } from '@/components/common/ModeToggle';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { startAuthFlow } from '@/services/auth/oauth';
+import { errorMessage } from '@/lib/jmapErrors';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const sessionExpired = useAuthStore((s) => s.sessionExpired);
 
   useDocumentTitle(t('login.title', 'Sign in'));
 
@@ -38,59 +39,64 @@ export default function LoginPage() {
     try {
       await startAuthFlow(trimmed, originalPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('login.error', 'An unexpected error occurred'));
+      setError(errorMessage(err, t('login.error', 'An unexpected error occurred')));
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-content-background px-4">
-      <div className="fixed right-4 top-4 z-50">
-        <ModeToggle />
-      </div>
-      <Card className="w-full max-w-sm shadow-sm">
-        <CardHeader className="items-center text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 py-10">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(48rem_22rem_at_50%_-4rem,var(--highlight),transparent_72%)]"
+        aria-hidden="true"
+      />
+      <div className="tile relative w-full max-w-[400px] px-7 pb-8 pt-9 sm:px-9">
+        <div className="flex justify-center text-foreground">
           <Logo />
-        </CardHeader>
+        </div>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-center text-sm text-muted-foreground">
-                {t('login.prompt', 'Enter your account name to continue')}
-              </p>
-              <Input
-                id="username"
-                type="text"
-                autoComplete="username"
-                autoFocus
-                placeholder={t('login.usernamePlaceholder', 'user@example.com')}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-                aria-label={t('login.prompt', 'Enter your account name to continue')}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <div className="space-y-1.5 text-center">
+            <h1 className="page-title">{t('login.title', 'Sign in')}</h1>
+            <p className="text-sm text-muted-foreground">{t('login.prompt', 'Enter your account name to continue')}</p>
+          </div>
 
-            {error && (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
+          <Input
+            id="username"
+            type="text"
+            autoComplete="username"
+            autoFocus
+            placeholder={t('login.usernamePlaceholder', 'user@example.com')}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={loading}
+            aria-label={t('login.prompt', 'Enter your account name to continue')}
+            className="h-11 rounded-full px-5"
+          />
+
+          {error && (
+            <p className="rounded-xl bg-destructive-soft px-4 py-3 text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          )}
+          {!error && sessionExpired && (
+            <p className="rounded-xl bg-info-soft px-4 py-3 text-center text-sm text-info" role="status">
+              {t('errors.sessionExpired', 'Your session has expired. Please sign in again.')}
+            </p>
+          )}
+
+          <Button type="submit" size="lg" className="w-full" disabled={loading || !username.trim()}>
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <>
+                {t('login.continue', 'Continue')}
+                <ArrowRight />
+              </>
             )}
-
-            <Button type="submit" className="w-full" disabled={loading || !username.trim()}>
-              {loading ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <>
-                  {t('login.continue', 'Continue')}
-                  <ArrowRight />
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

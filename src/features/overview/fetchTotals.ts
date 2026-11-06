@@ -139,8 +139,7 @@ export async function fetchCardTotals(
   const certCard = cards.find((c) => c.enrich === 'certificateValidity');
   if (certCard && totals[certCard.id]?.status === 'ok' && !signal?.aborted) {
     try {
-      const accountId = getAccountId(certCard.objectType);
-      const { list } = await jmapQueryAllAndGet(certCard.objectType, accountId, {}, ['notValidAfter'], signal);
+      const { list } = await jmapQueryAllAndGet(certCard.objectType, {}, ['notValidAfter'], { signal });
       const now = Date.now();
       let valid = 0;
       let expired = 0;
@@ -173,20 +172,17 @@ export async function fetchCardTotals(
   for (const card of reportCards) {
     if (signal?.aborted) break;
     try {
-      const accountId = getAccountId(card.objectType);
-      const queryResponses = await jmapQuery(card.objectType, accountId, {
-        limit: REPORT_SAMPLE_LIMIT,
-        position: 0,
-        calculateTotal: true,
-      });
-      const queryBody = queryResponses[0];
-      if (!queryBody || queryBody[0] === 'error') continue;
-      const ids = ((queryBody[1] as unknown as JmapQueryResponse).ids ?? []).slice(0, REPORT_SAMPLE_LIMIT);
+      const queryResult = await jmapQuery(
+        card.objectType,
+        { limit: REPORT_SAMPLE_LIMIT, position: 0, calculateTotal: true },
+        { signal },
+      );
+      const ids = (queryResult.ids ?? []).slice(0, REPORT_SAMPLE_LIMIT);
       if (ids.length === 0) {
         totals[card.id] = { ...totals[card.id], problemCount: 0, sampleSize: 0 };
         continue;
       }
-      const list = await jmapGetBatched(card.objectType, accountId, ids, ['report'], signal);
+      const list = await jmapGetBatched(card.objectType, ids, ['report'], { signal });
       const problemCount = list.filter((item) => reportHasProblems(card.viewName, item)).length;
       totals[card.id] = { ...totals[card.id], problemCount, sampleSize: list.length };
     } catch {

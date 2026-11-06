@@ -5,6 +5,9 @@ How to pull changes from [stalwartlabs/webui](https://github.com/stalwartlabs/we
 Remote name expected: `upstream` → `https://github.com/stalwartlabs/webui.git`  
 Fork remote: `origin` → your GitHub fork.
 
+> Current pending sync (upstream 2.0.5, major re-architecture): see
+> [UPSTREAM_V2_REPORT.md](UPSTREAM_V2_REPORT.md) for the impact analysis and phased plan.
+
 ## When to sync
 
 - After an upstream WebUI release, or when you need a specific upstream fix.

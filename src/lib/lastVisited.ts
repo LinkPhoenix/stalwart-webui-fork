@@ -4,48 +4,55 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { isLinkAccessible } from './layout';
+import {
+  findFirstAccessibleLinkInLayout,
+  findFirstVisibleLinkInLayout,
+  isLinkAccessible,
+  layoutContainsLink,
+  type CanGet,
+  type HasPermission,
+} from '@/lib/layout';
 import type { Layout, Schema } from '@/types/schema';
-
-type CanGet = (prefix: string) => boolean;
-type HasPermission = (permission: string) => boolean;
 
 const STORAGE_KEY = 'stalwart-last-visited';
 
-// Stores the last visited view name for a given top-level section in localStorage.
-export function setLastVisitedSection(section: string, viewName: string): void {
+function readAll(): Record<string, unknown> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-    data[section] = viewName;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
   } catch {
-    // Ignore storage errors (e.g. private mode).
+    return {};
   }
 }
 
-// Retrieves the last visited view name for a section, or null if none is stored.
-export function getLastVisitedSection(section: string): string | null {
+export function rememberLastVisited(section: string, viewName: string): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as Record<string, string>;
-    return data[section] ?? null;
+    const all = readAll();
+    if (all[section] === viewName) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...all, [section]: viewName }));
   } catch {
-    return null;
+    return;
   }
 }
 
-// Returns the stored view name only if it is still accessible in the target layout.
-export function findLastVisitedLinkInLayout(
+export function sectionLandingLink(
   schema: Schema,
   layout: Layout,
   edition: string,
   canGet: CanGet,
-  hasPermission: HasPermission,
+  hasPerm?: HasPermission,
 ): string | null {
-  const last = getLastVisitedSection(layout.name);
-  if (!last) return null;
-  if (isLinkAccessible(schema, last, edition, canGet, hasPermission)) return last;
-  return null;
+  const last = readAll()[layout.name];
+  if (
+    typeof last === 'string' &&
+    layoutContainsLink(layout, last) &&
+    isLinkAccessible(schema, last, edition, canGet, hasPerm)
+  ) {
+    return last;
+  }
+  return (
+    findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPerm) ??
+    findFirstVisibleLinkInLayout(schema, layout, canGet, hasPerm)
+  );
 }

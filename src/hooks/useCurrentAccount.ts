@@ -34,7 +34,6 @@ export function useCurrentAccountDetails(): CurrentAccountDetails {
       try {
         const list = await jmapGetBatched(
           'x:Account',
-          primaryAccountId,
           [primaryAccountId],
           ['id', 'name', 'emailAddress', 'description'],
         );

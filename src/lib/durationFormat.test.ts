@@ -8,13 +8,12 @@ import { describe, it, expect } from 'vitest';
 import {
   bytesToHuman,
   humanToBytes,
-  formatSize,
   msToHuman,
   humanToMs,
-  formatDuration,
   SIZE_UNITS,
   DURATION_UNITS,
 } from './durationFormat';
+import { formatDuration, formatSize } from './format';
 
 describe('SIZE_UNITS', () => {
   it('should contain the expected units in order', () => {

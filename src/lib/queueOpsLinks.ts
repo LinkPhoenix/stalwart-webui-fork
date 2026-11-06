@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { isLinkVisible } from '@/lib/layout';
+import { isLinkAccessible } from '@/lib/layout';
 import type { Schema } from '@/types/schema';
 
 export const QUEUE_DELIVERY_TRACE_VIEW = 'CustomComponent/LiveDelivery';
@@ -40,7 +40,7 @@ export function buildQueueOpsLinks(
 
   const links: QueueOpsLink[] = [];
   for (const candidate of candidates) {
-    if (!isLinkVisible(schema, candidate.viewName, edition, canGet, hasPerm)) continue;
+    if (!isLinkAccessible(schema, candidate.viewName, edition, canGet, hasPerm)) continue;
     const section = viewToSection[candidate.viewName] ?? 'Management';
     links.push({
       viewName: candidate.viewName,

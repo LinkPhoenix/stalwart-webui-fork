@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { getAccountId, jmapQuery, jmapQueryAllAndGet } from '@/services/jmap/client';
-import type { JmapQueryResponse } from '@/types/jmap';
+import { jmapQuery, jmapQueryAllAndGet } from '@/services/jmap/client';
 
 export const ONBOARDING_VIEW_NAME = 'CustomComponent/Onboarding';
 
@@ -36,20 +35,17 @@ export interface OnboardingFurtherLink {
 }
 
 async function hasEnabledDomain(): Promise<boolean> {
-  const accountId = getAccountId('x:Domain');
-  const { list } = await jmapQueryAllAndGet('x:Domain', accountId, {}, ['isEnabled']);
+  const { list } = await jmapQueryAllAndGet('x:Domain', {}, ['isEnabled']);
   return list.some((d) => d.isEnabled === true);
 }
 
 async function hasDkimSignature(): Promise<boolean> {
-  const accountId = getAccountId('x:DkimSignature');
-  const { ids } = await jmapQueryAllAndGet('x:DkimSignature', accountId, {}, []);
+  const { ids } = await jmapQueryAllAndGet('x:DkimSignature', {}, []);
   return ids.length > 0;
 }
 
 async function hasValidCertificate(): Promise<boolean> {
-  const accountId = getAccountId('x:Certificate');
-  const { list } = await jmapQueryAllAndGet('x:Certificate', accountId, {}, ['notValidAfter']);
+  const { list } = await jmapQueryAllAndGet('x:Certificate', {}, ['notValidAfter']);
   const now = Date.now();
   return list.some((c) => {
     const notValidAfter = c.notValidAfter;
@@ -60,8 +56,7 @@ async function hasValidCertificate(): Promise<boolean> {
 }
 
 async function hasAdminAccount(): Promise<boolean> {
-  const accountId = getAccountId('x:Account');
-  const { list } = await jmapQueryAllAndGet('x:Account', accountId, { filter: { '@type': 'User' } }, ['roles']);
+  const { list } = await jmapQueryAllAndGet('x:Account', { filter: { '@type': 'User' } }, ['roles']);
   return list.some((a) => {
     const roles = a.roles as Record<string, unknown> | undefined;
     return roles?.['@type'] === 'Admin';
@@ -69,15 +64,7 @@ async function hasAdminAccount(): Promise<boolean> {
 }
 
 async function hasAnyObject(objectType: string): Promise<boolean> {
-  const accountId = getAccountId(objectType);
-  const responses = await jmapQuery(objectType, accountId, {
-    limit: 1,
-    position: 0,
-    calculateTotal: true,
-  });
-  const body = responses[0];
-  if (!body || body[0] === 'error') return false;
-  const result = body[1] as unknown as JmapQueryResponse;
+  const result = await jmapQuery(objectType, { limit: 1, position: 0, calculateTotal: true });
   if (typeof result.total === 'number') return result.total > 0;
   return (result.ids?.length ?? 0) > 0;
 }

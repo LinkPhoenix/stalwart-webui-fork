@@ -5,6 +5,7 @@
  */
 
 import { create } from 'zustand';
+import { layoutViewFor } from '@/lib/layout';
 import type { Schema, LayoutSubItem, LayoutItem } from '@/types/schema';
 
 import { ONBOARDING_VIEW_NAME } from '@/features/onboarding/checklist';
@@ -237,21 +238,25 @@ function buildSearchIndex(
 
   for (const [name, obj] of Object.entries(schema.objects)) {
     if (obj.type !== 'view' && obj.description) {
-      const section = viewToSection[name] ?? '';
-      const display = displayNameFor(name);
+      const viewName = layoutViewFor(schema, viewToSection, name);
+      if (!viewName) continue;
+      const section = viewToSection[viewName];
+      const display = displayNameFor(viewName);
       entries.push({
         text: obj.description,
         type: 'link',
-        viewName: name,
+        viewName,
         section,
-        breadcrumb: section ? `${section} > ${display}` : display,
+        breadcrumb: `${section} > ${display}`,
         objectType: obj.type,
       });
     }
   }
 
   for (const [formKey, form] of Object.entries(schema.forms)) {
-    const viewName = formKey;
+    const mapped = schema.objects[formKey] ? layoutViewFor(schema, viewToSection, formKey) : formKey;
+    if (!mapped) continue;
+    const viewName = mapped;
     const section = viewToSection[viewName] ?? '';
     const display = displayNameFor(viewName);
 

@@ -61,12 +61,12 @@ export function OnboardingNavGate() {
 
       const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
       const hasPerm = (perm: string) => permissions.includes(perm);
-      const layouts = visibleLayouts(schema, edition, canGet, hasPerm);
+      const layouts = visibleLayouts(schema, canGet, hasPerm);
 
       for (const layout of layouts) {
         const link =
           findFirstAccessibleLinkInLayout(schema, layout, edition, canGet, hasPerm) ??
-          findFirstVisibleLinkInLayout(schema, layout, edition, canGet, hasPerm);
+          findFirstVisibleLinkInLayout(schema, layout, canGet, hasPerm);
         if (!link || link === ONBOARDING_VIEW_NAME) continue;
         setActiveSection(layout.name);
         navigate(`/${layout.name}/${link}`, { replace: true });

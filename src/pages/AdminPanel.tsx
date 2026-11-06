@@ -4,51 +4,39 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useAccountStore } from '@/stores/accountStore';
 import { useUIStore } from '@/stores/uiStore';
-import { fetchSession, fetchSchema, fetchAccountInfo } from '@/services/jmap/client';
-import { withClientLogFilters } from '@/lib/logFilters';
-import { withAccountListColumns } from '@/lib/accountColumns';
-import { withMailingListColumns } from '@/lib/mailingListColumns';
-import { withRoleListColumns } from '@/lib/roleColumns';
-import { withDomainColumns } from '@/lib/domainColumns';
-import { withReportListColumns } from '@/lib/reportColumns';
-import {
-  withDirectoryColumns,
-  withDnsServerColumns,
-  withNetworkListenerColumns,
-  withWebhookColumns,
-} from '@/lib/operationsListColumns';
-import { getDevelopmentAccessToken } from '@/lib/devAccessToken';
-import { setLocale } from '@/i18n';
+import { useSessionInit } from '@/data/session';
+import { errorMessage } from '@/lib/jmapErrors';
 import { TopBar } from '@/components/layout/TopBar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MainContent } from '@/components/layout/MainContent';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/layout/ErrorBoundary';
 import { LoadingFallback } from '@/components/common/LoadingFallback';
-import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { friendlyName } from '@/hooks/useGlobalSearch';
-import { AppearancePage } from '@/features/appearance/AppearancePage';
-import { ChangelogPage } from '@/features/changelog/ChangelogPage';
-import { OnboardingNavGate } from '@/features/onboarding/OnboardingNavGate';
 import {
-  findFirstAccessibleLinkInLayout,
   findFirstVisibleLinkInLayout,
   findPreferredDefaultLinkInLayout,
   isLinkAccessible,
+  layoutContainsLink,
   visibleLayouts,
 } from '@/lib/layout';
+import { useCanAccess, usePermissionCheckers } from '@/hooks/usePermissions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { friendlyName } from '@/hooks/useGlobalSearch';
+import { rememberLastVisited, sectionLandingLink } from '@/lib/lastVisited';
+import { parseAdminRoute } from '@/lib/adminRoute';
+import { resolveObject } from '@/lib/schemaResolver';
+import { Button } from '@/components/ui/button';
 import { OVERVIEW_VIEW_NAME } from '@/features/overview/constants';
-import { usePermissions } from '@/hooks/usePermissions';
-import { Loader2 } from 'lucide-react';
+import { OnboardingNavGate } from '@/features/onboarding/OnboardingNavGate';
+import { AppearancePage } from '@/features/appearance/AppearancePage';
+import { ChangelogPage } from '@/features/changelog/ChangelogPage';
 
-// Bootstrap mode is a rare first-run flow; keep it out of the main chunk.
 const BootstrapWizard = lazy(() =>
   import('@/components/bootstrap/BootstrapWizard').then((m) => ({ default: m.BootstrapWizard })),
 );
@@ -61,277 +49,143 @@ export default function AdminPanel() {
     '*'?: string;
   }>();
 
-  let viewName: string | undefined;
-  let id: string | undefined;
-  if (splat) {
-    const parts = splat.split('/');
-    if (parts[parts.length - 1] === 'new') {
-      id = 'new';
-      viewName = parts.slice(0, -1).join('/');
-    } else if (parts[parts.length - 1] === 'singleton') {
-      id = 'singleton';
-      viewName = parts.slice(0, -1).join('/');
-    } else {
-      const schemaStore = useSchemaStore.getState();
-      const fullAsView = parts.join('/');
-      if (schemaStore.schema?.objects[fullAsView]) {
-        viewName = fullAsView;
-      } else if (parts.length > 1) {
-        const candidateView = parts.slice(0, -1).join('/');
-        if (schemaStore.schema?.objects[candidateView]) {
-          viewName = candidateView;
-          id = parts[parts.length - 1];
-        } else {
-          viewName = fullAsView;
-        }
-      } else {
-        viewName = fullAsView;
-      }
-    }
-  }
-
-  const isSchemaLoaded = useSchemaStore((s) => s.isLoaded);
   const schema = useSchemaStore((s) => s.schema);
-  const setSchema = useSchemaStore((s) => s.setSchema);
-  const setAccountInfo = useAccountStore((s) => s.setAccountInfo);
+
+  const { viewName, id } = parseAdminRoute(splat, (name) => !!schema && resolveObject(schema, name) !== null);
+
   const edition = useAccountStore((s) => s.edition);
-  const permissions = useAccountStore((s) => s.permissions);
-  const setSession = useAuthStore((s) => s.setSession);
-  const accessToken = useAuthStore((s) => s.accessToken);
   const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
   const activeSection = useUIStore((s) => s.activeSection);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
-  const { canViewObject } = usePermissions();
+  const canViewBootstrap = useCanAccess('x:Bootstrap');
+  const { canGet, hasPermission: hasPerm } = usePermissionCheckers();
 
-  const [initError, setInitError] = useState<string | null>(null);
-  const [initializing, setInitializing] = useState(!isSchemaLoaded);
+  const init = useSessionInit();
 
   const searchIndex = useSchemaStore((s) => s.searchIndex);
-
-  // Tab title mirrors the sidebar label (search index) so it always matches
-  // what the user sees in the navigation, e.g. "MTA-STS · Settings".
   const pageTitle = useMemo(() => {
     if (section === 'Appearance') return t('appearance.label', 'Appearance');
     if (section === 'Changelog') return t('changelog.label', 'Changelog');
     if (!section) return t('dashboard.title', 'Dashboard');
     if (!viewName) return section;
-    const entry =
-      searchIndex.find((e) => e.type === 'link' && e.viewName === viewName && e.section === section) ??
-      searchIndex.find((e) => e.type === 'link' && e.viewName === viewName);
-    const base = entry?.text ?? friendlyName(viewName);
-    if (id === 'new') return `${t('form.createTitle', 'Create {{name}}', { name: base })} · ${section}`;
-    return `${base} · ${section}`;
-  }, [section, viewName, id, searchIndex, t]);
+    let label: string | undefined;
+    // SPDX-SnippetBegin
+    // SPDX-FileCopyrightText: 2020 Stalwart Labs LLC <hello@stalw.art>
+    // SPDX-License-Identifier: LicenseRef-SEL
+    if (viewName.startsWith('Dashboard/')) {
+      const dashboardId = viewName.slice('Dashboard/'.length);
+      label = schema?.dashboards?.find((dashboard) => dashboard.id === dashboardId)?.label;
+    }
+    // SPDX-SnippetEnd
+    if (label === undefined) {
+      for (const entry of searchIndex) {
+        if (entry.type !== 'link' || entry.viewName !== viewName) continue;
+        if (entry.section === section) {
+          label = entry.text;
+          break;
+        }
+        label ??= entry.text;
+      }
+    }
+    const name = label ?? friendlyName(viewName);
+    const title = id === 'new' ? t('form.createTitle', 'Create {{name}}', { name }) : name;
+    return `${title} · ${section}`;
+  }, [section, viewName, id, searchIndex, schema, t]);
 
   useDocumentTitle(pageTitle);
 
-  useEffect(() => {
-    const bypassToken = getDevelopmentAccessToken(import.meta.env.DEV, import.meta.env.VITE_ACCESS_TOKEN);
-    if (bypassToken && !accessToken) {
-      useAuthStore.getState().setTokens(bypassToken, '', 86400, '');
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (isSchemaLoaded) return;
-
-    let cancelled = false;
-
-    async function init() {
-      try {
-        const session = await fetchSession();
-        const accounts: Record<string, { name: string; isPersonal: boolean }> = {};
-        for (const [accountId, info] of Object.entries(
-          session.accounts as Record<string, { name: string; isPersonal: boolean }>,
-        )) {
-          accounts[accountId] = { name: info.name, isPersonal: info.isPersonal };
-        }
-        const primaryAccounts = session.primaryAccounts as Record<string, string>;
-        const primaryAccountId =
-          primaryAccounts['urn:ietf:params:jmap:core'] ?? Object.values(primaryAccounts)[0] ?? Object.keys(accounts)[0];
-        const apiUrl = (session.apiUrl as string) || '/jmap';
-
-        const capabilities = session.capabilities as Record<string, Record<string, unknown>> | undefined;
-        const coreCapability = capabilities?.['urn:ietf:params:jmap:core'];
-        const maxObjectsInGet =
-          typeof coreCapability?.maxObjectsInGet === 'number' ? coreCapability.maxObjectsInGet : undefined;
-        const maxObjectsInSet =
-          typeof coreCapability?.maxObjectsInSet === 'number' ? coreCapability.maxObjectsInSet : undefined;
-
-        if (cancelled) return;
-        setSession(accounts, primaryAccountId, apiUrl, maxObjectsInGet, maxObjectsInSet);
-
-        const [schemaData, accountData] = await Promise.all([fetchSchema(), fetchAccountInfo()]);
-
-        if (cancelled) return;
-
-        setSchema(
-          withReportListColumns(
-            withDomainColumns(
-              withRoleListColumns(
-                withMailingListColumns(
-                  withAccountListColumns(
-                    withNetworkListenerColumns(
-                      withDnsServerColumns(
-                        withDirectoryColumns(withWebhookColumns(withClientLogFilters(schemaData))),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        setAccountInfo(accountData.permissions, accountData.edition, accountData.locale);
-        setLocale(accountData.locale);
-
-        setInitializing(false);
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Initialization failed:', err);
-          setInitError(err instanceof Error ? err.message : t('errors.unexpectedError'));
-          setInitializing(false);
-        }
-      }
-    }
-
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [isSchemaLoaded, setSession, setSchema, setAccountInfo, t]);
-
   const isBootstrapMode = useMemo(() => {
     if (!schema) return false;
-    if (!canViewObject('x:Bootstrap')) return false;
-    // Read the permissions array directly: the store accessors are stable
-    // refs, so depending on them alone would keep stale results after access
-    // data finishes loading.
-    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
-    const hasPerm = (perm: string) => permissions.includes(perm);
-    return visibleLayouts(schema, edition, canGet, hasPerm).length === 0;
-  }, [schema, canViewObject, edition, permissions]);
+    if (!canViewBootstrap) return false;
+    return visibleLayouts(schema, canGet, hasPerm).length === 0;
+  }, [schema, canViewBootstrap, canGet, hasPerm]);
 
   useEffect(() => {
-    if (!schema) return;
+    if (!init.isSuccess || !schema) return;
     if (isBootstrapMode) return;
-    const canGet = (prefix: string) => permissions.includes(`${prefix}Get`);
-    const hasPerm = (perm: string) => permissions.includes(perm);
-    const layouts = visibleLayouts(schema, edition, canGet, hasPerm);
+    const layouts = visibleLayouts(schema, canGet, hasPerm);
     const pickDefault = (): { layoutName: string; link: string | null } | null => {
       for (const layout of layouts) {
-        const link = findPreferredDefaultLinkInLayout(
-          schema,
-          layout,
-          edition,
-          canGet,
-          hasPerm,
-          OVERVIEW_VIEW_NAME,
-        );
+        const link = findPreferredDefaultLinkInLayout(schema, layout, edition, canGet, hasPerm, OVERVIEW_VIEW_NAME);
         if (link) return { layoutName: layout.name, link };
       }
       if (layouts[0]) {
         return {
           layoutName: layouts[0].name,
-          link: findFirstVisibleLinkInLayout(schema, layouts[0], edition, canGet, hasPerm),
+          link: findFirstVisibleLinkInLayout(schema, layouts[0], canGet, hasPerm),
         };
       }
       return null;
     };
 
+    const redirectTo = (layoutName: string, link: string | null) => {
+      setActiveSection(layoutName);
+      if (link) navigate(`/${layoutName}/${link}`, { replace: true });
+    };
+
+    if (section === 'Appearance' || section === 'Changelog') {
+      // Client-side pages outside the schema layouts: keep the sidebar bound to a real section.
+      if (!layouts.some((l) => l.name === activeSection)) setActiveSection(layouts[0]?.name ?? '');
+      return;
+    }
+
     if (section && viewName && !isLinkAccessible(schema, viewName, edition, canGet, hasPerm)) {
       const fallback = pickDefault();
       if (fallback && (fallback.layoutName !== section || fallback.link !== viewName)) {
-        setActiveSection(fallback.layoutName);
-        if (fallback.link) {
-          navigate(`/${fallback.layoutName}/${fallback.link}`, { replace: true });
-        }
+        redirectTo(fallback.layoutName, fallback.link);
         return;
       }
     }
 
-    if (section === 'Appearance' || section === 'Changelog') {
-      // Appearance and Changelog are client-side pages outside the schema
-      // layouts: keep the sidebar bound to a real section while open.
-      if (!layouts.some((l) => l.name === activeSection)) {
-        setActiveSection(layouts[0]?.name ?? '');
-      }
+    if (section && viewName) {
+      const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
+      setActiveSection(ownLayout?.name ?? layouts[0]?.name ?? section);
+      if (ownLayout && layoutContainsLink(ownLayout, viewName)) rememberLastVisited(ownLayout.name, viewName);
       return;
     }
 
     if (section) {
-      if (!viewName) {
-        // A section URL without a view (e.g. /Settings alone, or an unknown
-        // section like /admin) should land on a real page instead of the
-        // dead-end "Select a view" empty state.
-        const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
-        if (ownLayout) {
-          const link =
-            findFirstAccessibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm) ??
-            findFirstVisibleLinkInLayout(schema, ownLayout, edition, canGet, hasPerm);
-          if (link) {
-            setActiveSection(ownLayout.name);
-            navigate(`/${ownLayout.name}/${link}`, { replace: true });
-            return;
-          }
-        }
+      const ownLayout = layouts.find((l) => l.name.toLowerCase() === section.toLowerCase());
+      const ownLink = ownLayout ? sectionLandingLink(schema, ownLayout, edition, canGet, hasPerm) : null;
+      if (ownLayout && ownLink) {
+        redirectTo(ownLayout.name, ownLink);
+      } else {
         const target = pickDefault();
-        if (target) {
-          setActiveSection(target.layoutName);
-          if (target.link) {
-            navigate(`/${target.layoutName}/${target.link}`, { replace: true });
-          }
-        }
-        return;
+        if (target) redirectTo(target.layoutName, target.link);
       }
-      setActiveSection(section);
       return;
     }
 
     const target = pickDefault();
-    if (target) {
-      setActiveSection(target.layoutName);
-      if (target.link) {
-        navigate(`/${target.layoutName}/${target.link}`, { replace: true });
-      }
-    }
+    if (target) redirectTo(target.layoutName, target.link);
   }, [
+    init.isSuccess,
     section,
     viewName,
-    activeSection,
     schema,
     setActiveSection,
     navigate,
     edition,
-    permissions,
+    canGet,
+    hasPerm,
     isBootstrapMode,
+    activeSection,
   ]);
 
-  if (initializing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{t('common.loading')}</p>
-        </div>
-      </div>
-    );
+  if (init.isPending) {
+    return <LoadingFallback fullScreen />;
   }
 
-  if (initError) {
+  if (init.isError) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-destructive">{t('errors.loadSchemaFailed')}</h2>
-          <p className="mt-2 text-muted-foreground">{initError}</p>
-          <button
-            className="mt-4 rounded bg-primary px-4 py-2 text-primary-foreground hover:opacity-90"
-            onClick={() => window.location.reload()}
-          >
-            {t('common.continue')}
-          </button>
+        <div role="alert" className="text-center">
+          <h1 className="page-title text-destructive">{t('errors.loadSchemaFailed')}</h1>
+          <p className="mt-2 text-muted-foreground">{errorMessage(init.error)}</p>
+          <Button className="mt-4" onClick={() => void init.refetch()} disabled={init.isFetching}>
+            {t('common.retry', 'Retry')}
+          </Button>
         </div>
       </div>
     );
@@ -349,36 +203,25 @@ export default function AdminPanel() {
     );
   }
 
-  // The shell is viewport-height so the main area scrolls internally through
-  // the shared ScrollArea instead of scrolling the whole window.
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-screen flex-col">
       <OnboardingNavGate />
       <TopBar />
-      <div className="flex min-h-0 min-w-0 flex-1">
+      <div className="flex flex-1">
         <Sidebar />
-        <ScrollArea
-          role="main"
-          className={`min-w-0 flex-1 bg-content-background transition-[margin] ${sidebarOpen ? 'md:ml-64' : ''}`}
+        <main
+          className={`min-w-0 flex-1 px-3 pb-28 pt-2 transition-[margin] sm:px-5 ${sidebarOpen ? 'md:ml-[252px]' : ''}`}
         >
-          <div className="min-w-0 p-4 sm:p-6">
-            <div className="mx-auto w-full min-w-0 max-w-7xl">
-              {/* Keyed on the active account: forces MainContent (and every
-                  view it renders) to fully remount on switch, so
-                  account-scoped views can't keep showing stale data fetched
-                  under the previous account. */}
-              <ErrorBoundary key={activeAccountId ?? 'none'}>
-                {section === 'Appearance' ? (
-                  <AppearancePage />
-                ) : section === 'Changelog' ? (
-                  <ChangelogPage />
-                ) : (
-                  <MainContent viewName={viewName} id={id} section={section} />
-                )}
-              </ErrorBoundary>
-            </div>
-          </div>
-        </ScrollArea>
+          <ErrorBoundary key={activeAccountId ?? 'none'}>
+            {section === 'Appearance' ? (
+              <AppearancePage />
+            ) : section === 'Changelog' ? (
+              <ChangelogPage />
+            ) : (
+              <MainContent viewName={viewName} id={id} section={section} />
+            )}
+          </ErrorBoundary>
+        </main>
       </div>
     </div>
   );
