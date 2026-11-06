@@ -667,3 +667,13 @@
     background: var(--primary);
   }
 }
+
+/* Fork: Appearance > List density. Comfortable is the default table padding;
+   compact tightens rows so more fit on screen. The attribute is set on the
+   root element by the UI store. */
+:root[data-list-density='compact'] .list-table thead th {
+  padding-block: 0.375rem;
+}
+:root[data-list-density='compact'] .list-table tbody :is(th, td) {
+  padding-block: 0.25rem;
+}

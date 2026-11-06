@@ -71,7 +71,7 @@ export function ListTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm" aria-busy={busy || undefined}>
+      <table className="list-table w-full text-sm" aria-busy={busy || undefined}>
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
