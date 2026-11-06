@@ -1,8 +1,8 @@
 import type { Column, Schema } from '@/types/schema';
 
 /**
- * SCHEMA-DEVIATION: webapp-enabled-column-fallback, sieve-script-active-column-fallback
- * (see SCHEMA_DEVIATIONS.md)
+ * SCHEMA-DEVIATION: webapp-enabled-column-fallback (see SCHEMA_DEVIATIONS.md)
+ * SCHEMA-DEVIATION: sieve-script-active-column-fallback (see SCHEMA_DEVIATIONS.md)
  *
  * Adds real-property columns the schema's lists omit: `enabled` on Web
  * Applications (shown second, after Description, like Domains) and

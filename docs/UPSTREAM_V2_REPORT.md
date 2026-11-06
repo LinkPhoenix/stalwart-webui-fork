@@ -273,3 +273,23 @@ dev token bypass, OAuth proxy and dev client, `forkSchema` patches, tests.
 
 Suggested order: (1) list core (synthetic columns, client sort, fetch-all guardrails, page size, column prefs, CSV export),
 (2) Log Entries and report features, (3) Sieve editor and detail-page extras, (4) bulk quota, density, polish.
+
+## 10. Re-implementation status (2026-11-06)
+
+Restored on the 2.0.5 architecture, one commit each: synthetic columns (quota bar, alias and permission counts, report
+summaries, user role, byte-size cells), client-side sort / client-only filters / mailbox tree through a fetch-all mode
+(`useDynamicList` + `data/listAll.ts` + `lists/clientList.ts`, behind the 2 000 / 10 000 row guardrails), page size and
+column preferences, CSV export, Log Entries tools (refresh cooldown, auto-refresh, presets), reports "Problems only",
+the Sieve code editor, detail-page "show empty fields", username/email in the top bar, bulk quota change, list density,
+empty states (+ exact-match hint, queue guidance), Active WebUI card and queue backlog notice.
+
+How the fork hooks into upstream files (keep these when syncing again): `listQuery.ts` (`expandListProperties`,
+`serverSort`, client-only filters excluded), `useDynamicList.ts` (client mode), `ListCell.tsx` / `ListTable.tsx`
+(synthetic cells, depth, empty), `FilterBar.tsx` (`trailing` tools slot), `MassActionBar.tsx` (`extraActions`),
+`Pagination.tsx` (page size), `DynamicList.tsx` (tools, notices, bulk quota), `StringWidgets.tsx` / `BlobWidget.tsx`
+(Sieve editor), `DynamicView.tsx` (empty fields), `TopBar.tsx`, `data/session.ts` (`withForkSchemaDeviations`).
+
+Not restored (low value or superseded): expand-to-fit textarea control, green/red switches, square-corner sidebar rows,
+related-object links on detail pages, dashboard "last refreshed" timestamps. Server note: Stalwart 1.0.3 no longer
+returns `x:Application.enabled`, so that column is only added while the property exists, and `x:Log` queries answer
+`serverUnavailable` on the disposable dev server, so Log Entries could be checked only up to the toolbar and filters.

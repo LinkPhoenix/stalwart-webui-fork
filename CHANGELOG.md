@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file. This projec
 ## [Unreleased]
 
 ### Changed
+- Fork list features were re-implemented on the new list architecture: Role, Usage/Quota, alias and permission count columns, report summaries and Problems only, client-side sorting, mailbox tree, Log Entries filters, presets and auto-refresh, CSV export, column preferences, page sizes, bulk quota change, list density, empty states, the Active WebUI card and the queue backlog notice.
+- The Sieve code editor, backend logos in type pickers, the sidebar accordion, Getting Started and Overview icons and the signed-in username in the top bar are back.
+- Appearance defaults are now dark mode, the default color theme, rounded corners and comfortable density.
 - Merged `stalwartlabs/webui` through 2.0.5: new design and navigation, schema-defined dashboards, TanStack Query data layer, split list and form components, passkey registration, locale-aware dates and numbers, CIMD and RFC 8707 OAuth support. Upstream notes: 2.0.0 CIMD; 2.0.1 create-only objects (Actions) shown; 2.0.2 tenant-scoped object pickers; 2.0.3 OAuth `resource` parameter and logout keeps tokens; 2.0.4 new design and `oauth-scopes` meta tag; 2.0.5 passkeys and locale formatting.
 
 ## [1.3.2] - 2026-10-07

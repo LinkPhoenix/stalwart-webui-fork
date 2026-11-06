@@ -68,7 +68,7 @@ export function buildListPageParams(
   pageSize = LIST_PAGE_SIZE,
   labelProperty?: string,
 ): ListPageParams {
-  // SCHEMA-DEVIATION: synthetic columns resolve to the real properties they need.
+  // SCHEMA-DEVIATION: account-quota-usage-column — synthetic columns resolve to the real properties they need.
   const properties = expandListProperties(list.columns, objectName);
   if (labelProperty && !properties.includes(labelProperty)) properties.push(labelProperty);
   const params: ListPageParams = {
