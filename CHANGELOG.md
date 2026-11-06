@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file. This projec
 ## [Unreleased]
 
 ### Changed
-- Dependencies were updated to their latest releases, including Vitest 5, happy-dom 21, `@rolldown/plugin-babel` 0.3, React 19.3.1, Vite 8.3.6, Tailwind CSS 4.3.5 and TanStack Query 5.107.
+- Dependencies were updated to their latest releases, including Vitest 5, happy-dom 21, `@rolldown/plugin-babel` 0.3, React 19.3.1, Vite 8.3.6, Tailwind CSS 4.3.5 and TanStack Query 5.107. `bun.lock` was regenerated, so `bun outdated` and `bun audit` report only `@babel/core`, which stays on 7.x for now, and no vulnerability.
 - The TypeScript compiler is now TypeScript 7 (native), and linting moved from ESLint and typescript-eslint to Oxlint, which blocked the upgrade because typescript-eslint cannot use TypeScript 7. Lint runs in about half a second instead of nine, and type checking in about 1.4 seconds instead of 7. `@babel/core` stays on 7.x until `babel-plugin-react-compiler` supports Babel 8. See `docs/UPSTREAM_SYNC.md`.
 - CI and release builds run on Node 24 (LTS) with the latest GitHub Actions, still pinned by commit: checkout 7, setup-node 7, upload-artifact 7 and download-artifact 8.
 - Fork list features were re-implemented on the new list architecture: Role, Usage/Quota, alias and permission count columns, report summaries and Problems only, client-side sorting, mailbox tree, Log Entries filters, presets and auto-refresh, CSV export, column preferences, page sizes, bulk quota change, list density, empty states, the Active WebUI card and the queue backlog notice.
