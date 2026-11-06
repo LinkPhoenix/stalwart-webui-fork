@@ -10,6 +10,7 @@ import {
   withNetworkListenerColumns,
   withWebhookColumns,
 } from '@/lib/operationsListColumns';
+import { withDisplayColumnFallbacks } from '@/lib/displayColumns';
 import type { Schema } from '@/types/schema';
 
 /**
@@ -17,13 +18,15 @@ import type { Schema } from '@/types/schema';
  * Each helper is documented (and tagged) in SCHEMA_DEVIATIONS.md.
  */
 export function withForkSchemaDeviations(schema: Schema): Schema {
-  return withReportListColumns(
-    withDomainColumns(
-      withRoleListColumns(
-        withMailingListColumns(
-          withAccountListColumns(
-            withNetworkListenerColumns(
-              withDnsServerColumns(withDirectoryColumns(withWebhookColumns(withClientLogFilters(schema)))),
+  return withDisplayColumnFallbacks(
+    withReportListColumns(
+      withDomainColumns(
+        withRoleListColumns(
+          withMailingListColumns(
+            withAccountListColumns(
+              withNetworkListenerColumns(
+                withDnsServerColumns(withDirectoryColumns(withWebhookColumns(withClientLogFilters(schema)))),
+              ),
             ),
           ),
         ),

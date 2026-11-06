@@ -7,6 +7,7 @@
 import { buildJmapFilter } from '@/lib/listFilter';
 import type { ListPageParams } from '@/data/keys';
 import type { ResolvedSchema } from '@/lib/schemaResolver';
+import { expandListProperties } from '@/lib/syntheticColumns';
 import type { Field, List } from '@/types/schema';
 import type { ListSort, ListUrlState } from './listUrlState';
 
@@ -52,7 +53,8 @@ export function buildListPageParams(
   pageSize = LIST_PAGE_SIZE,
   labelProperty?: string,
 ): ListPageParams {
-  const properties = ['id', ...list.columns.map((c) => c.name)];
+  // SCHEMA-DEVIATION: synthetic columns resolve to the real properties they need.
+  const properties = expandListProperties(list.columns, objectName);
   if (labelProperty && !properties.includes(labelProperty)) properties.push(labelProperty);
   const params: ListPageParams = {
     filter: buildListFilter(state.filters, list, objectName),
