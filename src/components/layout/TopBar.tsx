@@ -31,6 +31,7 @@ import { buildEndSessionUrl, getPostLogoutRedirectUri } from '@/services/auth/oa
 import { useEffect, useState } from 'react';
 import { useIsCommunity } from '@/hooks/usePermissions';
 import { SIDEBAR_ID } from './sidebarContext';
+import { useCurrentAccountDetails } from '@/hooks/useCurrentAccount';
 import { useLayoutNavigation } from './useLayoutNavigation';
 
 const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -46,6 +47,12 @@ export function TopBar() {
   const logout = useAuthStore((s) => s.logout);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const isCommunity = useIsCommunity();
+  const currentAccount = useCurrentAccountDetails();
+  const activeAccount = activeAccountId ? accounts[activeAccountId] : null;
+  // Fork: show who is signed in, independent of the JMAP session account name.
+  const displayName =
+    currentAccount.username?.trim() || activeAccount?.name?.trim() || activeAccountId?.split('@')[0] || '';
+  const displayEmail = currentAccount.email || activeAccountId || '';
   const { layouts: navigableLayouts, landingPath } = useLayoutNavigation();
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -120,13 +127,38 @@ export function TopBar() {
 
         <ModeToggle />
 
+        {displayName && (
+          <div className="hidden min-w-0 max-w-[14rem] flex-col text-right leading-tight lg:flex">
+            <span className="truncate text-[13px] font-semibold">{displayName}</span>
+            {displayEmail && displayEmail !== displayName && (
+              <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
+            )}
+          </div>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon-lg" aria-label={t('userMenu', 'User menu')}>
+            <Button
+              variant="outline"
+              size="icon-lg"
+              aria-label={t('userMenu', 'User menu')}
+              title={displayEmail || displayName || undefined}
+            >
               <User aria-hidden="true" className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            {displayName && (
+              <>
+                <DropdownMenuLabel className="font-normal">
+                  <span className="block truncate text-sm font-semibold">{displayName}</span>
+                  {displayEmail && displayEmail !== displayName && (
+                    <span className="block truncate text-xs text-muted-foreground">{displayEmail}</span>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+              </>
+            )}
             {navigableLayouts.length > 0 && (
               <>
                 <DropdownMenuLabel>{t('sections', 'Sections')}</DropdownMenuLabel>
