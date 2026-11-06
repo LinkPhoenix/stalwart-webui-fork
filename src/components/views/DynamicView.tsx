@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Eye, EyeOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ValueRow } from '@/components/values/FieldValue';
 import { cn } from '@/lib/utils';
 import { resolveForm, resolveSchema, resolveVariantForm } from '@/lib/schemaResolver';
@@ -48,10 +52,11 @@ function buildViewSections(
   layout: { fields: Fields | null; form: Form | null },
   data: Record<string, unknown>,
   visibleFields?: Set<string>,
+  showEmpty = false,
 ): ViewSection[] {
   const { fields, form } = layout;
   const include = (name: string) =>
-    name !== '@type' && (!visibleFields || visibleFields.has(name)) && !isEmptyValue(data[name]);
+    name !== '@type' && (!visibleFields || visibleFields.has(name)) && (showEmpty || !isEmptyValue(data[name]));
   if (form) {
     return form.sections
       .map((section, index) => ({
@@ -71,14 +76,33 @@ function buildViewSections(
 }
 
 export function DynamicView({ schema, objectName, viewName, data, visibleFields }: DynamicViewProps) {
+  const { t } = useTranslation();
+  const [showEmpty, setShowEmpty] = useState(false);
   const layout = resolveViewLayout(schema, objectName, viewName, data);
   if (!layout) return null;
-  const sections = buildViewSections(layout, data, visibleFields);
+  const sections = buildViewSections(layout, data, visibleFields, showEmpty);
   const typeLabel = variantLabel(schema, objectName, data['@type']);
+  // Fork: fields unset in the server response can be revealed on demand.
+  const countItems = (list: ViewSection[]) => list.reduce((sum, section) => sum + section.items.length, 0);
+  const emptyCount = showEmpty
+    ? countItems(sections) - countItems(buildViewSections(layout, data, visibleFields, false))
+    : countItems(buildViewSections(layout, data, visibleFields, true)) - countItems(sections);
 
   return (
     <div className="space-y-3.5">
-      {typeLabel && <Badge variant="default">{typeLabel}</Badge>}
+      {(typeLabel || emptyCount > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {typeLabel ? <Badge variant="default">{typeLabel}</Badge> : <span />}
+          {emptyCount > 0 && (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setShowEmpty((shown) => !shown)}>
+              {showEmpty ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+              {showEmpty
+                ? t('view.hideEmptyFields', 'Hide empty fields')
+                : t('view.showEmptyFields', 'Show {{count}} empty fields', { count: emptyCount })}
+            </Button>
+          )}
+        </div>
+      )}
       {sections.map((section) => (
         <section key={section.key} className="tile @container px-5 pb-1.5 sm:px-6">
           {section.title && <h2 className="section-title pb-1 pt-5">{section.title}</h2>}
