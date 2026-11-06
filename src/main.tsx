@@ -34,8 +34,8 @@ import { bindQueryClientToAuth, queryClient } from './data/queryClient';
     }
     // eslint-disable-next-line no-empty
   } catch {}
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-  document.documentElement.classList.toggle('dark', !!prefersDark);
+  // Dark is the default when the user has not chosen a theme yet.
+  document.documentElement.classList.add('dark');
 })();
 
 ensureLogoLoaded();

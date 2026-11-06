@@ -7,6 +7,7 @@
 import { createElement } from 'react';
 import { Circle, type LucideIcon } from 'lucide-react';
 import { ICONS } from '@/components/common/icons.generated';
+import { FORK_ICONS } from '@/components/common/forkIcons';
 
 const warned = new Set<string>();
 
@@ -24,7 +25,7 @@ interface DynamicIconProps {
 
 export function DynamicIcon({ name, className, fallback = Circle }: DynamicIconProps) {
   const key = iconKey(name);
-  const icon = Object.hasOwn(ICONS, key) ? ICONS[key] : undefined;
+  const icon = Object.hasOwn(ICONS, key) ? ICONS[key] : Object.hasOwn(FORK_ICONS, key) ? FORK_ICONS[key] : undefined;
   if (!icon && import.meta.env.DEV && !warned.has(key)) {
     warned.add(key);
     console.warn(`Unknown icon name "${name}": run npm run generate:icons after schema changes`);

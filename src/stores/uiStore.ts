@@ -80,10 +80,9 @@ export const COLOR_THEMES: { value: ColorTheme; labelKey: string; fallback: stri
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      theme:
-        typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-      colorTheme: 'stalwart',
-      radius: 'square',
+      theme: 'dark',
+      colorTheme: 'default',
+      radius: 'rounded',
       listDensity: 'comfortable',
       listPageSize: 25,
       sidebarOpen: typeof window !== 'undefined' ? (window.matchMedia?.('(min-width: 768px)').matches ?? true) : true,
@@ -136,8 +135,8 @@ export const useUIStore = create<UIState>()(
         return (state) => {
           if (state) {
             applyThemeClass(state.theme);
-            applyColorThemeAttribute(state.colorTheme ?? 'stalwart');
-            applyRadiusAttribute(state.radius ?? 'square');
+            applyColorThemeAttribute(state.colorTheme ?? 'default');
+            applyRadiusAttribute(state.radius ?? 'rounded');
             applyListDensityAttribute(state.listDensity ?? 'comfortable');
           }
         };

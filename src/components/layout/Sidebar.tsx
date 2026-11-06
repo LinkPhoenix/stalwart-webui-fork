@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-SEL
  */
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Lock } from 'lucide-react';
@@ -23,6 +23,22 @@ import { useLayoutNavigation } from './useLayoutNavigation';
 const itemClass =
   'flex w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left font-medium text-muted-foreground outline-none transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring';
 
+// Fork behavior (kept from before the 2.0 redesign): sibling groups form an
+// accordion, so opening one closes the others at the same level, and picking a
+// plain link collapses any group left open next to it.
+interface AccordionLevelValue {
+  openKey: string | null;
+  setOpenKey: (key: string | null) => void;
+}
+
+const AccordionLevelContext = createContext<AccordionLevelValue | null>(null);
+
+function useAccordionLevel(): AccordionLevelValue {
+  const level = useContext(AccordionLevelContext);
+  if (!level) throw new Error('Sidebar items must be rendered inside an accordion level');
+  return level;
+}
+
 function itemSize(depth: number) {
   return depth > 0 ? 'h-8 text-[13px]' : 'h-9 text-sm';
 }
@@ -30,6 +46,7 @@ function itemSize(depth: number) {
 function NavLink({ node, depth }: { node: Extract<NavNode, { kind: 'link' }>; depth: number }) {
   const { t } = useTranslation();
   const nav = useSidebarNav();
+  const level = useAccordionLevel();
   const ref = useRef<HTMLAnchorElement>(null);
   const isActive = node.viewName === nav.activeViewName;
 
@@ -61,6 +78,7 @@ function NavLink({ node, depth }: { node: Extract<NavNode, { kind: 'link' }>; de
     <Link
       ref={ref}
       to={viewPath(nav.sectionName, node.viewName)}
+      onClick={() => level.setOpenKey(null)}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
         className,
@@ -75,18 +93,20 @@ function NavLink({ node, depth }: { node: Extract<NavNode, { kind: 'link' }>; de
 
 function NavContainer({ node, depth }: { node: Extract<NavNode, { kind: 'container' }>; depth: number }) {
   const nav = useSidebarNav();
+  const level = useAccordionLevel();
+  const key = navNodeKey(node);
   const containsActive = someLink(node.children, (viewName) => viewName === nav.activeViewName);
-  const [open, setOpen] = useState(containsActive);
-  const [prevContainsActive, setPrevContainsActive] = useState(containsActive);
-  if (containsActive !== prevContainsActive) {
-    setPrevContainsActive(containsActive);
-    if (containsActive) setOpen(true);
-  }
+  const open = level.openKey === key;
+  const { setOpenKey } = level;
+  // Layout effect so the branch holding the active page is already open on first paint.
+  useLayoutEffect(() => {
+    if (containsActive) setOpenKey(key);
+  }, [containsActive, key, setOpenKey]);
 
   if (!someLink(node.children, nav.isVisible)) return null;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={(next) => setOpenKey(next ? key : null)}>
       <CollapsibleTrigger asChild>
         <button type="button" className={cn(itemClass, itemSize(depth))}>
           {node.icon && <DynamicIcon name={node.icon} className="h-4 w-4 shrink-0" />}
@@ -107,12 +127,18 @@ function NavContainer({ node, depth }: { node: Extract<NavNode, { kind: 'contain
 }
 
 function NavNodes({ nodes, depth }: { nodes: NavNode[]; depth: number }) {
-  return nodes.map((node) =>
-    node.kind === 'link' ? (
-      <NavLink key={navNodeKey(node)} node={node} depth={depth} />
-    ) : (
-      <NavContainer key={navNodeKey(node)} node={node} depth={depth} />
-    ),
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const value = useMemo(() => ({ openKey, setOpenKey }), [openKey]);
+  return (
+    <AccordionLevelContext.Provider value={value}>
+      {nodes.map((node) =>
+        node.kind === 'link' ? (
+          <NavLink key={navNodeKey(node)} node={node} depth={depth} />
+        ) : (
+          <NavContainer key={navNodeKey(node)} node={node} depth={depth} />
+        ),
+      )}
+    </AccordionLevelContext.Provider>
   );
 }
 
