@@ -168,17 +168,27 @@ export STALWART_USER='user@domain.com'
 export STALWART_PASSWORD='Password'
 ```
 
-Find the id of your `WEBAPP` application:
+Find the Id of your `WEBAPP` application:
 
 ```
 stalwart-cli query Application
 ```
 
+In the _output_ is **Id**. Lets say its value is `somehash`.
+
+Zooming in on _application somehash_.
+
+```
+stalwart-cli get Application somehash
+```
+
+Note the URL for switching back.
+
 Point it at this fork's latest release instead of upstream's:
 
 ```
-stalwart-cli update Application ID WEBAPP \
-  --field https://github.com/LinkPhoenix/stalwart-webui-fork/releases/latest/download/webui.zip
+stalwart-cli update Application somehash \
+  --field ResourceUrl=https://github.com/LinkPhoenix/stalwart-webui-fork/releases/latest/download/webui.zip
 ```
 
 Then trigger the update:
