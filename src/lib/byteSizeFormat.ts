@@ -14,12 +14,7 @@ import type { NumberFormat } from '@/types/schema';
  * `unsignedInteger`, which would render as a bare locale number (e.g. "1,254").
  * Matching by property name keeps this schema-driven rather than per-view.
  */
-const BYTE_SIZE_PROPERTY_KEYS = new Set([
-  'size',
-  'maxsize',
-  'useddiskquota',
-  'maxdiskquota',
-]);
+const BYTE_SIZE_PROPERTY_KEYS = new Set(['size', 'maxsize', 'useddiskquota', 'maxdiskquota']);
 
 export function isByteSizePropertyName(propertyName: string): boolean {
   const key = propertyName.toLowerCase().replace(/[^a-z0-9]/g, '');

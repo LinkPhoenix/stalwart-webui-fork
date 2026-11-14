@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- i18n: removed 19 dead keys from `src/i18n/en.json` (never referenced anywhere in the code), added 4 keys that were called with a text fallback but missing from the file (`list.columns`, `list.customizeColumns`, `list.pageSize`, `webApplications.resourceUrl`), and added `src/i18n/i18nKeys.test.ts` as a guard: every key called in the code must exist in `en.json` and no defined key may be dead. 564 keys remain, 0 dead.
+
+- Tooling: `.prettierrc` now sets `"endOfLine": "auto"` so `npm run format:check` works on the repo's CRLF files (243 false warnings before, 0 now), the 35 genuinely unformatted fork files were formatted with `prettier --write` (`src/types/schema.ts` untouched and still byte-identical to upstream), and CI (`.github/workflows/ci.yml`) now runs `npm run format:check` after lint.
+
+- Refactor: extracted the pure logic out of `useDynamicForm` (338 lines) into a new testable module `src/components/forms/formModel.ts` — `initialState`/`createDefaults`/`initialCreateVariant`/`loadedVariant`, `resolveFormParts` (fields + parent/variant forms + sections), `computeLoadState` (loading/loadError/loadFailed), `computeRecordLabel`, and `extractCreatedExtras`. The hook keeps only React orchestration (reducer, mutations, navigation, toasts). Covered by 16 new tests in `formModel.test.ts`; 229 unit tests + 12 e2e pass, build clean.
+
+- Tests: new unit suites for the fork's dashboard and onboarding logic — `src/features/dashboard/helpers.test.ts` (period windows, sample selection/reduction, bucketing, deltas, sentiment, node options, dashboard items, metric-id collection, headline ratio, rankings), `src/features/dashboard/liveMetrics.test.ts` (`isMetric` / `parseMetricBatch`) and `src/features/onboarding/checklist.test.ts` (`isOnboardingComplete` with a mocked JMAP client). New e2e `e2e/overview.e2e.ts` covers the Overview page (cards with totals, permission-filtered cards). Suite: 213 unit tests + 12 e2e, all passing.
+
+- Performance: `lucide-react/dynamic.js` (every icon, ~900 kB chunk) is no longer bundled into the initial load. `SchemaIcon` now loads it on demand via `src/lib/lucideDynamic.ts` (cached dynamic `import()`), `resolveLucideIconName` takes the supported-name list as a parameter (pure, unit-tested), and the `icons` chunk group in `vite.config.ts` excludes `dynamic*` so it stays a separate lazy chunk fetched only on the Overview page. Initial bundle: 921 kB → 735 kB eager, the rest lazy.
+
+- Dependencies updated: `@playwright/test` 1.65.1, `@rolldown/plugin-babel` 0.3.1, `@tanstack/react-query`(+devtools) 5.107.1, `@vitejs/plugin-react` 6.3.0, `lucide-react` 1.73.0, `oxlint` 1.93.0, `prettier` 3.10.1, `vite` 8.3.8, and `i18next` 27.1.1 + `react-i18next` 18.0.1 (peer deps satisfied by React 19 / TS 7). `bun.lock` regenerated to match. `@babel/core` stays on 7.x until `babel-plugin-react-compiler` supports Babel 8. `npm audit` and `bun audit` report 0 vulnerabilities.
+
+- New versioning scheme: the fork now releases as `X.Y.Z-rN` (lowercase `r`, like [anonaddy/docker](https://github.com/anonaddy/docker/releases)) — the upstream WebUI version plus a fork revision counter. `2.0.6-r0` is this line: official 2.0.6 plus the fork's standing additions; later fork features on the same base become `2.0.6-r1`, `2.0.6-r2`, etc. Tags are `vX.Y.Z-rN` and no longer collide with upstream tags. See `.agents/rules/releases.md`.
+
+### Fixed
+- Merged `stalwartlabs/webui` 2.0.6: OIDC sign-in keeps a query already present in the provider's `authorization_endpoint` (for example Casdoor's `?organization=`) and appends its own parameters with `&` (`src/services/auth/oauth.ts`).
+- Merged `stalwartlabs/webui` 2.0.6: clicking or hovering a list row in Safari now targets that row instead of the last row of the table; the stretched-link overlay was replaced by a row click handler (`src/components/lists/ListTable.tsx`). Fork deviations (mailbox tree `depths`, custom `empty` states, `list-table` density class, `item` passed to `ListCell`) are preserved.
+
 ## [2.0.5] - 2026-11-06
 
 ### Changed

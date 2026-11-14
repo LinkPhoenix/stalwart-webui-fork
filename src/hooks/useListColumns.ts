@@ -1,10 +1,6 @@
 import { useState } from 'react';
 
-import {
-  moveListColumn,
-  parseListColumnPreferences,
-  type ListColumnPreferences,
-} from '@/lib/listColumnPreferences';
+import { moveListColumn, parseListColumnPreferences, type ListColumnPreferences } from '@/lib/listColumnPreferences';
 import type { Column } from '@/types/schema';
 
 const storageKey = (viewName: string) => `list-columns:${viewName}`;

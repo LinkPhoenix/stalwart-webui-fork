@@ -27,7 +27,11 @@ export function ListCell({ schema, objectName, column, field, value, item }: Lis
     return <SyntheticCell column={column} objectName={objectName} item={item} schema={schema} />;
   }
   // SCHEMA-DEVIATION: byte-size-number-format
-  if (field?.type.type === 'number' && typeof value === 'number' && effectiveNumberFormat(column, field.type.format) === 'size') {
+  if (
+    field?.type.type === 'number' &&
+    typeof value === 'number' &&
+    effectiveNumberFormat(column, field.type.format) === 'size'
+  ) {
     return <SizeDisplay bytes={value} />;
   }
   if (field) return <FieldValue schema={schema} type={field.type} value={value} variant="compact" />;

@@ -46,9 +46,7 @@ export function listLogFilterPresets(): LogFilterPreset[] {
 
 export function saveLogFilterPreset(name: string, filters: Record<string, string>): LogFilterPreset {
   const trimmed = name.trim();
-  const cleanFilters = Object.fromEntries(
-    Object.entries(filters).filter(([, v]) => v !== '' && v != null),
-  );
+  const cleanFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v != null));
   const presets = readAll().filter((p) => p.name.toLowerCase() !== trimmed.toLowerCase());
   const preset: LogFilterPreset = {
     id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,

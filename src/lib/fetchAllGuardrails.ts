@@ -13,8 +13,7 @@ export const FETCH_ALL_WARN_THRESHOLD = 2000;
 export const FETCH_ALL_HARD_CAP = 10_000;
 
 export type FetchAllProbe =
-  | { ok: true; total: number; warn: boolean }
-  | { ok: false; total: number; reason: 'hard-cap' };
+  { ok: true; total: number; warn: boolean } | { ok: false; total: number; reason: 'hard-cap' };
 
 export function evaluateFetchAllTotal(total: number): FetchAllProbe {
   if (total > FETCH_ALL_HARD_CAP) {

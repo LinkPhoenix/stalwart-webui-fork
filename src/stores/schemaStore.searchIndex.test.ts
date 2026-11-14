@@ -57,4 +57,3 @@ describe('schemaStore search index fork pages', () => {
     expect(index.some((e) => e.viewName === 'Changelog')).toBe(true);
   });
 });
-

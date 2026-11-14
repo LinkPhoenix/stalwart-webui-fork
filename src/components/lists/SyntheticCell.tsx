@@ -4,7 +4,12 @@ import { SizeDisplay } from '@/components/common/SizeDisplay';
 import { Badge } from '@/components/ui/badge';
 import { formatNumber, formatSize } from '@/lib/format';
 import { isReportSummaryColumn } from '@/lib/reportSummaries';
-import { COUNT_COLUMN_SOURCES, QUOTA_USAGE_COLUMN, computeQuotaUsage, getCountColumnValue } from '@/lib/syntheticColumns';
+import {
+  COUNT_COLUMN_SOURCES,
+  QUOTA_USAGE_COLUMN,
+  computeQuotaUsage,
+  getCountColumnValue,
+} from '@/lib/syntheticColumns';
 import type { Schema } from '@/types/schema';
 import { ReportSummaryCell } from './ReportSummaryCell';
 

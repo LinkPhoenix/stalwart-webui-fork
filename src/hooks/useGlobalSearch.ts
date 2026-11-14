@@ -90,7 +90,8 @@ export function useGlobalSearch(onAfterSelect?: () => void) {
         if (!haystack.includes(token)) return false;
       }
       if (isClientOnlySearchPage(entry.viewName)) return true;
-      if (entry.viewName.startsWith('CustomComponent/')) return isLinkVisible(schema, entry.viewName, canGet, hasPermission);
+      if (entry.viewName.startsWith('CustomComponent/'))
+        return isLinkVisible(schema, entry.viewName, canGet, hasPermission);
       const resolved = resolveObject(schema, entry.viewName);
       if (!resolved) return false;
       return hasObjectPermission(

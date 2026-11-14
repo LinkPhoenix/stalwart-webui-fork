@@ -27,10 +27,7 @@ import { REPORT_SUMMARY_COLUMNS } from './reportSummaries';
 export function withReportListColumns(schema: Schema): Schema {
   let lists = schema.lists;
 
-  const patch = (
-    key: string,
-    extra: Array<{ name: string; label: string }>,
-  ): void => {
+  const patch = (key: string, extra: Array<{ name: string; label: string }>): void => {
     const list = lists[key];
     if (!list) return;
     lists = {

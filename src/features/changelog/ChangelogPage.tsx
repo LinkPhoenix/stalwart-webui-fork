@@ -52,10 +52,7 @@ export function ChangelogPage() {
         <CardContent className="flex items-start gap-3 p-4 sm:p-6">
           <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           <p className="text-sm leading-relaxed">
-            {t(
-              'changelog.officialNotice',
-              'The official WebUI is maintained by the Stalwart team and is available at',
-            )}{' '}
+            {t('changelog.officialNotice', 'The official WebUI is maintained by the Stalwart team and is available at')}{' '}
             <a
               href="https://github.com/stalwartlabs/webui"
               target="_blank"

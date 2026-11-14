@@ -6,11 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Schema } from '@/types/schema';
-import {
-  buildQueueOpsLinks,
-  QUEUE_DELIVERY_TRACE_VIEW,
-  QUEUE_LOG_ENTRIES_VIEW,
-} from './queueOpsLinks';
+import { buildQueueOpsLinks, QUEUE_DELIVERY_TRACE_VIEW, QUEUE_LOG_ENTRIES_VIEW } from './queueOpsLinks';
 
 function schemaStub(): Schema {
   return {

@@ -36,6 +36,7 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm run lint -- --deny-warnings
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium

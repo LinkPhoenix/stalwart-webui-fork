@@ -94,7 +94,9 @@ export default defineConfig(({ command, mode }) => {
             groups: [
               {
                 name: 'icons',
-                test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+                // lucide-react/dynamic.js bundles every icon (~900 kB): keep it out of
+                // this group so it stays a lazy chunk loaded only via lucideDynamic.ts.
+                test: (id: string) => /[\\/]node_modules[\\/]lucide-react[\\/]/.test(id) && !id.includes('dynamic'),
                 includeDependenciesRecursively: false,
               },
             ],
