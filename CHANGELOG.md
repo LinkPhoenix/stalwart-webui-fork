@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Fixed
+- Merged `stalwartlabs/webui` 2.0.6: OIDC sign-in keeps a query already present in the provider's `authorization_endpoint` (for example Casdoor's `?organization=`) and appends its own parameters with `&` (`src/services/auth/oauth.ts`).
+- Merged `stalwartlabs/webui` 2.0.6: clicking or hovering a list row in Safari now targets that row instead of the last row of the table; the stretched-link overlay was replaced by a row click handler (`src/components/lists/ListTable.tsx`). Fork deviations (mailbox tree `depths`, custom `empty` states, `list-table` density class, `item` passed to `ListCell`) are preserved.
+
 ## [2.0.5] - 2026-11-06
 
 ### Changed
