@@ -1,6 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Circle, type LucideIcon } from 'lucide-react';
-import { DynamicIcon } from 'lucide-react/dynamic.js';
+
+import { loadLucideDynamic } from '@/lib/lucideDynamic';
 import { resolveLucideIconName } from '@/lib/lucideIconName';
+
+type LucideDynamicModule = typeof import('lucide-react/dynamic.js');
 
 const warnedIcons = new Set<string>();
 
@@ -12,7 +16,23 @@ interface SchemaIconProps {
 }
 
 export function SchemaIcon({ name, className, fallback: Fallback = Circle, warnUnknown = false }: SchemaIconProps) {
-  const iconName = resolveLucideIconName(name);
+  // lucide-react/dynamic.js bundles every icon, so it is loaded on demand only:
+  // until it arrives, the fallback icon is shown.
+  const [lucide, setLucide] = useState<LucideDynamicModule | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadLucideDynamic().then((mod) => {
+      if (active) setLucide(mod);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!lucide) return <Fallback className={className} />;
+
+  const iconName = resolveLucideIconName(lucide.iconNames, name);
 
   if (!iconName) {
     if (warnUnknown && import.meta.env.DEV && !warnedIcons.has(name)) {
@@ -22,5 +42,6 @@ export function SchemaIcon({ name, className, fallback: Fallback = Circle, warnU
     return <Fallback className={className} />;
   }
 
+  const DynamicIcon = lucide.DynamicIcon;
   return <DynamicIcon name={iconName} className={className} fallback={() => <Fallback className={className} />} />;
 }
