@@ -52,10 +52,7 @@ function findSchemaFurtherLinks(
       links.push({
         id: 'spam-settings',
         titleKey: ['onboarding.further.spamTitle', 'Review spam settings'],
-        descriptionKey: [
-          'onboarding.further.spamDescription',
-          'Tune classification and lists once mail is flowing.',
-        ],
+        descriptionKey: ['onboarding.further.spamDescription', 'Tune classification and lists once mail is flowing.'],
         href: `/${section}/${spamView}`,
       });
     }
@@ -158,9 +155,7 @@ export function OnboardingChecklistPage() {
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium leading-none">{t(...item.titleKey)}</p>
-                    {optional && (
-                      <Badge variant="secondary">{t('onboarding.optional', 'Optional')}</Badge>
-                    )}
+                    {optional && <Badge variant="secondary">{t('onboarding.optional', 'Optional')}</Badge>}
                   </div>
                   <p className="text-sm text-muted-foreground">{t(...item.descriptionKey)}</p>
                   {status === 'unknown' && (

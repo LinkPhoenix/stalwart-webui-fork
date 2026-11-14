@@ -81,9 +81,9 @@ describe('deriveAttention', () => {
         expiringSoon: 1,
       }),
     ).toBe('warn');
-    expect(
-      deriveAttention({ enrich: 'reportProblems' } as never, { status: 'ok', total: 10, problemCount: 2 }),
-    ).toBe('danger');
+    expect(deriveAttention({ enrich: 'reportProblems' } as never, { status: 'ok', total: 10, problemCount: 2 })).toBe(
+      'danger',
+    );
     expect(deriveAttention({ enrich: 'queueAttention' } as never, { status: 'ok', total: 0 })).toBe('none');
   });
 });

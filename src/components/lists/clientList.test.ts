@@ -30,7 +30,9 @@ describe('planClientMode', () => {
   });
 
   it('switches to client mode for client sort, client-only filters, problems-only and mailboxes', () => {
-    expect(planClientMode(list, 'x:Account', state({ sort: { field: 'aliasCount', ascending: true } })).client).toBe(true);
+    expect(planClientMode(list, 'x:Account', state({ sort: { field: 'aliasCount', ascending: true } })).client).toBe(
+      true,
+    );
     expect(planClientMode(list, 'x:Log', state({ filters: { level: 'error' } })).client).toBe(true);
     expect(planClientMode(list, 'x:Log', state({ filters: { name: 'a' } })).client).toBe(false);
     expect(planClientMode(list, 'x:DmarcExternalReport', state({ filters: { [PROBLEMS_ONLY_KEY]: '1' } })).client).toBe(

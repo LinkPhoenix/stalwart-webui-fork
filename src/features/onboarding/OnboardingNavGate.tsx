@@ -10,11 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAccountStore } from '@/stores/accountStore';
 import { useSchemaStore } from '@/stores/schemaStore';
 import { useUIStore } from '@/stores/uiStore';
-import {
-  findFirstAccessibleLinkInLayout,
-  findFirstVisibleLinkInLayout,
-  visibleLayouts,
-} from '@/lib/layout';
+import { findFirstAccessibleLinkInLayout, findFirstVisibleLinkInLayout, visibleLayouts } from '@/lib/layout';
 import { isOnboardingComplete, ONBOARDING_VIEW_NAME } from '@/features/onboarding/checklist';
 
 /**
@@ -36,8 +32,7 @@ export function OnboardingNavGate() {
   const isSchemaLoaded = useSchemaStore((s) => s.isLoaded);
   const setActiveSection = useUIStore((s) => s.setActiveSection);
 
-  const onOnboardingPage =
-    splat === ONBOARDING_VIEW_NAME || splat?.startsWith(`${ONBOARDING_VIEW_NAME}/`) === true;
+  const onOnboardingPage = splat === ONBOARDING_VIEW_NAME || splat?.startsWith(`${ONBOARDING_VIEW_NAME}/`) === true;
 
   useEffect(() => {
     if (!isSchemaLoaded) return;

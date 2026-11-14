@@ -16,7 +16,6 @@ import { VARIANT_FIELD } from './formLogic';
 
 const fields = {
   properties: {
-
     name: { description: 'Name', type: { type: 'string', format: 'string' }, update: 'mutable' },
     owner: {
       description: 'Owner',
@@ -120,10 +119,7 @@ describe('resolveFormParts', () => {
     const parts = resolveFormParts(schema, singleView, 'x:Test', '', 'create', () => true);
     expect(Object.keys(parts.fields?.properties ?? {}).sort()).toEqual(['name', 'owner']);
     expect(parts.form).toBeNull();
-    expect(parts.sections.flatMap((s) => s.fields.map((f) => f.formField.name)).sort()).toEqual([
-      'name',
-      'owner',
-    ]);
+    expect(parts.sections.flatMap((s) => s.fields.map((f) => f.formField.name)).sort()).toEqual(['name', 'owner']);
   });
 
   it('drops fields referencing objects the user cannot read', () => {

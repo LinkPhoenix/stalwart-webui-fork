@@ -126,10 +126,7 @@ export interface LoadState {
 type Translate = (key: string, fallback: string) => string;
 
 /** Derive the loading / error state of the object query for a form. */
-export function computeLoadState(
-  input: LoadStateInput,
-  t: Translate,
-): LoadState {
+export function computeLoadState(input: LoadStateInput, t: Translate): LoadState {
   const loading = input.mode === 'edit' && input.fetchStatus !== 'idle' && !input.isFetchedAfterMount;
   const loadError =
     input.mode === 'create'

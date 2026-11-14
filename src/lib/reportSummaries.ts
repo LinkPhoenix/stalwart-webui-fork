@@ -113,10 +113,7 @@ export function summarizeArfFeedbackType(report: unknown): string {
 }
 
 /** Resolve a synthetic report-summary column to a display/sort value. */
-export function getReportSummaryValue(
-  colName: string,
-  item: Record<string, unknown>,
-): string | number {
+export function getReportSummaryValue(colName: string, item: Record<string, unknown>): string | number {
   const report = item.report;
   switch (colName) {
     case REPORT_SUMMARY_COLUMNS.dmarcPassCount:

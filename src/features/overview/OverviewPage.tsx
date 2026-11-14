@@ -85,7 +85,10 @@ function OverviewStatCard({
   }
 
   return (
-    <Link to={card.href} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <Link
+      to={card.href}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <Card
         className={cn(
           'h-full transition-colors hover:bg-muted/40',

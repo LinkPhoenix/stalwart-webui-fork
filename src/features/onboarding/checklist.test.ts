@@ -4,7 +4,14 @@ import { isOnboardingComplete, ONBOARDING_ITEMS } from './checklist';
 import type { JmapQueryResponse } from '@/types/jmap';
 
 const queryResponse = (total: number): JmapQueryResponse =>
-  ({ total, ids: total > 0 ? ['x'] : [], accountId: 'test', queryState: 's', canCalculateChanges: false, position: 0 }) as JmapQueryResponse;
+  ({
+    total,
+    ids: total > 0 ? ['x'] : [],
+    accountId: 'test',
+    queryState: 's',
+    canCalculateChanges: false,
+    position: 0,
+  }) as JmapQueryResponse;
 
 vi.mock('@/services/jmap/client', () => ({
   jmapQuery: vi.fn(async () => ({ total: 0, ids: [] as string[] })),

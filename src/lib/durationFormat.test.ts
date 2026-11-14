@@ -5,14 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  bytesToHuman,
-  humanToBytes,
-  msToHuman,
-  humanToMs,
-  SIZE_UNITS,
-  DURATION_UNITS,
-} from './durationFormat';
+import { bytesToHuman, humanToBytes, msToHuman, humanToMs, SIZE_UNITS, DURATION_UNITS } from './durationFormat';
 import { formatDuration, formatSize } from './format';
 
 describe('SIZE_UNITS', () => {

@@ -24,9 +24,7 @@ function withOnboardingNavEntry(schema: Schema): Schema {
   const first = schema.layouts[0];
   if (!first) return schema;
 
-  const alreadyPresent = first.items.some(
-    (item) => 'link' in item && item.link.viewName === ONBOARDING_VIEW_NAME,
-  );
+  const alreadyPresent = first.items.some((item) => 'link' in item && item.link.viewName === ONBOARDING_VIEW_NAME);
   if (alreadyPresent) return schema;
 
   const onboardingLink: LayoutItem = {
@@ -36,11 +34,8 @@ function withOnboardingNavEntry(schema: Schema): Schema {
     (item) => 'link' in item && item.link.viewName === 'CustomComponent/Dashboard',
   );
   // Prefer sitting above Overview when that fork entry is already present.
-  const overviewIdx = first.items.findIndex(
-    (item) => 'link' in item && item.link.viewName === OVERVIEW_VIEW_NAME,
-  );
-  const insertAt =
-    overviewIdx !== -1 ? overviewIdx : dashboardIdx === -1 ? 0 : dashboardIdx + 1;
+  const overviewIdx = first.items.findIndex((item) => 'link' in item && item.link.viewName === OVERVIEW_VIEW_NAME);
+  const insertAt = overviewIdx !== -1 ? overviewIdx : dashboardIdx === -1 ? 0 : dashboardIdx + 1;
   const items = [...first.items.slice(0, insertAt), onboardingLink, ...first.items.slice(insertAt)];
 
   return {
@@ -57,23 +52,18 @@ function withOverviewNavEntry(schema: Schema): Schema {
   const first = schema.layouts[0];
   if (!first) return schema;
 
-  const alreadyPresent = first.items.some(
-    (item) => 'link' in item && item.link.viewName === OVERVIEW_VIEW_NAME,
-  );
+  const alreadyPresent = first.items.some((item) => 'link' in item && item.link.viewName === OVERVIEW_VIEW_NAME);
   if (alreadyPresent) return schema;
 
   const overviewLink: LayoutItem = {
     link: { name: 'Overview', icon: 'panels-top-left', viewName: OVERVIEW_VIEW_NAME },
   };
 
-  const onboardingIdx = first.items.findIndex(
-    (item) => 'link' in item && item.link.viewName === ONBOARDING_VIEW_NAME,
-  );
+  const onboardingIdx = first.items.findIndex((item) => 'link' in item && item.link.viewName === ONBOARDING_VIEW_NAME);
   const dashboardIdx = first.items.findIndex(
     (item) => 'link' in item && item.link.viewName === 'CustomComponent/Dashboard',
   );
-  const insertAt =
-    onboardingIdx !== -1 ? onboardingIdx + 1 : dashboardIdx !== -1 ? dashboardIdx + 1 : 0;
+  const insertAt = onboardingIdx !== -1 ? onboardingIdx + 1 : dashboardIdx !== -1 ? dashboardIdx + 1 : 0;
   const items = [...first.items.slice(0, insertAt), overviewLink, ...first.items.slice(insertAt)];
 
   return {
@@ -85,9 +75,7 @@ function withOverviewNavEntry(schema: Schema): Schema {
 function withoutOnboardingNavEntry(schema: Schema): Schema {
   let changed = false;
   const layouts = schema.layouts.map((layout) => {
-    const items = layout.items.filter(
-      (item) => !('link' in item && item.link.viewName === ONBOARDING_VIEW_NAME),
-    );
+    const items = layout.items.filter((item) => !('link' in item && item.link.viewName === ONBOARDING_VIEW_NAME));
     if (items.length !== layout.items.length) {
       changed = true;
       return { ...layout, items };

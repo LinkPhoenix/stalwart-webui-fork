@@ -170,9 +170,7 @@ export const ONBOARDING_DOC_LINKS: OnboardingFurtherLink[] = [
  * Returns true when every *required* checklist item the user can query is
  * already done (or when they cannot query any required items).
  */
-export async function isOnboardingComplete(
-  canQuery: (permissionPrefix: string) => boolean,
-): Promise<boolean> {
+export async function isOnboardingComplete(canQuery: (permissionPrefix: string) => boolean): Promise<boolean> {
   const checkable = ONBOARDING_ITEMS.filter(
     (item) => item.requiredForCompletion !== false && canQuery(item.permissionPrefix),
   );

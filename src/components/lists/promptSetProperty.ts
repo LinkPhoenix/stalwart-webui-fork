@@ -21,8 +21,5 @@ export const QUOTA_PROMPT_CONFIG: PromptSetPropertyConfig = {
   format: 'size',
   titleKey: ['list.changeQuotaTitle', 'Change disk quota'],
   descriptionOneKey: ['list.changeQuotaDescription_one', 'Set a new maximum disk quota for {{count}} account.'],
-  descriptionOtherKey: [
-    'list.changeQuotaDescription_other',
-    'Set a new maximum disk quota for {{count}} accounts.',
-  ],
+  descriptionOtherKey: ['list.changeQuotaDescription_other', 'Set a new maximum disk quota for {{count}} accounts.'],
 };

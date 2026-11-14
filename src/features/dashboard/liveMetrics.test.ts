@@ -5,7 +5,9 @@ import { isMetric, parseMetricBatch } from './liveMetrics';
 describe('isMetric', () => {
   it('accepts Counter and Gauge samples', () => {
     expect(isMetric({ '@type': 'Counter', metric: 'm', count: 1 })).toBe(true);
-    expect(isMetric({ '@type': 'Gauge', metric: 'm', count: 2, nodeId: 1, timestamp: '2026-01-01T00:00:00Z' })).toBe(true);
+    expect(isMetric({ '@type': 'Gauge', metric: 'm', count: 2, nodeId: 1, timestamp: '2026-01-01T00:00:00Z' })).toBe(
+      true,
+    );
   });
 
   it('requires sum on histograms', () => {

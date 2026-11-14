@@ -5,11 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  FETCH_ALL_HARD_CAP,
-  FETCH_ALL_WARN_THRESHOLD,
-  evaluateFetchAllTotal,
-} from './fetchAllGuardrails';
+import { FETCH_ALL_HARD_CAP, FETCH_ALL_WARN_THRESHOLD, evaluateFetchAllTotal } from './fetchAllGuardrails';
 
 describe('evaluateFetchAllTotal', () => {
   it('allows small totals without warning', () => {

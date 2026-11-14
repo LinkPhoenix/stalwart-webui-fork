@@ -147,10 +147,7 @@ describe('reduceSamples', () => {
   });
 
   it("uses only the latest samples with aggregate 'last'", () => {
-    const samples = [
-      counter('m', 100, '2026-01-01T00:00:00Z'),
-      counter('m', 5, '2026-01-02T00:00:00Z'),
-    ];
+    const samples = [counter('m', 100, '2026-01-01T00:00:00Z'), counter('m', 5, '2026-01-02T00:00:00Z')];
     expect(reduceSamples(target({ aggregate: 'last' }), samples)).toBe(5);
   });
 

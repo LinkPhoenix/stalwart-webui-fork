@@ -5,11 +5,7 @@
  */
 
 import { Badge } from '@/components/ui/badge';
-import {
-  getReportSummaryTone,
-  getReportSummaryValue,
-  REPORT_SUMMARY_COLUMNS,
-} from '@/lib/reportSummaries';
+import { getReportSummaryTone, getReportSummaryValue, REPORT_SUMMARY_COLUMNS } from '@/lib/reportSummaries';
 
 interface ReportSummaryCellProps {
   colName: string;
