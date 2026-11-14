@@ -55,8 +55,7 @@
     "save": "Save",
     "search": "Search",
     "searchPlaceholder": "Search...",
-    "yes": "Yes",
-    "showDescription": "Show description"
+    "yes": "Yes"
   },
   "dashboard": {
     "allNodes": "All nodes",
@@ -82,9 +81,7 @@
     "preset90d": "Last 90 days",
     "refresh": "Refresh",
     "title": "Dashboard",
-    "to": "To",
-    "lastUpdated": "Last updated {{time}}",
-    "noDashboardsConfigured": "No dashboards configured."
+    "to": "To"
   },
   "deliveryTrace": {
     "attemptCount_one": "{{count}} attempt",
@@ -231,11 +228,7 @@
     "removeItemN": "Remove item {{n}}",
     "showValue": "Show value",
     "unit": "Unit",
-    "unsupportedType": "Unsupported field type: {{type}}",
-    "active": "Active",
-    "expandToFitContent": "Expand to fit content",
-    "hour": "Hour",
-    "minute": "Minute"
+    "unsupportedType": "Unsupported field type: {{type}}"
   },
   "filters": {
     "after": "After",
@@ -372,16 +365,10 @@
     "sortAscending": "Sort ascending",
     "sortClear": "Clear sort",
     "sortDescending": "Sort descending",
-    "openItem": "Open {{name}}",
-    "rowActions": "Actions for this item",
-    "sortByColumn": "Sort by {{column}}, currently {{state}}",
-    "sortNone": "not sorted",
     "changeQuota": "Change quota…",
     "changeQuotaDescription_one": "Set a new maximum disk quota for {{count}} account.",
     "changeQuotaDescription_other": "Set a new maximum disk quota for {{count}} accounts.",
     "changeQuotaTitle": "Change disk quota",
-    "comboboxEmptyText": "No matches.",
-    "comboboxSearchPlaceholder": "Search...",
     "csvNo": "No",
     "csvYes": "Yes",
     "exportCsv": "Export CSV",
@@ -413,7 +400,10 @@
     "negativeQuotaTooltip": "This disk-usage counter is out of sync (often after a migration or reset). Schedule a task: Perform account maintenance operations → Recalculate storage quota usage for the account. Or for all accounts: Perform store maintenance operations → Reset all user quotas.",
     "quotaUsagePercent": "Quota used",
     "quotaNoLimit": "No limit (unlimited)",
-    "quotaValueAria": "Quota amount"
+    "quotaValueAria": "Quota amount",
+    "columns": "Columns",
+    "customizeColumns": "Customize columns",
+    "pageSize": "Rows per page"
   },
   "login": {
     "continue": "Continue",
@@ -492,7 +482,6 @@
     "warningDescription": "A new tab will open sievepad.com with a copy of this script. Sievepad compiles and runs the script entirely in your browser: nothing is uploaded to or stored on any server.",
     "warningTitle": "Debug in Sievepad"
   },
-  "toggleTheme": "Toggle theme",
   "tracing": {
     "activeFilters": "Active filters",
     "addFilter": "Add filter",
@@ -576,11 +565,7 @@
     "label": "Changelog",
     "officialNotice": "The official WebUI is maintained by the Stalwart team and is available at"
   },
-  "mainContent": {
-    "selectView": "Select a view from the sidebar.",
-    "unknownComponent": "Unknown component: {{name}}",
-    "unknownView": "Unknown view: {{name}}"
-  },
+  "mainContent": {},
   "onboarding": {
     "title": "Getting Started",
     "subtitle": "A quick checklist for a new Stalwart install. {{done}} of {{total}} done.",
@@ -633,7 +618,6 @@
     "refreshCooldown": "Please wait a few seconds before refreshing again",
     "unavailable": "—",
     "noPermission": "No inventory objects are available with your current permissions.",
-    "certificatesDetail": "{{valid}} valid · {{expired}} expired",
     "certificatesValid": "{{count}} valid",
     "countMissingTotal": "The server response did not include a count.",
     "countQueryRejected": "The server could not complete this count query.",
@@ -672,6 +656,6 @@
   "webApplications": {
     "activeWebUI": "Active WebUI",
     "version": "Version",
-    "enabled": "Enabled"
+    "resourceUrl": "Source"
   }
 }
