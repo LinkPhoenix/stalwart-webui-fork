@@ -46,11 +46,11 @@ This fork keeps to that philosophy: any AI agent or contributor working on it fo
 
 ### Versions and compatibility
 
-The fork uses **the same version number as the official WebUI it is based on**: release 2.0.5 of this fork is the official 2.0.5 plus the fork's additions. Releases before 2.0.5 (1.x) followed the official 1.0.x WebUI.
+The fork versions as **`X.Y.Z-rN`** (like [anonaddy/docker](https://github.com/anonaddy/docker/releases)): the number of the official WebUI it is based on, plus a fork revision counter. `2.0.6-r0` is the official 2.0.6 plus the fork's additions; `2.0.6-r1`, `r2`, … add further fork features on the same base. Releases before the 2.x line (1.x) followed the official 1.0.x WebUI directly.
 
 | This fork | Official WebUI | Stalwart server |
 |-----------|----------------|-----------------|
-| 2.0.5 | 2.0.5 | **1.0.0 or later** (tested with 1.0.3) |
+| 2.0.6-r0 | 2.0.6 | **1.0.0 or later** (tested with 1.0.3) |
 
 The minimum server version is declared as `stalwart.minServerVersion` in [package.json](package.json) and published in the app manifest (`stalwart-app.json`) that Stalwart reads when it installs a WebUI build. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
@@ -187,7 +187,7 @@ Then trigger the update:
 stalwart-cli create Action/UpdateApps
 ```
 
-Every tagged release of this fork publishes a `webui.zip` build via CI (see [`.github/workflows/build.yml`](.github/workflows/build.yml)), so pointing at `releases/latest/download/webui.zip` always fetches the newest tested build. To stay on a specific version, use `https://github.com/LinkPhoenix/stalwart-webui-fork/releases/download/v2.0.5/webui.zip` instead. To go back to the official UI, repeat the `update` step with `https://github.com/stalwartlabs/webui/releases/latest/download/webui.zip`.
+Every tagged release of this fork publishes a `webui.zip` build via CI (see [`.github/workflows/build.yml`](.github/workflows/build.yml)), so pointing at `releases/latest/download/webui.zip` always fetches the newest tested build. To stay on a specific version, use `https://github.com/LinkPhoenix/stalwart-webui-fork/releases/download/v2.0.6-r0/webui.zip` instead. To go back to the official UI, repeat the `update` step with `https://github.com/stalwartlabs/webui/releases/latest/download/webui.zip`.
 
 After the update, **Settings → Web Applications** shows the version that is being served.
 

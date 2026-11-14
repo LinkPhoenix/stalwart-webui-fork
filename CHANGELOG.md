@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- New versioning scheme: the fork now releases as `X.Y.Z-rN` (lowercase `r`, like [anonaddy/docker](https://github.com/anonaddy/docker/releases)) — the upstream WebUI version plus a fork revision counter. `2.0.6-r0` is this line: official 2.0.6 plus the fork's standing additions; later fork features on the same base become `2.0.6-r1`, `2.0.6-r2`, etc. Tags are `vX.Y.Z-rN` and no longer collide with upstream tags. See `.agents/rules/releases.md`.
+
 ### Fixed
 - Merged `stalwartlabs/webui` 2.0.6: OIDC sign-in keeps a query already present in the provider's `authorization_endpoint` (for example Casdoor's `?organization=`) and appends its own parameters with `&` (`src/services/auth/oauth.ts`).
 - Merged `stalwartlabs/webui` 2.0.6: clicking or hovering a list row in Safari now targets that row instead of the last row of the table; the stretched-link overlay was replaced by a row click handler (`src/components/lists/ListTable.tsx`). Fork deviations (mailbox tree `depths`, custom `empty` states, `list-table` density class, `item` passed to `ListCell`) are preserved.

@@ -6,7 +6,11 @@ describe('isValidReleaseTag', () => {
     expect(isValidReleaseTag(tag)).toBe(true);
   });
 
-  it.each(['1.2.3', 'v01.2.3', 'v1.2', 'v1.2.3-rc.1', 'v1.2.3|$(id)', 'v1.2.3\ncommand']) (
+  it.each(['v2.0.6-r0', 'v2.0.6-r1', 'v1.7.4-r12'])('accepts fork revision tag %s', (tag) => {
+    expect(isValidReleaseTag(tag)).toBe(true);
+  });
+
+  it.each(['1.2.3', 'v01.2.3', 'v1.2', 'v1.2.3-rc.1', 'v2.0.6-R0', 'v2.0.6-r', 'v2.0.6-r01', 'v2.0.6-r0.1', 'v1.2.3|$(id)', 'v1.2.3\ncommand']) (
     'rejects invalid or command-bearing tag %s',
     (tag) => {
       expect(isValidReleaseTag(tag)).toBe(false);

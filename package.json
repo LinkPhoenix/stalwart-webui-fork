@@ -1,7 +1,7 @@
 {
   "name": "stalwart-webui-fork",
   "private": true,
-  "version": "2.0.5",
+  "version": "2.0.6-r0",
   "stalwart": {
     "minServerVersion": "1.0.0"
   },
