@@ -5,75 +5,64 @@
  */
 
 import { useEffect, useReducer } from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
 import { useTranslation } from 'react-i18next';
+
 import { useSchemaStore } from '@/stores/schemaStore';
+
 import { usePermissionCheckers } from '@/hooks/usePermissions';
+
 import { useResolvedView } from '@/hooks/useResolvedView';
+
 import { toast } from '@/hooks/use-toast';
-import {
-  buildCreateDefaults,
-  buildEmbeddedDefaults,
-  getDisplayProperty,
-  resolveForm,
-  resolveVariantForm,
-  type ResolvedView,
-} from '@/lib/schemaResolver';
-import { coerceLabel } from '@/lib/objectOptions';
+
+import { buildEmbeddedDefaults } from '@/lib/schemaResolver';
+
 import { layoutViewFor } from '@/lib/layout';
+
 import { switchVariantValues } from '@/lib/embeddedSchema';
+
 import { errorMessage, friendlySetError, validationErrorMessage } from '@/lib/jmapErrors';
+
 import { logFormChange } from '@/lib/debug';
+
 import { useJmapObject } from '@/data/objects';
+
 import { useJmapSet } from '@/data/mutations';
+
 import {
   buildCreatePayload,
-  buildSections,
   buildUpdatePatch,
   collectBlobUploads,
   collectFetchProperties,
-  combineForms,
-  filterAccessibleFields,
   formFieldNames,
   isOtpAuthValid,
   mapSetError,
   validateRequired,
-  VARIANT_FIELD,
-  type FieldValues,
 } from '@/components/forms/formLogic';
-import { formReducer, initialFormState, isFormDirty, type FormState } from '@/components/forms/formReducer';
+
+import { formReducer, isFormDirty } from '@/components/forms/formReducer';
+
 import { useUnsavedChangesGuard } from '@/components/forms/useUnsavedChangesGuard';
+
+import {
+  computeLoadState,
+  computeRecordLabel,
+  createDefaults,
+  extractCreatedExtras,
+  initialCreateVariant,
+  initialState,
+  loadedVariant,
+  resolveFormParts,
+} from '@/components/forms/formModel';
+
 import type { FormMode } from '@/components/forms/formContext';
+
 import type { JmapSetError } from '@/types/jmap';
-import type { Fields, Form, Schema } from '@/types/schema';
 
 const CREATE_ID = 'new-0';
-const NOISY_CREATED_KEYS = new Set(['id', 'blobId']);
-
-function createDefaults(schema: Schema, view: ResolvedView, variant: string | undefined): FieldValues {
-  const data = buildCreateDefaults(schema, view.object, view.resolvedSchema, variant, view.list?.filtersStatic);
-  if (variant) data[VARIANT_FIELD] = variant;
-  return data;
-}
-
-function initialCreateVariant(view: ResolvedView): string | undefined {
-  const { resolvedSchema, list } = view;
-  if (resolvedSchema.type !== 'multiple') return undefined;
-  const fromFilter = list?.filtersStatic?.[VARIANT_FIELD];
-  return typeof fromFilter === 'string' ? fromFilter : (resolvedSchema.variants[0]?.name ?? '');
-}
-
-function initialState(schema: Schema | null, view: ResolvedView | null, mode: FormMode): FormState {
-  if (mode !== 'create' || !schema || !view) return initialFormState();
-  const variant = initialCreateVariant(view);
-  return initialFormState(createDefaults(schema, view, variant), variant ?? '', view);
-}
-
-function loadedVariant(view: ResolvedView, data: FieldValues): string {
-  if (view.resolvedSchema.type !== 'multiple') return '';
-  const type = data[VARIANT_FIELD];
-  return typeof type === 'string' ? type : (view.resolvedSchema.variants[0]?.name ?? '');
-}
 
 export function useDynamicForm(viewName: string, objectId: string | null) {
   const { t } = useTranslation();
@@ -122,40 +111,30 @@ export function useDynamicForm(viewName: string, objectId: string | null) {
   const saving = setMutation.isPending;
   const guard = useUnsavedChangesGuard(isDirty && !saving);
 
-  const sch = resolved?.resolvedSchema ?? null;
-  const variant = sch?.type === 'multiple' ? sch.variants.find((v) => v.name === state.variant) : undefined;
-  const rawFields: Fields | null = !sch ? null : sch.type === 'single' ? sch.fields : (variant?.fields ?? null);
-  const fields = schema ? filterAccessibleFields(rawFields, schema, canGet) : null;
+  const { fields, parentForm, variantForm, form, sections } = resolveFormParts(
+    schema,
+    resolved,
+    viewName,
+    state.variant,
+    mode,
+    canGet,
+  );
 
-  let parentForm: Form | null = null;
-  let variantForm: Form | null = null;
-  if (schema && resolved && sch) {
-    if (sch.type === 'single') {
-      variantForm = resolveForm(schema, viewName, resolved.object.objectName, sch.schemaName);
-    } else {
-      parentForm = schema.forms[viewName] ?? schema.forms[resolved.object.objectName] ?? null;
-      variantForm = variant
-        ? resolveVariantForm(schema, viewName, resolved.object.objectName, variant.schemaName)
-        : null;
-    }
-  }
-  const form = sch?.type === 'multiple' ? combineForms(parentForm, variantForm) : variantForm;
-  const sections = buildSections(form, fields, mode);
-
-  const loading = mode === 'edit' && objectQuery.fetchStatus !== 'idle' && !objectQuery.isFetchedAfterMount;
-  const loadError =
-    mode === 'create'
-      ? null
-      : objectQuery.isError
-        ? errorMessage(objectQuery.error, t('form.failedToLoadData', 'Failed to load data.'))
-        : objectQuery.isSuccess && !objectQuery.data
-          ? t('form.objectNotFound', 'Object not found.')
-          : null;
-  const loadFailed = mode === 'edit' && loadError !== null && !objectQuery.data;
+  const { loading, loadError, loadFailed } = computeLoadState(
+    {
+      mode,
+      fetchStatus: objectQuery.fetchStatus,
+      isFetchedAfterMount: objectQuery.isFetchedAfterMount,
+      isError: objectQuery.isError,
+      error: objectQuery.error,
+      isSuccess: objectQuery.isSuccess,
+      hasData: objectQuery.data !== undefined,
+    },
+    (key, fallback) => t(key, fallback),
+  );
   const retryLoad = () => void objectQuery.refetch();
 
-  const labelProperty = schema ? (resolved?.list?.labelProperty ?? getDisplayProperty(schema, viewName)) : undefined;
-  const recordLabel = labelProperty ? coerceLabel(state.data[labelProperty], '') : '';
+  const recordLabel = computeRecordLabel(schema, viewName, resolved, state.data);
 
   const listView = schema ? layoutViewFor(schema, viewToSection, viewName) : null;
   const listPath = listView ? `/${viewToSection[listView]}/${listView}` : '/';
@@ -185,6 +164,7 @@ export function useDynamicForm(viewName: string, objectId: string | null) {
       mode === 'create'
         ? createDefaults(schema, resolved, next)
         : buildEmbeddedDefaults(schema, resolved.object.objectName, {}, next);
+
     const data = switchVariantValues(
       variants.find((v) => v.name === state.variant)?.fields,
       variants.find((v) => v.name === next)?.fields,
@@ -192,6 +172,7 @@ export function useDynamicForm(viewName: string, objectId: string | null) {
       defaults,
       mode === 'edit' ? state.original : undefined,
     );
+
     dispatch({ type: 'setVariant', variant: next, data });
   };
 
@@ -236,11 +217,9 @@ export function useDynamicForm(viewName: string, objectId: string | null) {
         );
         const result = await setMutation.mutateAsync({ create: { [CREATE_ID]: payload }, blobs });
         const created = result.created?.[CREATE_ID];
+
         if (created) {
-          const extras: FieldValues = {};
-          for (const [key, value] of Object.entries(created)) {
-            if (!NOISY_CREATED_KEYS.has(key)) extras[key] = value;
-          }
+          const extras = extractCreatedExtras(created);
           if (Object.keys(extras).length > 0) {
             dispatch({ type: 'created', result: { id: String(created.id), values: extras } });
           } else {

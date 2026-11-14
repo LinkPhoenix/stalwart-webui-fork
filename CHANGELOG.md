@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file. This projec
 ## [Unreleased]
 
 ### Changed
+- Refactor: extracted the pure logic out of `useDynamicForm` (338 lines) into a new testable module `src/components/forms/formModel.ts` — `initialState`/`createDefaults`/`initialCreateVariant`/`loadedVariant`, `resolveFormParts` (fields + parent/variant forms + sections), `computeLoadState` (loading/loadError/loadFailed), `computeRecordLabel`, and `extractCreatedExtras`. The hook keeps only React orchestration (reducer, mutations, navigation, toasts). Covered by 16 new tests in `formModel.test.ts`; 229 unit tests + 12 e2e pass, build clean.
+
 - Tests: new unit suites for the fork's dashboard and onboarding logic — `src/features/dashboard/helpers.test.ts` (period windows, sample selection/reduction, bucketing, deltas, sentiment, node options, dashboard items, metric-id collection, headline ratio, rankings), `src/features/dashboard/liveMetrics.test.ts` (`isMetric` / `parseMetricBatch`) and `src/features/onboarding/checklist.test.ts` (`isOnboardingComplete` with a mocked JMAP client). New e2e `e2e/overview.e2e.ts` covers the Overview page (cards with totals, permission-filtered cards). Suite: 213 unit tests + 12 e2e, all passing.
 
 - Performance: `lucide-react/dynamic.js` (every icon, ~900 kB chunk) is no longer bundled into the initial load. `SchemaIcon` now loads it on demand via `src/lib/lucideDynamic.ts` (cached dynamic `import()`), `resolveLucideIconName` takes the supported-name list as a parameter (pure, unit-tested), and the `icons` chunk group in `vite.config.ts` excludes `dynamic*` so it stays a separate lazy chunk fetched only on the Overview page. Initial bundle: 921 kB → 735 kB eager, the rest lazy.
