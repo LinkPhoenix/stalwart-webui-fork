@@ -35,7 +35,11 @@ import { Button } from '@/components/ui/button';
 import { OVERVIEW_VIEW_NAME } from '@/features/overview/constants';
 import { OnboardingNavGate } from '@/features/onboarding/OnboardingNavGate';
 import { AppearancePage } from '@/features/appearance/AppearancePage';
-import { ChangelogPage } from '@/features/changelog/ChangelogPage';
+
+// Pulls in react-markdown and the raw CHANGELOG.md, which only this page needs.
+const ChangelogPage = lazy(() =>
+  import('@/features/changelog/ChangelogPage').then((m) => ({ default: m.ChangelogPage })),
+);
 
 const BootstrapWizard = lazy(() =>
   import('@/components/bootstrap/BootstrapWizard').then((m) => ({ default: m.BootstrapWizard })),
@@ -216,7 +220,9 @@ export default function AdminPanel() {
             {section === 'Appearance' ? (
               <AppearancePage />
             ) : section === 'Changelog' ? (
-              <ChangelogPage />
+              <Suspense fallback={<LoadingFallback />}>
+                <ChangelogPage />
+              </Suspense>
             ) : (
               <MainContent viewName={viewName} id={id} section={section} />
             )}
