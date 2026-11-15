@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.0.6-r2] - 2026-11-15
+
+### Fixed
+- Getting Started no longer shows "Configure a domain" forever when domains are already configured: the checklist queried `x:Domain/get` with the property `isEnabled`, but the wire property on `x:Domain` is `enable` (confirmed against a live server and the `/api/schema` column/form field), so `/get` silently dropped it and the check always failed. The same wrong property name also prevented the `clientSortable` tag from applying to the Enabled column on the Domains list (`src/lib/domainColumns.ts`). Covered by the updated `src/features/onboarding/checklist.test.ts`; 369 unit tests, typecheck and lint pass.
+
 ## [2.0.6-r1] - 2026-11-15
 
 ### Security
