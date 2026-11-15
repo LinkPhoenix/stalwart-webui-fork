@@ -41,3 +41,5 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      # Same tests against dist/, so they also run under the Content-Security-Policy that only builds carry.
+      - run: E2E_TARGET=build npm run test:e2e

@@ -6,7 +6,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NetworkError } from '@/services/errors';
-import { fetchWithTimeout, isTimeoutError, timeoutAsNetworkError, withTimeout } from '@/services/http';
+import { fetchWithTimeout, isTimeoutError, readJsonOrNull, timeoutAsNetworkError, withTimeout } from '@/services/http';
 
 /** A fetch that never answers on its own and rejects with the signal's reason once it aborts, like a browser. */
 function hangingFetch(): typeof fetch {
@@ -69,6 +69,22 @@ describe('fetchWithTimeout', () => {
     const response = await fetchWithTimeout('/ok', { method: 'POST' }, 1_000);
     expect(await response.text()).toBe('ok');
     expect(fetchMock).toHaveBeenCalledWith('/ok', expect.objectContaining({ method: 'POST' }));
+  });
+});
+
+describe('readJsonOrNull', () => {
+  it('parses a JSON body', async () => {
+    expect(await readJsonOrNull(new Response('{"a":1}'))).toEqual({ a: 1 });
+  });
+
+  it('gives null for a body that is not JSON', async () => {
+    expect(await readJsonOrNull(new Response('<html>Bad gateway</html>'))).toBeNull();
+  });
+
+  it('still fails when the connection stalls while the body is read', async () => {
+    const response = new Response('{}');
+    vi.spyOn(response, 'json').mockRejectedValue(new DOMException('late', 'TimeoutError'));
+    await expect(readJsonOrNull(response)).rejects.toBeInstanceOf(NetworkError);
   });
 });
 

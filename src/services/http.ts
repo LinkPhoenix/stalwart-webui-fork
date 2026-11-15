@@ -47,3 +47,16 @@ export async function fetchWithTimeout(
 export function timeoutAsNetworkError(err: unknown): unknown {
   return isTimeoutError(err) ? new NetworkError(err) : err;
 }
+
+/**
+ * Reads a JSON body whose shape the caller validates afterwards. A body that is not JSON (an HTML error page from
+ * a proxy, for example) gives `null` so the validator can report it, while a stalled connection still fails.
+ */
+export async function readJsonOrNull(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (err) {
+    if (isTimeoutError(err)) throw timeoutAsNetworkError(err);
+    return null;
+  }
+}

@@ -5,7 +5,13 @@
  */
 
 import { getApiBaseUrl } from '@/services/api';
-import { AUTH_TIMEOUT_MS, fetchWithTimeout } from '@/services/http';
+import { AUTH_TIMEOUT_MS, fetchWithTimeout, readJsonOrNull } from '@/services/http';
+import {
+  parseDiscovery,
+  parseTokenResponse,
+  type DiscoveryResponse,
+  type TokenResponse,
+} from '@/services/auth/validation';
 import { getBasePath } from '@/lib/basePath';
 import { resolveOAuthClientId } from '@/lib/oauthClientId';
 import { useAuthStore } from '@/stores/authStore';
@@ -15,15 +21,7 @@ const SCOPES_OVERRIDE = import.meta.env.VITE_OAUTH_SCOPES as string | undefined;
 
 const SESSION_PREFIX = 'stalwart-oauth-';
 
-export interface DiscoveryResponse {
-  authorization_endpoint: string;
-  token_endpoint: string;
-  end_session_endpoint?: string;
-  scopes_supported?: string[];
-  client_id_metadata_document_supported?: boolean;
-  stalwart_required_scopes?: string[];
-  protected_resources?: string[];
-}
+export type { DiscoveryResponse } from '@/services/auth/validation';
 
 export function getMetaScopes(): string[] {
   const content = document.querySelector('meta[name="oauth-scopes"]')?.getAttribute('content') ?? '';
@@ -75,7 +73,7 @@ export async function discover(username: string): Promise<DiscoveryResponse> {
       }),
     );
   }
-  return response.json() as Promise<DiscoveryResponse>;
+  return parseDiscovery(await readJsonOrNull(response));
 }
 
 const UNRESERVED = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -123,13 +121,6 @@ function base64UrlEncode(bytes: Uint8Array): string {
   return btoa(binString).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-interface TokenResponse {
-  access_token: string;
-  refresh_token?: string;
-  expires_in?: number;
-  token_type: string;
-}
-
 export async function exchangeCode(
   code: string,
   codeVerifier: string,
@@ -168,7 +159,7 @@ export async function exchangeCode(
     );
   }
 
-  return response.json() as Promise<TokenResponse>;
+  return parseTokenResponse(await readJsonOrNull(response));
 }
 
 function getRedirectUri(): string {

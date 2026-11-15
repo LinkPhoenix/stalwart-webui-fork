@@ -1,6 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
 const baseURL = 'http://127.0.0.1:5174';
+// E2E_TARGET=build serves the production build in dist/ instead of the dev server, so the tests also run under the
+// Content-Security-Policy and the chunk splitting that only exist in a build. Run `npm run build` first.
+const serveBuild = process.env.E2E_TARGET === 'build';
 
 export default defineConfig({
   testDir: './e2e',
@@ -19,7 +22,9 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --mode e2e --host 127.0.0.1 --port 5174 --strictPort',
+    command: serveBuild
+      ? 'npx vite preview --host 127.0.0.1 --port 5174 --strictPort'
+      : 'npm run dev -- --mode e2e --host 127.0.0.1 --port 5174 --strictPort',
     url: `${baseURL}/login`,
     reuseExistingServer: !process.env.CI,
     stdout: 'ignore',

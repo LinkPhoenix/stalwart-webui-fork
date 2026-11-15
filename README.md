@@ -279,6 +279,8 @@ npm run test:e2e    # Playwright browser tests
 
 Install Chromium once with `npx playwright install chromium` before running the browser tests. Locally they use two workers; CI uses one.
 
+To run the browser tests against the production build in `dist/` instead of the dev server, run `npm run build` first and set `E2E_TARGET=build` (PowerShell: `$env:E2E_TARGET = 'build'`). Only that target checks the Content-Security-Policy, which is injected at build time.
+
 ## Building for production
 
 ```

@@ -425,6 +425,8 @@
     "clientIdUnavailable": "Sign-in is not configured: the identity provider does not support client metadata documents and no OAuth client id is configured for this application.",
     "discoveryFailed": "Discovery failed for \"{{username}}\": {{status}} {{statusText}}",
     "error": "Authentication failed",
+    "invalidDiscovery": "The identity provider returned invalid sign-in endpoints. Please contact your administrator.",
+    "invalidTokenResponse": "The identity provider returned an invalid token response.",
     "missingData": "Missing OAuth session data. Please try logging in again.",
     "missingParams": "Missing authorization code or state parameter",
     "processing": "Completing sign in...",
