@@ -35,8 +35,11 @@ export interface OnboardingFurtherLink {
 }
 
 async function hasEnabledDomain(): Promise<boolean> {
-  const { list } = await jmapQueryAllAndGet('x:Domain', {}, ['isEnabled']);
-  return list.some((d) => d.isEnabled === true);
+  // The wire property on x:Domain is `enable` (the schema's "Enabled" column
+  // and form field both use that name) — `isEnabled` is silently dropped by
+  // /get, which made this check always fail.
+  const { list } = await jmapQueryAllAndGet('x:Domain', {}, ['enable']);
+  return list.some((d) => d.enable === true);
 }
 
 async function hasDkimSignature(): Promise<boolean> {

@@ -26,7 +26,7 @@ function mockAllChecksPass() {
   queryAllMock.mockImplementation(async (objectType: string) => {
     switch (objectType) {
       case 'x:Domain':
-        return { ids: ['d1'], list: [{ isEnabled: true }] };
+        return { ids: ['d1'], list: [{ enable: true }] };
       case 'x:DkimSignature':
         return { ids: ['k1'], list: [] };
       case 'x:Certificate':

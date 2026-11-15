@@ -31,7 +31,7 @@ export function withDomainColumns(schema: Schema): Schema {
   if (!list) return schema;
 
   const columns = [
-    ...list.columns.map((c) => (c.name === 'name' || c.name === 'isEnabled' ? clientSortable(c) : c)),
+    ...list.columns.map((c) => (c.name === 'name' || c.name === 'enable' ? clientSortable(c) : c)),
     clientSortable({ name: 'aliasCount', label: 'Aliases' }),
   ];
 
