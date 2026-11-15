@@ -6,7 +6,14 @@
 
 import { useAuthStore } from '@/stores/authStore';
 import { ApiError } from '@/services/errors';
-import { API_TIMEOUT_MS, AUTH_TIMEOUT_MS, fetchWithTimeout, timeoutAsNetworkError } from '@/services/http';
+import { parseTokenResponse } from '@/services/auth/validation';
+import {
+  API_TIMEOUT_MS,
+  AUTH_TIMEOUT_MS,
+  fetchWithTimeout,
+  readJsonOrNull,
+  timeoutAsNetworkError,
+} from '@/services/http';
 
 export { ApiError } from '@/services/errors';
 
@@ -60,7 +67,7 @@ async function performRefresh(): Promise<void> {
     throw new ApiError(response.status, response.statusText, body);
   }
 
-  const data = (await response.json()) as { access_token: string; refresh_token?: string; expires_in?: number };
+  const data = parseTokenResponse(await readJsonOrNull(response));
   if (!stillCurrent()) {
     throw new ApiError(401, 'Unauthorized', null);
   }
