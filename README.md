@@ -50,6 +50,7 @@ The fork versions as **`X.Y.Z-rN`** (like [anonaddy/docker](https://github.com/a
 
 | This fork | Official WebUI | Stalwart server |
 |-----------|----------------|-----------------|
+| 2.0.6-r3 | 2.0.6 | **1.0.0 or later** (tested with the 1.0 image) |
 | 2.0.6-r2 | 2.0.6 | **1.0.0 or later** (tested with the 1.0 image) |
 | 2.0.6-r1 | 2.0.6 | **1.0.0 or later** (tested with the 1.0 image) |
 | 2.0.6-r0 | 2.0.6 | **1.0.0 or later** (tested with 1.0.3) |

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.0.6-r3] - 2026-11-15
+
+### Added
+- The TLS certificates list (`Settings › TLS › Certificates`) now has a **Status** column: each certificate shows Valid (green check), Expiring soon (amber warning) or Expired (red cross), computed from the real `notValidAfter` property with the same rules as the Overview card (missing/past date = expired, within 30 days = expiring soon). The column is client-sorted by expiry date, so expired certificates come first. The rules are shared between the list and the Overview in `src/lib/certificateValidity.ts`; tracked as `certificate-validity-status-column` in `SCHEMA_DEVIATIONS.md`. Covered by `src/lib/certificateValidity.test.ts`; 379 unit tests, typecheck and lint pass.
+
 ## [2.0.6-r2] - 2026-11-15
 
 ### Fixed
