@@ -50,6 +50,7 @@ The fork versions as **`X.Y.Z-rN`** (like [anonaddy/docker](https://github.com/a
 
 | This fork | Official WebUI | Stalwart server |
 |-----------|----------------|-----------------|
+| 2.0.6-r1 | 2.0.6 | **1.0.0 or later** (tested with the 1.0 image) |
 | 2.0.6-r0 | 2.0.6 | **1.0.0 or later** (tested with 1.0.3) |
 
 The minimum server version is declared as `stalwart.minServerVersion` in [package.json](package.json) and published in the app manifest (`stalwart-app.json`) that Stalwart reads when it installs a WebUI build. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
