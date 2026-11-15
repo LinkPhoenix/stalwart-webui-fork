@@ -1,10 +1,15 @@
 import { useTranslation } from 'react-i18next';
 
+import { CircleCheck, TriangleAlert, XCircle } from 'lucide-react';
+
 import { SizeDisplay } from '@/components/common/SizeDisplay';
 import { Badge } from '@/components/ui/badge';
 import { formatNumber, formatSize } from '@/lib/format';
+
+import { certificateValidity } from '@/lib/certificateValidity';
 import { isReportSummaryColumn } from '@/lib/reportSummaries';
 import {
+  CERTIFICATE_STATUS_COLUMN,
   COUNT_COLUMN_SOURCES,
   QUOTA_USAGE_COLUMN,
   computeQuotaUsage,
@@ -74,6 +79,39 @@ function UserRoleCell({ value, schema }: { value: unknown; schema: Schema }) {
   return <>{type}</>;
 }
 
+/**
+ * SCHEMA-DEVIATION: certificate-validity-status-column — renders the synthetic
+ * x:Certificate Status column from `notValidAfter`, with the same rules as the
+ * Overview TLS card (src/lib/certificateValidity.ts).
+ */
+function ValidityStatusCell({ item }: { item: Record<string, unknown> }) {
+  const { t } = useTranslation();
+  const status = certificateValidity(item.notValidAfter);
+
+  if (status === 'expired') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-destructive">
+        <XCircle className="h-4 w-4 shrink-0" />
+        <span>{t('list.certificateStatus.expired', 'Expired')}</span>
+      </span>
+    );
+  }
+  if (status === 'expiringSoon') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-amber-500">
+        <TriangleAlert className="h-4 w-4 shrink-0" />
+        <span>{t('list.certificateStatus.expiringSoon', 'Expiring soon')}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-green-600">
+      <CircleCheck className="h-4 w-4 shrink-0" />
+      <span>{t('list.certificateStatus.valid', 'Valid')}</span>
+    </span>
+  );
+}
+
 interface SyntheticCellProps {
   column: string;
   objectName: string;
@@ -89,6 +127,7 @@ interface SyntheticCellProps {
  */
 export function SyntheticCell({ column, objectName, item, schema }: SyntheticCellProps) {
   if (column === QUOTA_USAGE_COLUMN) return <QuotaUsageCell item={item} />;
+  if (column === CERTIFICATE_STATUS_COLUMN) return <ValidityStatusCell item={item} />;
   if (column in COUNT_COLUMN_SOURCES) {
     return <span className="tabular-nums">{formatNumber(getCountColumnValue(column, item))}</span>;
   }

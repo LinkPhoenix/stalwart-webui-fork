@@ -7,14 +7,14 @@
 import { getAccountId, jmapGetBatched, jmapQuery, jmapQueryAllAndGet, jmapRequest } from '@/services/jmap/client';
 import { resolveObject } from '@/lib/schemaResolver';
 import { reportHasProblems } from '@/lib/reportSummaries';
+
+import { certificateValidity } from '@/lib/certificateValidity';
 import type { Schema } from '@/types/schema';
 import type { JmapMethodCall, JmapQueryResponse } from '@/types/jmap';
 import type { OverviewCardDef } from '@/features/overview/cards';
 
 /** Stay under typical Stalwart maxCallsInRequest (often 16). */
 const QUERY_BATCH_SIZE = 12;
-/** Certificates expiring within this window get a warn badge. */
-const CERT_EXPIRING_SOON_MS = 30 * 24 * 60 * 60 * 1000;
 /** Cap report sampling so Overview stays cheap. */
 const REPORT_SAMPLE_LIMIT = 25;
 
@@ -145,19 +145,12 @@ export async function fetchCardTotals(
       let expired = 0;
       let expiringSoon = 0;
       for (const item of list) {
-        const notValidAfter = item.notValidAfter;
-        if (typeof notValidAfter !== 'string') {
+        const status = certificateValidity(item.notValidAfter, now);
+        if (status === 'expired') {
           expired += 1;
-          continue;
-        }
-        const expiry = Date.parse(notValidAfter);
-        if (!Number.isFinite(expiry) || expiry <= now) {
-          expired += 1;
-        } else if (expiry - now <= CERT_EXPIRING_SOON_MS) {
-          valid += 1;
-          expiringSoon += 1;
         } else {
           valid += 1;
+          if (status === 'expiringSoon') expiringSoon += 1;
         }
       }
       totals[certCard.id] = { ...totals[certCard.id], valid, expired, expiringSoon };

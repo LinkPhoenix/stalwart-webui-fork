@@ -3,6 +3,7 @@ import { withAccountListColumns } from '@/lib/accountColumns';
 import { withMailingListColumns } from '@/lib/mailingListColumns';
 import { withRoleListColumns } from '@/lib/roleColumns';
 import { withDomainColumns } from '@/lib/domainColumns';
+import { withCertificateColumns } from '@/lib/certificateColumns';
 import { withReportListColumns } from '@/lib/reportColumns';
 import {
   withDirectoryColumns,
@@ -20,12 +21,14 @@ import type { Schema } from '@/types/schema';
 export function withForkSchemaDeviations(schema: Schema): Schema {
   return withDisplayColumnFallbacks(
     withReportListColumns(
-      withDomainColumns(
-        withRoleListColumns(
-          withMailingListColumns(
-            withAccountListColumns(
-              withNetworkListenerColumns(
-                withDnsServerColumns(withDirectoryColumns(withWebhookColumns(withClientLogFilters(schema)))),
+      withCertificateColumns(
+        withDomainColumns(
+          withRoleListColumns(
+            withMailingListColumns(
+              withAccountListColumns(
+                withNetworkListenerColumns(
+                  withDnsServerColumns(withDirectoryColumns(withWebhookColumns(withClientLogFilters(schema)))),
+                ),
               ),
             ),
           ),

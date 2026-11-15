@@ -165,6 +165,13 @@ itself stays byte-for-byte alignable with upstream's version of the file.
 - **Why**: those lists' schemas only show envelope metadata (From/Subject/Received or Domain/dates), so admins must open each report to spot failures — tracked upstream as [stalwartlabs/webui#13](https://github.com/stalwartlabs/webui/issues/13).
 - **Ideal fix**: the server's list schemas expose computed summary columns (or denormalized count properties) natively; `reportColumns.ts` / `reportSummaries.ts` and the DynamicList branch are deleted.
 
+### `certificate-validity-status-column` 🟡
+
+- **Where**: [`src/lib/certificateColumns.ts`](src/lib/certificateColumns.ts), applied to `x:Certificate` by [`src/lib/forkSchema.ts`](src/lib/forkSchema.ts); validity rules shared with the Overview TLS card in [`src/lib/certificateValidity.ts`](src/lib/certificateValidity.ts), resolved by [`src/lib/syntheticColumns.ts`](src/lib/syntheticColumns.ts) and rendered by [`src/components/lists/SyntheticCell.tsx`](src/components/lists/SyntheticCell.tsx)
+- **What**: adds a synthetic `validityStatus` column to the TLS certificates list — not a real schema property; the list fetches the real `notValidAfter` property once and renders Valid / Expiring soon / Expired with the same rules as the Overview card (missing or unparseable date, or a date in the past = expired; within 30 days = expiring soon; otherwise valid). Tagged `clientSortable`, sorted by expiry timestamp.
+- **Why**: the `x:Certificate` list schema exposes only Subject Alternative Names, so there was no way to see which certificate is valid, expiring or expired without opening each one — the Overview card aggregates the counts but the list itself showed nothing.
+- **Ideal fix**: the server's `x:Certificate` list schema includes a validity/expiry column natively; `certificateColumns.ts` and the SyntheticCell branch are deleted.
+
 ## Not a deviation (for reference)
 
 A few other `viewName === '...'` / `objectName === '...'` checks exist in

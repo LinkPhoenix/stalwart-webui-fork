@@ -331,6 +331,11 @@
     "bulkSuccessDelete_other": "{{count}} items deleted successfully.",
     "bulkSuccessUpdate_one": "{{count}} item updated successfully.",
     "bulkSuccessUpdate_other": "{{count}} items updated successfully.",
+    "certificateStatus": {
+      "expired": "Expired",
+      "expiringSoon": "Expiring soon",
+      "valid": "Valid"
+    },
     "clearSelection": "Clear selection",
     "confirmItemDescription": "Apply \"{{action}}\" to {{label}}?",
     "confirmMassDescription": "Apply \"{{action}}\" to {{count}} {{name}}?",

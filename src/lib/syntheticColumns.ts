@@ -1,9 +1,11 @@
 import { getReportSummaryValue, isReportSummaryColumn } from '@/lib/reportSummaries';
 
+import { certificateExpiryMs } from '@/lib/certificateValidity';
+
 /**
  * SCHEMA-DEVIATION: account-quota-usage-column, account-alias-count-column,
- * role-permission-count-columns, report-summary-columns
- * (see SCHEMA_DEVIATIONS.md)
+ * role-permission-count-columns, report-summary-columns,
+ * certificate-validity-status-column (see SCHEMA_DEVIATIONS.md)
  *
  * Synthetic list columns are not server properties: the schema patches in
  * lib/*Columns.ts add them, and the list resolves each one to the real
@@ -13,6 +15,9 @@ import { getReportSummaryValue, isReportSummaryColumn } from '@/lib/reportSummar
 
 export const QUOTA_USAGE_COLUMN = 'quotaUsage';
 
+/** Synthetic x:Certificate column computed from `notValidAfter`. */
+export const CERTIFICATE_STATUS_COLUMN = 'validityStatus';
+
 /** Count columns, keyed by column name, naming the set/objectList property they count. */
 export const COUNT_COLUMN_SOURCES: Record<string, string> = {
   aliasCount: 'aliases',
@@ -21,7 +26,12 @@ export const COUNT_COLUMN_SOURCES: Record<string, string> = {
 };
 
 export function isSyntheticColumn(name: string): boolean {
-  return name === QUOTA_USAGE_COLUMN || name in COUNT_COLUMN_SOURCES || isReportSummaryColumn(name);
+  return (
+    name === QUOTA_USAGE_COLUMN ||
+    name === CERTIFICATE_STATUS_COLUMN ||
+    name in COUNT_COLUMN_SOURCES ||
+    isReportSummaryColumn(name)
+  );
 }
 
 /** Columns rendered by components/lists/SyntheticCell instead of the schema-driven pipeline. */
@@ -37,6 +47,8 @@ export function expandListProperties(columns: ReadonlyArray<{ name: string }>, o
     if (name === QUOTA_USAGE_COLUMN) {
       properties.add('usedDiskQuota');
       properties.add('quotas');
+    } else if (name === CERTIFICATE_STATUS_COLUMN) {
+      properties.add('notValidAfter');
     } else if (name in COUNT_COLUMN_SOURCES) {
       properties.add(COUNT_COLUMN_SOURCES[name]);
     } else if (isReportSummaryColumn(name)) {
@@ -69,6 +81,7 @@ export function getCountColumnValue(colName: string, item: Record<string, unknow
 /** Comparable value for a column, used by client-side sorting. */
 export function getClientSortValue(colName: string, item: Record<string, unknown>): string | number {
   if (colName === QUOTA_USAGE_COLUMN) return computeQuotaUsage(item).used;
+  if (colName === CERTIFICATE_STATUS_COLUMN) return certificateExpiryMs(item.notValidAfter);
   if (colName in COUNT_COLUMN_SOURCES) return getCountColumnValue(colName, item);
   if (isReportSummaryColumn(colName)) return getReportSummaryValue(colName, item);
   const raw = item[colName];
