@@ -15,13 +15,14 @@ v1.1.4 shipped with only `## [Unreleased]` in the GitHub release because CI used
 - Example: `2.0.6-r0` = official WebUI 2.0.6 + the fork's additions; `2.0.6-r1` adds one more fork change on the same base, and so on.
 - Because the `-rN` suffix never matches an upstream tag, fork tags `vX.Y.Z-rN` and upstream tags `vX.Y.Z` no longer collide. Still fetch upstream with `git fetch upstream --no-tags` so a stray upstream tag can never shadow a fork tag locally, and never push tags with `--tags`.
 - `scripts/validate-release-tag.mjs` (CI gate in `.github/workflows/build.yml`) accepts `vMAJOR.MINOR.PATCH` and `vMAJOR.MINOR.PATCH-rN` only — no uppercase `R`, no `-rc.1`, no leading zeros.
+- A moving **`latest`** tag always points at the newest release tag `vX.Y.Z-rN`. The Build and Release workflow only triggers on `v*`, so moving `latest` never starts a second build.
 - `stalwart.minServerVersion` in `package.json` is the oldest Stalwart server the build supports. Keep it equal to upstream's.
 
 ## Cutting a release (checklist)
 
 1. Move every bullet under `## [Unreleased]` into a new `## [X.Y.Z-rN] - YYYY-MM-DD` section. Leave `## [Unreleased]` empty (heading only).
 2. Bump `version` in `package.json` **and** the matching fields in `package-lock.json` to `X.Y.Z-rN`.
-3. Commit (e.g. `chore: release vX.Y.Z-rN`), push `main`, then create and push annotated tag `vX.Y.Z-rN`.
+3. Commit (e.g. `chore: release vX.Y.Z-rN`), push `main`, then create and push annotated tag `vX.Y.Z-rN`, and move the `latest` tag onto it: `git tag -f latest vX.Y.Z-rN && git push -f origin latest`.
 4. Wait for the **Build and Release** workflow on that tag to finish successfully.
 5. **Verify** the GitHub release body at `https://github.com/<owner>/<repo>/releases/tag/vX.Y.Z-rN`:
    - It must contain the `## [X.Y.Z-rN]` notes (Added/Changed/Fixed, etc.).
@@ -39,6 +40,7 @@ v1.1.4 shipped with only `## [Unreleased]` in the GitHub release because CI used
 - Tag/push a release while the new version’s notes still sit only under `## [Unreleased]`.
 - Assume “CHANGELOG updated in the repo” means the GitHub Release page is correct — always open/check the published release.
 - “Fix” release notes by inventing text that is not in `CHANGELOG.md`; copy the version section.
+- Do not let the `latest` tag drift or push it with `--tags`: after every release it must point at the tag just pushed.
 
 ## In-app Changelog page
 
