@@ -5,6 +5,7 @@
  */
 
 import { getApiBaseUrl } from '@/services/api';
+import { AUTH_TIMEOUT_MS, fetchWithTimeout } from '@/services/http';
 import { getBasePath } from '@/lib/basePath';
 import { resolveOAuthClientId } from '@/lib/oauthClientId';
 import { useAuthStore } from '@/stores/authStore';
@@ -64,7 +65,7 @@ export function selectResource(
 
 export async function discover(username: string): Promise<DiscoveryResponse> {
   const url = `${getApiBaseUrl()}/api/discover/${encodeURIComponent(username)}`;
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url, undefined, AUTH_TIMEOUT_MS);
   if (!response.ok) {
     throw new Error(
       i18n.t('oauth.discoveryFailed', 'Discovery failed for "{{username}}": {{status}} {{statusText}}', {
@@ -148,11 +149,15 @@ export async function exchangeCode(
     body.set('resource', resource);
   }
 
-  const response = await fetch(tokenEndpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
+  const response = await fetchWithTimeout(
+    tokenEndpoint,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    },
+    AUTH_TIMEOUT_MS,
+  );
 
   if (!response.ok) {
     throw new Error(
