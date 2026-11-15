@@ -88,21 +88,6 @@ export default defineConfig(({ command, mode }) => {
     ],
     build: {
       assetsInlineLimit: (file: string) => (file.endsWith('.woff2') ? false : undefined),
-      rolldownOptions: {
-        output: {
-          codeSplitting: {
-            groups: [
-              {
-                name: 'icons',
-                // lucide-react/dynamic.js bundles every icon (~900 kB): keep it out of
-                // this group so it stays a lazy chunk loaded only via lucideDynamic.ts.
-                test: (id: string) => /[\\/]node_modules[\\/]lucide-react[\\/]/.test(id) && !id.includes('dynamic'),
-                includeDependenciesRecursively: false,
-              },
-            ],
-          },
-        },
-      },
     },
     resolve: {
       alias: {

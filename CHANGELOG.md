@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- Performance: removed the manual `icons` chunk group from `vite.config.ts`. It matched every `lucide-react` module outside `dynamic*`, including the ~1500 per-icon modules that `lucide-react/dynamic.js` loads on demand, so they were merged into one 753 kB (197 kB gzip) chunk that the entry preloaded on every page. Without the group each icon is its own lazy chunk and only the icons imported statically stay in the entry graph. JavaScript fetched at startup: 1558 kB → 556 kB raw, 394 kB → 182 kB gzip (measured on the `modulepreload` list of `dist/index.html`). Typecheck, lint, 231 unit tests and the 12 e2e tests pass against both the dev server and the production build.
+
 ## [2.0.6-r0] - 2026-11-14
 
 ### Changed
