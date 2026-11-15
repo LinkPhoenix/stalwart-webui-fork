@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Changed
+- Reliability: network requests now have a deadline instead of waiting forever on a stalled connection. A new `src/services/http.ts` (`fetchWithTimeout`) combines the caller's cancellation signal with `AbortSignal.timeout`: 120 s for API/JMAP calls and 30 s for OAuth discovery, token exchange and token refresh. A deadline hit becomes a retryable `NetworkError` (queries retry, mutations still do not) rather than a "request cancelled" message, and cancellations requested by the caller are still passed through untouched. Covered by 7 new unit tests.
+- Performance: the Changelog page is now loaded on demand (`src/pages/AdminPanel.tsx`). It was imported statically, so every signed-in user downloaded `react-markdown` and the raw `CHANGELOG.md` (which grows with each release) as part of the `AdminPanel` chunk. That chunk drops from 368 kB to 217 kB raw (119 kB → 73 kB gzip); the page itself is a separate 34 kB chunk. New e2e test `e2e/changelog.e2e.ts` covers the lazy route.
+- Performance: removed the manual `icons` chunk group from `vite.config.ts`. It matched every `lucide-react` module outside `dynamic*`, including the ~1500 per-icon modules that `lucide-react/dynamic.js` loads on demand, so they were merged into one 753 kB (197 kB gzip) chunk that the entry preloaded on every page. Without the group each icon is its own lazy chunk and only the icons imported statically stay in the entry graph. JavaScript fetched at startup: 1558 kB → 556 kB raw, 394 kB → 182 kB gzip (measured on the `modulepreload` list of `dist/index.html`). Typecheck, lint, 231 unit tests and the 12 e2e tests pass against both the dev server and the production build.
+
 ## [2.0.6-r0] - 2026-11-14
 
 ### Changed

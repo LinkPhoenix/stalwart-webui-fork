@@ -5,7 +5,8 @@
  */
 
 import { useAuthStore } from '@/stores/authStore';
-import { ApiError, NetworkError, isAbortError } from '@/services/errors';
+import { ApiError } from '@/services/errors';
+import { API_TIMEOUT_MS, AUTH_TIMEOUT_MS, fetchWithTimeout, timeoutAsNetworkError } from '@/services/http';
 
 export { ApiError } from '@/services/errors';
 
@@ -39,16 +40,15 @@ async function performRefresh(): Promise<void> {
     body.set('resource', resource);
   }
 
-  let response: Response;
-  try {
-    response = await fetch(tokenEndpoint, {
+  const response = await fetchWithTimeout(
+    tokenEndpoint,
+    {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
-    });
-  } catch (err) {
-    throw new NetworkError(err);
-  }
+    },
+    AUTH_TIMEOUT_MS,
+  );
 
   const stillCurrent = () => useAuthStore.getState().refreshToken === refreshToken;
 
@@ -101,13 +101,12 @@ async function send(
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
-  try {
-    const response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers, redirect: 'follow' });
-    return { response, token: accessToken };
-  } catch (err) {
-    if (isAbortError(err)) throw err;
-    throw new NetworkError(err);
-  }
+  const response = await fetchWithTimeout(
+    `${getApiBaseUrl()}${path}`,
+    { ...options, headers, redirect: 'follow' },
+    API_TIMEOUT_MS,
+  );
+  return { response, token: accessToken };
 }
 
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
@@ -153,5 +152,9 @@ export async function apiFetch(path: string, options?: RequestInit): Promise<Res
 
 export async function apiFetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await apiFetch(path, options);
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch (err) {
+    throw timeoutAsNetworkError(err);
+  }
 }
