@@ -32,8 +32,9 @@ import { bindQueryClientToAuth, queryClient } from './data/queryClient';
         return;
       }
     }
-    // eslint-disable-next-line no-empty
-  } catch {}
+  } catch {
+    // Storage is unavailable or holds invalid JSON: fall through to the default theme.
+  }
   // Dark is the default when the user has not chosen a theme yet.
   document.documentElement.classList.add('dark');
 })();

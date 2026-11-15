@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/authStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { isAuthPath, stripBasePath } from '@/lib/authPaths';
 import { getBasePath } from '@/lib/basePath';
 import { errorMessage } from '@/lib/jmapErrors';
 import { exchangeCode, getStoredOAuthData, clearStoredOAuthData, getOAuthRedirectUri } from '@/services/auth/oauth';
@@ -89,15 +90,8 @@ export default function OAuthCallback() {
 
         clearStoredOAuthData();
 
-        const basePath = getBasePath();
-        const stripBase = (p: string) => (basePath && p.startsWith(basePath) ? p.slice(basePath.length) || '/' : p);
-        const candidate = returnUrl ? stripBase(returnUrl) : '/';
-        const isAuthPath =
-          candidate === '/login' ||
-          candidate.startsWith('/login?') ||
-          candidate === '/oauth/callback' ||
-          candidate.startsWith('/oauth/callback?');
-        const destination = isAuthPath ? '/' : candidate;
+        const candidate = returnUrl ? stripBasePath(returnUrl, getBasePath()) : '/';
+        const destination = isAuthPath(candidate) ? '/' : candidate;
         navigate(destination, { replace: true });
       } catch (err) {
         if (cancelled) return;

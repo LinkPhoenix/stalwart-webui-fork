@@ -12,6 +12,8 @@ import {
   type DiscoveryResponse,
   type TokenResponse,
 } from '@/services/auth/validation';
+import { isAuthPath, stripBasePath } from '@/lib/authPaths';
+import { toBase64Url } from '@/lib/base64Url';
 import { getBasePath } from '@/lib/basePath';
 import { resolveOAuthClientId } from '@/lib/oauthClientId';
 import { useAuthStore } from '@/stores/authStore';
@@ -107,18 +109,13 @@ async function sha256(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
 
 export async function generateCodeChallenge(verifier: string): Promise<{ challenge: string; method: 'S256' }> {
   const digest = await sha256(new TextEncoder().encode(verifier));
-  return { challenge: base64UrlEncode(digest), method: 'S256' };
+  return { challenge: toBase64Url(digest), method: 'S256' };
 }
 
 function generateState(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  const binString = Array.from(bytes, (b) => String.fromCodePoint(b)).join('');
-  return btoa(binString).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export async function exchangeCode(
@@ -187,13 +184,7 @@ export async function startAuthFlow(username: string, returnUrl?: string | null)
 
   const candidate = returnUrl ?? window.location.pathname + window.location.search;
   const basePath = getBasePath();
-  const stripped = candidate.startsWith(basePath) ? candidate.slice(basePath.length) : candidate;
-  const isAuthPath =
-    stripped === '/login' ||
-    stripped.startsWith('/login?') ||
-    stripped === '/oauth/callback' ||
-    stripped.startsWith('/oauth/callback?');
-  const safeReturnUrl = isAuthPath ? '' : candidate;
+  const safeReturnUrl = isAuthPath(stripBasePath(candidate, basePath)) ? '' : candidate;
 
   sessionStorage.setItem(`${SESSION_PREFIX}code_verifier`, codeVerifier);
   sessionStorage.setItem(`${SESSION_PREFIX}token_endpoint`, token_endpoint);
