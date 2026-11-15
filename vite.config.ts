@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pkg from './package.json' with { type: 'json' };
+import { buildContentSecurityPolicy } from './src/lib/contentSecurityPolicy.ts';
 import { assertNoDevelopmentTokenInBuild } from './src/lib/devAccessToken.ts';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -69,6 +70,26 @@ function emitAppManifest(): Plugin {
   };
 }
 
+/**
+ * Production builds only: the dev server needs inline scripts and eval for hot reload, which the policy forbids.
+ * It goes first in `<head>` so it applies to everything that loads after it.
+ */
+function contentSecurityPolicy(apiBaseUrl: string | undefined): Plugin {
+  return {
+    name: 'content-security-policy',
+    apply: 'build',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'meta',
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: buildContentSecurityPolicy(apiBaseUrl) },
+          injectTo: 'head-prepend',
+        },
+      ];
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const environment = loadEnv(mode, projectRoot, 'VITE_');
   assertNoDevelopmentTokenInBuild(command, environment.VITE_ACCESS_TOKEN);
@@ -83,6 +104,7 @@ export default defineConfig(({ command, mode }) => {
       babel({ presets: [reactCompilerPreset()] }),
       tailwindcss(),
       emitAppManifest(),
+      contentSecurityPolicy(environment.VITE_API_BASE_URL),
       devOAuthClientId(),
       restartOnEnvDevelopmentLocal(),
     ],

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Security
+- Production builds now embed a Content-Security-Policy (`<meta http-equiv>` injected by `vite.config.ts` from `src/lib/contentSecurityPolicy.ts`). Since the OAuth tokens live in `sessionStorage`, `script-src 'self'` stops injected inline scripts, `eval` and remote scripts from running. `connect-src` allows `https:` because the identity provider's token endpoint is only known at runtime. The dev server is unaffected. New e2e target `E2E_TARGET=build` runs the Playwright tests against `dist/` (CI runs it after the build) and checks that the pages load without a policy violation and that an injected inline script is refused. See `docs/SECURITY_OPERATIONS.md` for the `frame-ancestors` header to add on the server side.
+
 ### Changed
 - Reliability: network requests now have a deadline instead of waiting forever on a stalled connection. A new `src/services/http.ts` (`fetchWithTimeout`) combines the caller's cancellation signal with `AbortSignal.timeout`: 120 s for API/JMAP calls and 30 s for OAuth discovery, token exchange and token refresh. A deadline hit becomes a retryable `NetworkError` (queries retry, mutations still do not) rather than a "request cancelled" message, and cancellations requested by the caller are still passed through untouched. Covered by 7 new unit tests.
 - Performance: the Changelog page is now loaded on demand (`src/pages/AdminPanel.tsx`). It was imported statically, so every signed-in user downloaded `react-markdown` and the raw `CHANGELOG.md` (which grows with each release) as part of the `AdminPanel` chunk. That chunk drops from 368 kB to 217 kB raw (119 kB → 73 kB gzip); the page itself is a separate 34 kB chunk. New e2e test `e2e/changelog.e2e.ts` covers the lazy route.
