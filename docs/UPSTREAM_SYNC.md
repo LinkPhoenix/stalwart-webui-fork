@@ -5,8 +5,8 @@ How to pull changes from [stalwartlabs/webui](https://github.com/stalwartlabs/we
 Remote name expected: `upstream` → `https://github.com/stalwartlabs/webui.git`  
 Fork remote: `origin` → your GitHub fork.
 
-> Current pending sync (upstream 2.0.5, major re-architecture): see
-> [UPSTREAM_V2_REPORT.md](UPSTREAM_V2_REPORT.md) for the impact analysis and phased plan.
+> Last sync: upstream 2.1.0 (2.0.6 and 2.1.0 each merged as a single step). The 2.0.5 re-architecture
+> analysis is kept in [UPSTREAM_V2_REPORT.md](UPSTREAM_V2_REPORT.md) for history.
 
 ## When to sync
 
@@ -55,7 +55,8 @@ git commit   # if merge created one
 | `src/types/schema.ts` | Upstream type updates | **Upstream’s file** (or a pure upstream-aligned merge). Re-apply fork types only via `schemaDeviationTypes.ts`. |
 | `src/components/lists/DynamicList.tsx` | Large file; fork list UX | Re-apply fork branches carefully; keep `// SCHEMA-DEVIATION:` tags. |
 | `src/stores/schemaStore.ts` | Onboarding/Overview nav splice | Keep `withOnboardingNavEntry` / `withOverviewNavEntry`. |
-| `src/components/layout/MainContent.tsx` | CustomComponent routes | Keep Overview / Onboarding / LiveDelivery / LiveTracing cases. |
+| `src/extensions/pages.ts` | Upstream's `PAGES` registry replaced the routing in `MainContent.tsx` | Keep the fork block registering the `Onboarding` and `Overview` custom components. |
+| `src/components/forms/useDynamicForm.ts` / `formModel.ts` | Fork extracted the pure logic into `formModel.ts`; upstream keeps editing the hook | Port each upstream hook change into both files by hand. |
 | `vite.config.ts` | Dev proxy / env restart | Keep fork proxy (`/auth`, OAuth `/login`, env watcher). |
 | `package.json` / lockfiles | Dep bumps | Prefer upstream versions unless a fork dep is required; re-run install. |
 | `eslint.config.js` / `.oxlintrc.json` / `tsconfig*.json` | Upstream lints with ESLint and typescript-eslint on TypeScript 6 | Keep the fork's Oxlint config and TypeScript 7 (see [Toolchain deviations](#toolchain-deviations)). Delete any `eslint.config.js` that comes back, and port new upstream lint rules into `.oxlintrc.json`. |

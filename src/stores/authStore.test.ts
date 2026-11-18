@@ -110,8 +110,8 @@ describe('authStore', () => {
   describe('setSession', () => {
     it('stores accounts and primaryAccountId', () => {
       const accounts = {
-        'acc-1': { name: 'Personal', isPersonal: true },
-        'acc-2': { name: 'Work', isPersonal: false },
+        'acc-1': { name: 'Personal', isPersonal: true, hasManagement: false },
+        'acc-2': { name: 'Work', isPersonal: false, hasManagement: false },
       };
 
       useAuthStore.getState().setSession(accounts, 'acc-1', 'https://api');
@@ -123,7 +123,9 @@ describe('authStore', () => {
     });
 
     it('sets activeAccountId to primaryAccountId', () => {
-      useAuthStore.getState().setSession({ 'acc-1': { name: 'A', isPersonal: true } }, 'acc-1', 'https://api');
+      useAuthStore
+        .getState()
+        .setSession({ 'acc-1': { name: 'A', isPersonal: true, hasManagement: false } }, 'acc-1', 'https://api');
 
       expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
     });
@@ -131,8 +133,8 @@ describe('authStore', () => {
     it('preserves the previously active account across a reload if still valid', () => {
       useAuthStore.setState({ activeAccountId: 'acc-2' });
       const accounts = {
-        'acc-1': { name: 'Personal', isPersonal: true },
-        'acc-2': { name: 'Shared', isPersonal: false },
+        'acc-1': { name: 'Personal', isPersonal: true, hasManagement: false },
+        'acc-2': { name: 'Shared', isPersonal: false, hasManagement: false },
       };
 
       useAuthStore.getState().setSession(accounts, 'acc-1', 'https://api');
@@ -143,7 +145,9 @@ describe('authStore', () => {
     it('falls back to primaryAccountId if the previously active account is gone', () => {
       useAuthStore.setState({ activeAccountId: 'acc-removed' });
 
-      useAuthStore.getState().setSession({ 'acc-1': { name: 'A', isPersonal: true } }, 'acc-1', 'https://api');
+      useAuthStore
+        .getState()
+        .setSession({ 'acc-1': { name: 'A', isPersonal: true, hasManagement: false } }, 'acc-1', 'https://api');
 
       expect(useAuthStore.getState().activeAccountId).toBe('acc-1');
     });
@@ -153,8 +157,8 @@ describe('authStore', () => {
     it('changes activeAccountId when account exists', () => {
       useAuthStore.setState({
         accounts: {
-          a1: { name: 'A1', isPersonal: true },
-          a2: { name: 'A2', isPersonal: false },
+          a1: { name: 'A1', isPersonal: true, hasManagement: false },
+          a2: { name: 'A2', isPersonal: false, hasManagement: false },
         },
         activeAccountId: 'a1',
       });
@@ -165,7 +169,7 @@ describe('authStore', () => {
 
     it('does nothing for unknown account id', () => {
       useAuthStore.setState({
-        accounts: { a1: { name: 'A1', isPersonal: true } },
+        accounts: { a1: { name: 'A1', isPersonal: true, hasManagement: false } },
         activeAccountId: 'a1',
       });
 
@@ -191,8 +195,8 @@ describe('authStore', () => {
       it('resets account-scoped queries when switching to a different account', () => {
         useAuthStore.setState({
           accounts: {
-            a1: { name: 'A1', isPersonal: true },
-            a2: { name: 'A2', isPersonal: false },
+            a1: { name: 'A1', isPersonal: true, hasManagement: false },
+            a2: { name: 'A2', isPersonal: false, hasManagement: false },
           },
           activeAccountId: 'a1',
         });
@@ -205,7 +209,7 @@ describe('authStore', () => {
 
       it('keeps cached queries when "switching" to the already-active account', () => {
         useAuthStore.setState({
-          accounts: { a1: { name: 'A1', isPersonal: true } },
+          accounts: { a1: { name: 'A1', isPersonal: true, hasManagement: false } },
           activeAccountId: 'a1',
         });
 
@@ -223,7 +227,7 @@ describe('authStore', () => {
         refreshToken: 'ref',
         tokenExpiresAt: 99999,
         tokenEndpoint: 'https://auth/token',
-        accounts: { a: { name: 'A', isPersonal: true } },
+        accounts: { a: { name: 'A', isPersonal: true, hasManagement: false } },
         primaryAccountId: 'a',
         activeAccountId: 'a',
         apiUrl: 'https://api',

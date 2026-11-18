@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+### Added
+- Merged `stalwartlabs/webui` 2.1.0: Mail Rules editor, Blocked senders and Safe senders pages (Account > Filters & Auto-Replies), Vacation Response page, weekly schedule editor, searchable time zone picker, local time and date fields, and pasting several values at once into list fields. These pages are schema-driven and only appear on a server whose schema defines `x:MailRule`, `x:BlockedSender`, `x:SafeSender` and `x:WorkingHoursSlot`.
+- New production dependency from upstream: `@dnd-kit/core`, `@dnd-kit/sortable` and `@dnd-kit/utilities` (drag and drop reordering of mail rules).
+
+### Changed
+- Merged `stalwartlabs/webui` 2.1.0: account pages follow the account selected in the top bar, map entries use the value format declared by their key, forms validate required fields and minimum item counts inside nested lists, and switching an object variant no longer fails with "name: required". Mobile select menus, popovers and object pickers were also fixed.
+- Page routing now goes through upstream's `PAGES` registry (`src/extensions/pages.ts`). The fork-only Overview and Getting Started pages are registered there; the Sieve editor is plugged into upstream's new `SieveWidget`.
+- `src/components/forms/formModel.ts` (fork refactor of `useDynamicForm`) carries the upstream `createValues`, `accountId` and `fieldOverrides` changes.
+- `AccountInfo.hasManagement` is now part of the auth store test fixtures.
+
 ## [2.0.6-r3] - 2026-11-15
 
 ### Added
