@@ -8,14 +8,15 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { FieldError, FieldRow } from '@/components/forms/FieldRow';
-import { fieldIds, useFieldScope, useFormContext } from '@/components/forms/formContext';
+import { ValueRow } from '@/components/values/FieldValue';
+import { fieldIds, useFormContext } from '@/components/forms/formContext';
 import { missingNestedFields } from '@/components/forms/formLogic';
+import type { FieldRenderProps } from '@/components/forms/useDynamicForm';
 import { usePermissionCheckers } from '@/hooks/usePermissions';
-import { embeddedEntries, isRecord, resolveEmbedded } from '@/lib/embeddedSchema';
+import { embeddedEntries, resolveEmbedded } from '@/lib/embeddedSchema';
 import { cn } from '@/lib/utils';
-import type { WidgetProps } from '@/components/forms/widgets/types';
-import type { ValueProps } from '@/extensions/types';
-import type { Field, FieldTypeObject, FieldTypeObjectList } from '@/types/schema';
+import type { ViewRenderProps } from '@/components/views/DynamicView';
+import type { Field, FieldTypeObjectList } from '@/types/schema';
 import { useRuleAccountId } from '../account';
 import { listEntries } from '../builder';
 import { mailboxNameResolver } from '../mailboxes';
@@ -24,8 +25,8 @@ import {
   hasScheduleCondition,
   isRejectAllowed,
   MAIL_RULE_ACTION_OBJECT,
-  MAIL_RULE_BODY_OBJECT,
   MAIL_RULE_CONDITION_OBJECT,
+  MAIL_RULE_OBJECT,
   parseCustomBody,
   REJECT_ACTION,
   ruleIssues,
@@ -35,7 +36,8 @@ import { useMailboxOptions } from '../queries';
 import { ruleIssueMessage, ruleSentence, summarizeCustomRule } from '../summary';
 import { RuleItemList } from './RuleItemList';
 
-const LIST_FIELDS = new Set(['conditions', 'exceptions', 'actions']);
+const TRAILING_FIELDS = new Set(['stopProcessing', 'timeZone']);
+const RULE_ERROR_FIELDS = ['matchAll', 'conditions', 'exceptions'] as const;
 const STOP_PROCESSING = 'stopProcessing';
 const TOGGLE_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
@@ -117,23 +119,20 @@ function IssueList({ issues }: { issues: readonly RuleIssue[] }) {
   );
 }
 
-type BuilderProps = Pick<WidgetProps<FieldTypeObject>, 'value' | 'onChange' | 'readOnly' | 'error'>;
-
-function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
+export function RuleBuilderRow({ data: body, errors, readOnly, onFieldChange: set }: FieldRenderProps) {
   const { t } = useTranslation();
   const { schema, idPrefix } = useFormContext();
-  const scope = useFieldScope();
   const checkers = usePermissionCheckers();
   const exceptionsButton = useRef<HTMLButtonElement>(null);
-  const body = isRecord(value) ? value : {};
   const custom = parseCustomBody(body);
-  const resolved = resolveEmbedded(schema, MAIL_RULE_BODY_OBJECT, body);
+  const resolved = resolveEmbedded(schema, MAIL_RULE_OBJECT, body);
   const entries = resolved ? embeddedEntries(resolved) : [];
   const fieldOf = (name: string) => entries.find((entry) => entry.formField.name === name);
-  const invalid = !!error;
-  const missing = invalid ? missingNestedFields(schema, MAIL_RULE_BODY_OBJECT, body) : [];
   const [exceptionsExpanded, setExceptionsExpanded] = useState<boolean | null>(null);
-  const set = (name: string, next: unknown) => onChange({ ...body, [name]: next });
+  const missing = new Set(
+    errors.conditions || errors.exceptions || errors.actions ? missingNestedFields(schema, MAIL_RULE_OBJECT, body) : [],
+  );
+  const errorOf = (name: string) => (missing.has(name) ? undefined : errors[name]);
   const issues = ruleIssues({ isEnabled: true, body }, checkers);
   const hasReject = hasRejectAction(custom);
   const rejectBlocked =
@@ -149,26 +148,29 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
   const conditionLabel = (n: number) => t('mailRules.builder.conditionN', 'Condition {{n}}', { n });
   const exceptionLabel = (n: number) => t('mailRules.builder.exceptionN', 'Exception {{n}}', { n });
   const actionLabel = (n: number) => t('mailRules.builder.actionN', 'Action {{n}}', { n });
-  const showExceptions = missing.includes('exceptions') || (exceptionsExpanded ?? custom.exceptions.length > 0);
-  const exceptionsId = `${fieldIds(idPrefix, [...scope.path, 'exceptions']).inputId}-list`;
-  const actionsErrorId = fieldIds(idPrefix, [...scope.path, 'actions']).errorId;
-  const ruleError = missing.length === 0 ? error : undefined;
+  const showExceptions = !!errors.exceptions || (exceptionsExpanded ?? custom.exceptions.length > 0);
+  const exceptionsId = `${fieldIds(idPrefix, ['exceptions']).inputId}-list`;
+  const actionsErrorId = fieldIds(idPrefix, ['actions']).errorId;
+  const ruleErrorField = RULE_ERROR_FIELDS.find((name) => errorOf(name));
+  const actionsError =
+    errors.actions &&
+    (custom.actions.length === 0
+      ? t('mailRules.builder.actionRequired', 'Add at least one action.')
+      : errorOf('actions'));
   const changeExceptions = (next: unknown) => {
     if (custom.exceptions.length > 0 && listEntries(next).length === 0) exceptionsButton.current?.focus();
     set('exceptions', next);
   };
   const trailing = entries.filter(
     ({ formField }) =>
-      !LIST_FIELDS.has(formField.name) &&
-      formField.name !== 'matchAll' &&
-      (formField.name !== 'timeZone' || hasScheduleCondition(custom)),
+      TRAILING_FIELDS.has(formField.name) && (formField.name !== 'timeZone' || hasScheduleCondition(custom)),
   );
 
   return (
     <div className="divide-y divide-border" data-testid="mail-rule-builder">
-      {ruleError && (
-        <div className="pb-3">
-          <FieldError id={fieldIds(idPrefix, scope.path).errorId} error={ruleError} />
+      {ruleErrorField && (
+        <div className="py-3">
+          <FieldError id={fieldIds(idPrefix, [ruleErrorField]).errorId} error={errorOf(ruleErrorField)} />
         </div>
       )}
       <Step
@@ -204,7 +206,7 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
           value={body.conditions}
           onChange={(next) => set('conditions', next)}
           readOnly={readOnly}
-          invalid={invalid}
+          invalid={!!errors.conditions}
           {...listBounds(fieldOf('conditions')?.field)}
           itemLabel={conditionLabel}
           addLabel={t('mailRules.builder.addCondition', 'Add condition')}
@@ -237,7 +239,7 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
               value={body.exceptions}
               onChange={changeExceptions}
               readOnly={readOnly}
-              invalid={invalid}
+              invalid={!!errors.exceptions}
               {...listBounds(fieldOf('exceptions')?.field)}
               itemLabel={exceptionLabel}
               addLabel={t('mailRules.builder.addException', 'Add exception')}
@@ -253,16 +255,14 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
           value={body.actions}
           onChange={(next) => set('actions', next)}
           readOnly={readOnly}
-          invalid={invalid}
+          invalid={!!errors.actions}
           {...listBounds(fieldOf('actions')?.field)}
           canAddMore={!hasReject}
           itemLabel={actionLabel}
           addLabel={t('mailRules.builder.addAction', 'Add action')}
           disabledVariants={disabledActions}
         />
-        {invalid && custom.actions.length === 0 && (
-          <FieldError id={actionsErrorId} error={t('mailRules.builder.actionRequired', 'Add at least one action.')} />
-        )}
+        <FieldError id={actionsErrorId} error={actionsError} />
       </Step>
 
       {trailing.length > 0 && (
@@ -282,6 +282,8 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
                 formField={formField}
                 value={body[formField.name]}
                 onChange={(next) => set(formField.name, next)}
+                error={errors[formField.name]}
+                readOnly={readOnly}
               />
             ),
           )}
@@ -293,11 +295,7 @@ function CustomRuleBuilder({ value, onChange, readOnly, error }: BuilderProps) {
   );
 }
 
-export function MailRuleBodyEditor({ value, onChange, readOnly, error }: WidgetProps<FieldTypeObject>) {
-  return <CustomRuleBuilder value={value} onChange={onChange} readOnly={readOnly} error={error} />;
-}
-
-export function MailRuleBodyView({ schema, value, variant }: ValueProps) {
+export function RuleSummaryRow({ schema, data }: ViewRenderProps) {
   const { t } = useTranslation();
   const accountId = useRuleAccountId();
   const mailboxes = useMailboxOptions(accountId);
@@ -306,6 +304,12 @@ export function MailRuleBodyView({ schema, value, variant }: ValueProps) {
     schema,
     mailboxName: mailboxes.status === 'ready' ? mailboxNameResolver(mailboxes.options) : undefined,
   };
-  const text = ruleSentence(ctx, summarizeCustomRule(ctx, isRecord(value) ? value : {}));
-  return <span className={cn(variant === 'compact' ? 'truncate' : 'whitespace-normal break-words')}>{text}</span>;
+  return (
+    <ValueRow
+      schema={schema}
+      label={t('mailRules.summaryLabel', 'Summary')}
+      type={undefined}
+      value={ruleSentence(ctx, summarizeCustomRule(ctx, data))}
+    />
+  );
 }
