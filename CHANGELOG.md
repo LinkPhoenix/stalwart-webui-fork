@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.1.0-r0] - 2026-11-18
+
 ### Added
 - Merged `stalwartlabs/webui` 2.1.0: Mail Rules editor, Blocked senders and Safe senders pages (Account > Filters & Auto-Replies), Vacation Response page, weekly schedule editor, searchable time zone picker, local time and date fields, and pasting several values at once into list fields. These pages are schema-driven and only appear on a server whose schema defines `x:MailRule`, `x:BlockedSender`, `x:SafeSender` and `x:WorkingHoursSlot`.
 - New production dependency from upstream: `@dnd-kit/core`, `@dnd-kit/sortable` and `@dnd-kit/utilities` (drag and drop reordering of mail rules).
