@@ -73,10 +73,12 @@ export function MultilineWidget(props: WidgetProps<FieldTypeString>) {
       </div>
     );
   }
-  if (type.format === 'sieve') {
-    return <SieveEditorField value={common.value} onCommit={commit} readOnly={readOnly} />;
-  }
   return <BufferedTextarea {...common} rows={4} />;
+}
+
+export function SieveWidget(props: WidgetProps<FieldTypeString>) {
+  const { value, readOnly } = props;
+  return <SieveEditorField value={stringValue(value)} onCommit={stringCommitter(props)} readOnly={readOnly} />;
 }
 
 export function ColorWidget(props: WidgetProps<FieldTypeString>) {

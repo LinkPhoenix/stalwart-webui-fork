@@ -6,6 +6,7 @@
 
 import {
   buildCreateDefaults,
+  deepMerge,
   getDisplayProperty,
   resolveForm,
   resolveVariantForm,
@@ -43,8 +44,14 @@ export function extractCreatedExtras(created: Record<string, unknown>): FieldVal
   return extras;
 }
 
-export function createDefaults(schema: Schema, view: ResolvedView, variant: string | undefined): FieldValues {
-  const data = buildCreateDefaults(schema, view.object, view.resolvedSchema, variant, view.list?.filtersStatic);
+export function createDefaults(
+  schema: Schema,
+  view: ResolvedView,
+  variant: string | undefined,
+  createValues?: FieldValues,
+): FieldValues {
+  const defaults = buildCreateDefaults(schema, view.object, view.resolvedSchema, variant, view.list?.filtersStatic);
+  const data = createValues ? deepMerge(defaults, createValues) : defaults;
   if (variant) data[VARIANT_FIELD] = variant;
   return data;
 }
@@ -56,10 +63,15 @@ export function initialCreateVariant(view: ResolvedView): string | undefined {
   return typeof fromFilter === 'string' ? fromFilter : (resolvedSchema.variants[0]?.name ?? '');
 }
 
-export function initialState(schema: Schema | null, view: ResolvedView | null, mode: FormMode): FormState {
+export function initialState(
+  schema: Schema | null,
+  view: ResolvedView | null,
+  mode: FormMode,
+  createValues?: FieldValues,
+): FormState {
   if (mode !== 'create' || !schema || !view) return initialFormState();
   const variant = initialCreateVariant(view);
-  return initialFormState(createDefaults(schema, view, variant), variant ?? '', view);
+  return initialFormState(createDefaults(schema, view, variant, createValues), variant ?? '', view);
 }
 
 export function loadedVariant(view: ResolvedView, data: FieldValues): string {
@@ -84,6 +96,7 @@ export function resolveFormParts(
   variantName: string,
   mode: FormMode,
   canGet: (permissionPrefix: string) => boolean,
+  hidden?: ReadonlySet<string>,
 ): FormParts {
   const sch = resolved?.resolvedSchema ?? null;
   const variant = sch?.type === 'multiple' ? sch.variants.find((v) => v.name === variantName) : undefined;
@@ -103,7 +116,7 @@ export function resolveFormParts(
     }
   }
   const form = sch?.type === 'multiple' ? combineForms(parentForm, variantForm) : variantForm;
-  const sections = buildSections(form, fields, mode);
+  const sections = buildSections(form, fields, mode, hidden);
   return { fields, parentForm, variantForm, form, sections };
 }
 

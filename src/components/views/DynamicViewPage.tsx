@@ -18,14 +18,15 @@ import { DynamicView } from './DynamicView';
 interface DynamicViewPageProps {
   viewName: string;
   objectId: string;
+  accountId?: string;
 }
 
-export function DynamicViewPage({ viewName, objectId }: DynamicViewPageProps) {
+export function DynamicViewPage({ viewName, objectId, accountId }: DynamicViewPageProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const schema = useSchemaStore((s) => s.schema);
   const resolvedObject = schema ? resolveObject(schema, viewName) : null;
-  const query = useJmapObject(resolvedObject?.objectName, objectId);
+  const query = useJmapObject(resolvedObject?.objectName, objectId, undefined, { accountId });
   const data = query.data ?? null;
   const loading = query.isPending && query.fetchStatus !== 'idle';
   const error = !schema
