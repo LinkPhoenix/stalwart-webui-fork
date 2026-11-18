@@ -37,7 +37,6 @@ import { WeeklyScheduleWidget } from '@/components/forms/widgets/WeeklyScheduleW
 import { TimeZoneValue } from '@/components/values/TimeZoneValue';
 import { WeeklyScheduleValue } from '@/components/values/WeeklyScheduleValue';
 import { SievepadRowAddon } from '@/components/forms/SievepadButton';
-import { MailRuleBodyValue, MailRuleBodyWidget } from '@/features/mailRules/widgets';
 import type { WidgetProps } from '@/components/forms/widgets/types';
 import type { ResolvedWidget, WidgetDefinition, WidgetKey, WidgetMatch, WidgetTraits } from '@/extensions/types';
 import type {
@@ -162,13 +161,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     match: { objectName: 'x:PasskeyRegistration' },
     traits: { ...UNLABELLED, createOnly: true },
     Edit: PasskeyRegistrationWidget,
-  }),
-  widget({
-    key: 'object:x:MailRuleBody',
-    match: { objectName: 'x:MailRuleBody' },
-    traits: { ...GROUP_BLOCK, ownsError: true },
-    Edit: MailRuleBodyWidget,
-    View: MailRuleBodyValue,
   }),
   widget({ key: 'objectList', match: { type: 'objectList' }, traits: GROUP_BLOCK, Edit: ObjectListWidget }),
   widget({

@@ -107,7 +107,6 @@ export function FieldRow({ field, formField, value, onChange, error, readOnly: f
   };
 
   const widgetProps = { type: ft, field, formField, value, onChange, readOnly, control, error };
-  const rowError = traits.ownsError && !asValue ? undefined : error;
   let body: ReactNode = asValue ? (
     <FieldValue schema={ctx.schema} type={ft} value={value} />
   ) : (
@@ -128,7 +127,7 @@ export function FieldRow({ field, formField, value, onChange, error, readOnly: f
       <div data-slot="field-row" className="space-y-1.5 py-4">
         {body}
         {RowAddon && <RowAddon {...widgetProps} />}
-        <FieldError id={ids.errorId} error={rowError} />
+        <FieldError id={ids.errorId} error={error} />
       </div>
     );
   }
@@ -160,11 +159,11 @@ export function FieldRow({ field, formField, value, onChange, error, readOnly: f
       <div className={cn('min-w-0 space-y-1.5', layout === 'inline' && 'pt-0.5', asValue && '@xl:pt-2')}>
         <div className={cn(locked && 'opacity-60')}>{body}</div>
         {RowAddon && <RowAddon {...widgetProps} />}
-        {layout !== 'inline' && <FieldError id={ids.errorId} error={rowError} />}
+        {layout !== 'inline' && <FieldError id={ids.errorId} error={error} />}
       </div>
-      {layout === 'inline' && rowError && (
+      {layout === 'inline' && error && (
         <div className="col-span-full">
-          <FieldError id={ids.errorId} error={rowError} />
+          <FieldError id={ids.errorId} error={error} />
         </div>
       )}
     </div>

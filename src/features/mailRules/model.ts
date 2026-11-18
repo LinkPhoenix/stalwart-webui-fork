@@ -10,7 +10,6 @@ import type { PermissionCheckers } from '@/lib/permissions';
 import type { JmapObject } from '@/services/jmap/client';
 
 export const MAIL_RULE_OBJECT = 'x:MailRule';
-export const MAIL_RULE_BODY_OBJECT = 'x:MailRuleBody';
 export const MAIL_RULE_CONDITION_OBJECT = 'x:MailRuleCondition';
 export const MAIL_RULE_ACTION_OBJECT = 'x:MailRuleAction';
 
@@ -53,16 +52,15 @@ export function setValues(value: unknown): string[] {
 }
 
 export function parseMailRule(raw: JmapObject): MailRule | null {
-  const { id, rule } = raw;
+  const { id } = raw;
   if (typeof id !== 'string') return null;
-  const body = isRecord(rule) ? rule : {};
   const position = raw.position;
   return {
     id,
     name: typeof raw.name === 'string' ? raw.name : '',
     isEnabled: raw.isEnabled !== false,
     position: typeof position === 'number' && Number.isFinite(position) && position >= 0 ? position : 0,
-    body,
+    body: raw,
   };
 }
 

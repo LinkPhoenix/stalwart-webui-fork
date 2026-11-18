@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.1.0-r1] - 2026-11-18
+
+### Changed
+- Merged the rewritten upstream `stalwartlabs/webui` v2.1.0 commit (upstream force-pushed `3efefaa` to `1a595c2` after 2.1.0-r0 was cut). The Mail Rule builder is renamed `RuleBuilder` and no longer goes through the widget registry, and read-only views accept per-field renderers. The fork's "Hide empty fields" toggle on read-only views is kept.
+
 ## [2.1.0-r0] - 2026-11-18
 
 ### Added

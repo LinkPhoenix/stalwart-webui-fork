@@ -9,12 +9,33 @@ import { DynamicForm } from '@/components/forms/DynamicForm';
 import { ListError, ListSpinner } from '@/components/lists/ListStates';
 import { DynamicViewPage } from '@/components/views/DynamicViewPage';
 import { errorMessage } from '@/lib/jmapErrors';
+import type { FieldOverrides } from '@/components/forms/useDynamicForm';
+import type { ViewRenderers } from '@/components/views/DynamicView';
 import type { PageProps } from '@/extensions/types';
 import { useRuleAccountId } from '../account';
 import { nextRulePosition } from '../model';
 import { useMailRules } from '../queries';
+import { RuleBuilderRow, RuleSummaryRow } from './RuleBuilder';
 
-const HIDDEN_FIELDS = { hidden: ['position'] };
+const RULE_ANCHOR = 'actions';
+const RULE_FIELDS = ['matchAll', 'conditions', 'exceptions', 'stopProcessing', 'timeZone'] as const;
+
+function Omitted() {
+  return null;
+}
+
+const FIELD_OVERRIDES: FieldOverrides = {
+  hidden: ['position'],
+  render: {
+    ...Object.fromEntries(RULE_FIELDS.map((name) => [name, Omitted])),
+    [RULE_ANCHOR]: RuleBuilderRow,
+  },
+};
+
+const VIEW_RENDERERS: ViewRenderers = {
+  ...Object.fromEntries(RULE_FIELDS.map((name) => [name, Omitted])),
+  [RULE_ANCHOR]: RuleSummaryRow,
+};
 
 function CreateRuleForm({ viewName, accountId }: { viewName: string; accountId: string }) {
   const { t } = useTranslation();
@@ -33,7 +54,7 @@ function CreateRuleForm({ viewName, accountId }: { viewName: string; accountId: 
       viewName={viewName}
       objectId={null}
       accountId={accountId}
-      fieldOverrides={HIDDEN_FIELDS}
+      fieldOverrides={FIELD_OVERRIDES}
       createValues={{ position: nextRulePosition(rules.data) }}
     />
   );
@@ -43,11 +64,11 @@ export function MailRuleFormPage({ viewName, objectId }: PageProps) {
   const accountId = useRuleAccountId();
   if (!accountId) return null;
   if (objectId === 'new') return <CreateRuleForm viewName={viewName} accountId={accountId} />;
-  return <DynamicForm viewName={viewName} objectId={objectId} accountId={accountId} fieldOverrides={HIDDEN_FIELDS} />;
+  return <DynamicForm viewName={viewName} objectId={objectId} accountId={accountId} fieldOverrides={FIELD_OVERRIDES} />;
 }
 
 export function MailRuleViewPage({ viewName, objectId }: PageProps) {
   const accountId = useRuleAccountId();
   if (!accountId || !objectId) return null;
-  return <DynamicViewPage viewName={viewName} objectId={objectId} accountId={accountId} />;
+  return <DynamicViewPage viewName={viewName} objectId={objectId} accountId={accountId} renderers={VIEW_RENDERERS} />;
 }

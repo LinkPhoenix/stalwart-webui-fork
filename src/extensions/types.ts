@@ -42,7 +42,6 @@ export interface WidgetTraits {
   readOnlyAsValue: boolean;
   layout: RowLayout;
   createOnly?: true;
-  ownsError?: true;
 }
 
 export type WidgetKey =
@@ -67,7 +66,6 @@ export type WidgetKey =
   | 'object:x:Rate'
   | 'object:x:OtpAuth'
   | 'object:x:PasskeyRegistration'
-  | 'object:x:MailRuleBody'
   | 'objectList'
   | 'objectList:x:WorkingHoursSlot'
   | 'set'
