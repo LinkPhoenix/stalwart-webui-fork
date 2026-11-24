@@ -127,6 +127,15 @@ describe('resolveFormParts', () => {
     expect(Object.keys(parts.fields?.properties ?? {})).toEqual(['name']);
   });
 
+  it('strips section titles for the untitled fields only', () => {
+    const titled = resolveFormParts(schema, singleView, 'x:Test', '', 'create', () => true);
+    const sections = titled.sections.map((s) => ({ ...s, title: 'T' }));
+    expect(sections.every((s) => s.title === 'T')).toBe(true);
+    const parts = resolveFormParts(schema, singleView, 'x:Test', '', 'create', () => true, undefined, ['name']);
+    const holder = parts.sections.find((s) => s.fields.some((f) => f.formField.name === 'name'));
+    expect(holder?.title).toBeUndefined();
+  });
+
   it('handles a missing view', () => {
     const parts = resolveFormParts(schema, null, 'x:Test', '', 'edit', () => true);
     expect(parts.fields).toBeNull();

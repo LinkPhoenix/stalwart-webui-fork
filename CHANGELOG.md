@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file. This projec
 
 ## [Unreleased]
 
+## [2.1.1-r0] - 2026-11-24
+
+### Added
+- Mail Rules editor: rules that apply only while the vacation response is in effect, stop-only rules, and replies sent to every message.
+
+### Changed
+- Merged upstream `stalwartlabs/webui` v2.1.1; no schema deviation is affected. The form hook's new `untitled` field override and `showCreatedValues` option are ported into `formModel.ts` as well as `useDynamicForm.ts`.
+- Mail Rules editor follows the new rule format: conditions that must all match, alternatives of which at least one must match, and exceptions, each explained in plain words.
+- Rule page with a summary of what the rule does, a Conditions step and an Actions step. Each action appears at most once, as a card added from grouped buttons.
+- Trash and Junk are ordinary move and copy targets, and read, flagged and not spam are shown by name instead of as keywords.
+- The rule summary is fully translatable: whole-sentence templates, plural forms and lists joined for the user's locale.
+
 ## [2.1.0-r1] - 2026-11-18
 
 ### Changed

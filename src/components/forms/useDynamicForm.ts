@@ -82,6 +82,7 @@ export interface FieldRenderProps {
 
 export interface FieldOverrides {
   hidden?: readonly string[];
+  untitled?: readonly string[];
   render?: Readonly<Record<string, ComponentType<FieldRenderProps>>>;
   validate?: (data: FieldValues) => FieldErrors;
 }
@@ -90,12 +91,13 @@ export interface DynamicFormOptions {
   accountId?: string;
   fieldOverrides?: FieldOverrides;
   createValues?: FieldValues;
+  showCreatedValues?: boolean;
 }
 
 export function useDynamicForm(
   viewName: string,
   objectId: string | null,
-  { accountId, fieldOverrides, createValues }: DynamicFormOptions = {},
+  { accountId, fieldOverrides, createValues, showCreatedValues = true }: DynamicFormOptions = {},
 ) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -152,6 +154,7 @@ export function useDynamicForm(
     mode,
     canGet,
     hidden,
+    fieldOverrides?.untitled,
   );
 
   const { loading, loadError, loadFailed } = computeLoadState(
@@ -275,7 +278,7 @@ export function useDynamicForm(
 
         if (created) {
           const extras = extractCreatedExtras(created);
-          if (Object.keys(extras).length > 0) {
+          if (showCreatedValues && Object.keys(extras).length > 0) {
             dispatch({ type: 'created', result: { id: String(created.id), values: extras } });
           } else {
             toast({ title: t('form.createdSuccess', 'Created successfully'), variant: 'success' });
