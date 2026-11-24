@@ -22,6 +22,7 @@ import {
   combineForms,
   filterAccessibleFields,
   VARIANT_FIELD,
+  withoutSectionTitles,
   type FieldValues,
   type RenderableSection,
 } from '@/components/forms/formLogic';
@@ -97,6 +98,7 @@ export function resolveFormParts(
   mode: FormMode,
   canGet: (permissionPrefix: string) => boolean,
   hidden?: ReadonlySet<string>,
+  untitled?: readonly string[],
 ): FormParts {
   const sch = resolved?.resolvedSchema ?? null;
   const variant = sch?.type === 'multiple' ? sch.variants.find((v) => v.name === variantName) : undefined;
@@ -116,7 +118,7 @@ export function resolveFormParts(
     }
   }
   const form = sch?.type === 'multiple' ? combineForms(parentForm, variantForm) : variantForm;
-  const sections = buildSections(form, fields, mode, hidden);
+  const sections = withoutSectionTitles(buildSections(form, fields, mode, hidden), untitled);
   return { fields, parentForm, variantForm, form, sections };
 }
 
